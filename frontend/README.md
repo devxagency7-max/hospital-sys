@@ -32,6 +32,7 @@ npm run dev     # بناء CSS بالمراقبة + خادم ثابت على htt
 | تغيير ألوان/خطوط الهوية | `@theme` في `css/tailwind.src.css` |
 | الربط بباك-إند حقيقي | `js/core/config.js` → `API.mode = "live"` |
 | فهم عقد الـ API | [`../docs/11-FRONTEND-CONVENTIONS.md`](../docs/11-FRONTEND-CONVENTIONS.md) |
+| بناء أي شاشة فوترة | [`../docs/12-BILLING-DOMAIN-MODEL.md`](../docs/12-BILLING-DOMAIN-MODEL.md) أولًا — المرتجع وإشعار الدائن كيانان منفصلان |
 
 ## البنية
 
@@ -67,8 +68,12 @@ tools/                  خادم التطوير ومُشغّل الاختبار�
 7. **لا حالة غير مسجَّلة** في `js/core/statuses.js`.
 8. **لا حساب مالي في شاشة** — استخدم `js/domain/billing.js` و `js/core/money.js`.
 9. **لا إصلاح اتجاه مفرد** — استخدم `components/common/value.js` وأدوات `ltr-isolate`.
+10. **لا خلط بين مرتجع وإشعار دائن** — مرتجع يُخفّض `netPaid`، إشعار دائن يُخفّض
+    `effectiveTotal`؛ راجع [`../docs/12-BILLING-DOMAIN-MODEL.md`](../docs/12-BILLING-DOMAIN-MODEL.md).
+11. **لا تعديل فاتورة بعد إصدارها** — `assertMutable()` ترمي خطأً؛ التصحيح عبر
+    إشعار دائن لا بإعادة الحساب.
 
-القواعد 1–9 يحرسها `tests/architecture.test.mjs` آليًا.
+القواعد 1–11 يحرسها `tests/architecture.test.mjs` آليًا.
 
 التفاصيل والأسباب في [`../docs/11-FRONTEND-CONVENTIONS.md`](../docs/11-FRONTEND-CONVENTIONS.md)
 و [`../docs/07-FRONTEND-RULES.md`](../docs/07-FRONTEND-RULES.md).

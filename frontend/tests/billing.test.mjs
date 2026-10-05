@@ -10,17 +10,31 @@
 
 import * as money from "../js/core/money.js";
 import {
+  InvoiceLifecycle,
+  DocumentStatus,
   calculateInvoiceTotals,
   settleInvoice,
   deriveInvoiceStatus,
   summarizePatientAccount,
   totalOutstanding,
   totalInvoiced,
+  totalCredited,
   totalCollected,
   isOverdue,
+  isDraft,
+  isIssued,
+  isCancelled,
+  isFinalized,
+  assertMutable,
+  assertDocumentMutable,
+  issueInvoice,
+  cancelInvoice,
+  maxRefundable,
+  maxCreditable,
+  buildInvoiceTimeline,
 } from "../js/domain/billing.js";
 
-import { assert, assertMoney, section, report } from "./harness.mjs";
+import { assert, assertMoney, assertThrows, section, report } from "./harness.mjs";
 
 /* ==========================================================================
    وحدة المال
@@ -190,7 +204,98 @@ const multiRefund = settleInvoice(
 assertMoney("مرتجعات متعددة تُجمع المعتمدة فقط", multiRefund.refunded, 350);
 assertMoney("المتبقي", multiRefund.remaining, 350);
 
-section("التسوية — الدفع الزائد");
+section("التسوية — إشعارات الدائن (تصحيح قيمة الفاتورة)");
+
+/*
+ * الفرق الجوهري عن المرتجع: إشعار الدائن يُخفّض effectiveTotal (جانب
+ * الفاتورة) لا netPaid (جانب التحصيل). فاتورة لم يُدفع عليها شيء بعد وصدر
+ * عليها إشعار دائن: المتبقي يقل فورًا، رغم أن المدفوع لا يزال صفرًا.
+ */
+const creditedUnpaid = settleInvoice(
+  { total: 1000 },
+  { creditNotes: [{ amount: 300, status: "approved" }] },
+);
+assertMoney("effectiveTotal ينخفض بقيمة الإشعار", creditedUnpaid.effectiveTotal, 700);
+assertMoney("المدفوع يبقى صفرًا — الإشعار لا يمسّ التحصيل", creditedUnpaid.paid, 0);
+assertMoney("المتبقي = effectiveTotal", creditedUnpaid.remaining, 700);
+assert("الحالة unpaid لا partially_paid", creditedUnpaid.status === "unpaid", creditedUnpaid.status);
+
+const creditedPending = settleInvoice(
+  { total: 1000 },
+  { payments: [{ amount: 1000 }], creditNotes: [{ amount: 300, status: "pending" }] },
+);
+assertMoney("الإشعار المعلّق لا يُحتسب", creditedPending.credited, 0);
+assertMoney("effectiveTotal يبقى كاملًا", creditedPending.effectiveTotal, 1000);
+assert("الحالة تبقى paid", creditedPending.status === "paid", creditedPending.status);
+
+const creditedRejected = settleInvoice(
+  { total: 1000 },
+  { payments: [{ amount: 1000 }], creditNotes: [{ amount: 300, status: "rejected" }] },
+);
+assertMoney("الإشعار المرفوض لا يُحتسب", creditedRejected.credited, 0);
+
+const multiCredit = settleInvoice(
+  { total: 1000 },
+  {
+    creditNotes: [
+      { amount: 200, status: "approved" },
+      { amount: 150, status: "approved" },
+      { amount: 500, status: "pending" },
+    ],
+  },
+);
+assertMoney("إشعارات متعددة تُجمع المعتمدة فقط", multiCredit.credited, 350);
+assertMoney("effectiveTotal", multiCredit.effectiveTotal, 650);
+
+const overCredited = settleInvoice(
+  { total: 1000 },
+  { creditNotes: [{ amount: 1500, status: "approved" }] },
+);
+assertMoney(
+  "إشعار يتجاوز الإجمالي: effectiveTotal لا يصبح سالبًا",
+  overCredited.effectiveTotal,
+  0,
+);
+assertMoney("المتبقي صفر لا سالب", overCredited.remaining, 0);
+
+section("التسوية — إشعار دائن بعد تحصيل كامل (الحالة الحرجة)");
+
+/*
+ * السيناريو الذي يثبت استقلال المحورين: فاتورة سُدِّدت بالكامل، ثم اكتُشف
+ * أن جزءًا من الخدمة لم يُقدَّم فصدر إشعار دائن — لا مرتجع، لأن لا أحد طلب
+ * استرداد مال بعد؛ القيمة المستحقة هي التي تغيّرت. النتيجة "دفع زائد" لا
+ * "مدفوعة جزئيًا" — المريض الآن له رصيد دائن، لا عليه مديونية.
+ */
+const fullyPaidThenCredited = settleInvoice(
+  { total: 1000 },
+  { payments: [{ amount: 1000 }], creditNotes: [{ amount: 300, status: "approved" }] },
+);
+assertMoney("effectiveTotal", fullyPaidThenCredited.effectiveTotal, 700);
+assertMoney("netPaid لم يتغيّر — لا مرتجع هنا", fullyPaidThenCredited.netPaid, 1000);
+assertMoney("المتبقي سالب = رصيد دائن 300", fullyPaidThenCredited.remaining, -300);
+assert("الحالة overpaid لا paid", fullyPaidThenCredited.status === "overpaid", fullyPaidThenCredited.status);
+
+section("التسوية — مرتجع وإشعار دائن معًا");
+
+/*
+ * المحوران مستقلان تمامًا ويتركّبان بلا أي حالة خاصة: إشعار دائن يُخفّض
+ * effectiveTotal، ثم مرتجع جزئي من الفائض الناتج يُخفّض netPaid — بالضبط
+ * كما يحدث في الواقع: تصحيح القيمة أولًا، ثم إعادة الفائض نقدًا.
+ */
+const both = settleInvoice(
+  { total: 1000 },
+  {
+    payments: [{ amount: 1000 }],
+    creditNotes: [{ amount: 200, status: "approved" }],
+    refunds: [{ amount: 150, status: "approved" }],
+  },
+);
+assertMoney("effectiveTotal = 1000 − 200", both.effectiveTotal, 800);
+assertMoney("netPaid = 1000 − 150", both.netPaid, 850);
+assertMoney("المتبقي = effectiveTotal − netPaid", both.remaining, -50);
+assert("الحالة overpaid", both.status === "overpaid", both.status);
+
+section("التسوية — الدفع الزائد (بالتحصيل المباشر، بلا إشعار)");
 
 const over = settleInvoice({ total: 1000 }, { payments: [{ amount: 1200 }] });
 assertMoney("المتبقي سالب", over.remaining, -200);
@@ -200,19 +305,244 @@ section("التسوية — الفاتورة الملغاة");
 
 const cancelled = settleInvoice(
   { total: 5000, status: "cancelled" },
-  { payments: [{ amount: 2000 }], refunds: [{ amount: 500, status: "approved" }] },
+  {
+    payments: [{ amount: 2000 }],
+    refunds: [{ amount: 500, status: "approved" }],
+    creditNotes: [{ amount: 300, status: "approved" }],
+  },
 );
 assertMoney("الإجمالي يبقى للتدقيق", cancelled.total, 5000);
+assertMoney("effectiveTotal = total — لا تصحيح على فاتورة ملغاة", cancelled.effectiveTotal, 5000);
 assertMoney("المدفوع صفر", cancelled.paid, 0);
+assertMoney("المُحتسب (مرتجع) صفر", cancelled.refunded, 0);
+assertMoney("المُحتسب (إشعار دائن) صفر", cancelled.credited, 0);
 assertMoney("المتبقي صفر", cancelled.remaining, 0);
 assert("الحالة cancelled", cancelled.status === "cancelled", cancelled.status);
+assert("lifecycleStatus cancelled", cancelled.lifecycleStatus === InvoiceLifecycle.CANCELLED);
+assert("مسوّاة", cancelled.isSettled === true);
+
+section("التسوية — الفاتورة المسودة");
+
+/*
+ * المسودة ليست التزامًا ماليًا بعد — لا مديونية حتى تُصدَر. حتى لو سُجِّلت
+ * عليها دفعة بالخطأ (حالة شاذة لا ينبغي أن تحدث عبر الواجهة)، الحساب يتجاهلها.
+ */
+const draft = settleInvoice(
+  { total: 1000, lifecycleStatus: InvoiceLifecycle.DRAFT },
+  { payments: [{ amount: 500 }] },
+);
+assertMoney("الإجمالي محفوظ", draft.total, 1000);
+assertMoney("effectiveTotal = total", draft.effectiveTotal, 1000);
+assertMoney("لا مديونية بعد", draft.remaining, 0);
+assert("الحالة draft", draft.status === InvoiceLifecycle.DRAFT, draft.status);
+assert("غير مسوّاة", draft.isSettled === false);
+
+const legacyDraft = settleInvoice({ total: 500, status: "draft" }, {});
+assert(
+  "التوافق الرجعي: status='draft' يُقرأ كـ lifecycleStatus",
+  legacyDraft.lifecycleStatus === InvoiceLifecycle.DRAFT,
+  legacyDraft.lifecycleStatus,
+);
+
+const legacyIssued = settleInvoice({ total: 500, status: "paid" }, { payments: [{ amount: 500 }] });
+assert(
+  "التوافق الرجعي: أي status آخر يُعامَل كـ issued",
+  legacyIssued.lifecycleStatus === InvoiceLifecycle.ISSUED,
+  legacyIssued.lifecycleStatus,
+);
 
 section("اشتقاق الحالة");
 
-assert("صفر متبقٍ → paid", deriveInvoiceStatus({ total: 100, netPaid: 100, remaining: 0 }) === "paid");
-assert("لا مدفوع → unpaid", deriveInvoiceStatus({ total: 100, netPaid: 0, remaining: 100 }) === "unpaid");
-assert("مدفوع جزئي → partially_paid", deriveInvoiceStatus({ total: 100, netPaid: 40, remaining: 60 }) === "partially_paid");
-assert("متبقٍ سالب → overpaid", deriveInvoiceStatus({ total: 100, netPaid: 120, remaining: -20 }) === "overpaid");
+assert("صفر متبقٍ → paid", deriveInvoiceStatus({ netPaid: 100, remaining: 0 }) === "paid");
+assert("لا مدفوع → unpaid", deriveInvoiceStatus({ netPaid: 0, remaining: 100 }) === "unpaid");
+assert("مدفوع جزئي → partially_paid", deriveInvoiceStatus({ netPaid: 40, remaining: 60 }) === "partially_paid");
+assert("متبقٍ سالب → overpaid", deriveInvoiceStatus({ netPaid: 120, remaining: -20 }) === "overpaid");
+
+/* ==========================================================================
+   دورة حياة الفاتورة — انتقالات ومنع التعديل
+   ========================================================================== */
+
+section("محمولات الدورة");
+
+assert("isDraft", isDraft({ lifecycleStatus: "draft" }) && !isDraft({ lifecycleStatus: "issued" }));
+assert("isIssued", isIssued({ lifecycleStatus: "issued" }) && !isIssued({ lifecycleStatus: "cancelled" }));
+assert("isCancelled", isCancelled({ status: "cancelled" }));
+assert("isFinalized يساوي isIssued", isFinalized === isIssued);
+assert(
+  "فاتورة بلا أي حقل حالة تُعامَل كصادرة",
+  isIssued({ total: 100 }) && !isDraft({ total: 100 }) && !isCancelled({ total: 100 }),
+);
+
+section("منع التعديل بعد الإصدار");
+
+assertThrows(
+  "assertMutable ترمي على فاتورة صادرة",
+  () => assertMutable({ lifecycleStatus: InvoiceLifecycle.ISSUED, invoiceNumber: "INV-1" }),
+  (error) => error.code === "BUSINESS_RULE_VIOLATION" && /INV-1/.test(error.message),
+);
+assertThrows(
+  "assertMutable ترمي على فاتورة ملغاة",
+  () => assertMutable({ lifecycleStatus: InvoiceLifecycle.CANCELLED }),
+);
+
+{
+  let threw = false;
+  try {
+    assertMutable({ lifecycleStatus: InvoiceLifecycle.DRAFT });
+  } catch {
+    threw = true;
+  }
+  assert("assertMutable لا ترمي على مسودة", threw === false);
+}
+
+section("إصدار الفاتورة");
+
+const draftInvoice = { id: 1, total: 1000, lifecycleStatus: InvoiceLifecycle.DRAFT };
+const issued = issueInvoice(draftInvoice, { issuedAt: "2026-10-05T10:00:00Z" });
+assert("lifecycleStatus يصبح issued", issued.lifecycleStatus === InvoiceLifecycle.ISSUED);
+assert("يسجّل issuedAt", issued.issuedAt === "2026-10-05T10:00:00Z");
+assert("لا يُعدِّل الكائن الأصلي (دالة خالصة)", draftInvoice.lifecycleStatus === InvoiceLifecycle.DRAFT);
+
+assertThrows(
+  "لا يمكن إصدار فاتورة صادرة بالفعل",
+  () => issueInvoice({ lifecycleStatus: InvoiceLifecycle.ISSUED }),
+);
+assertThrows(
+  "لا يمكن إصدار فاتورة ملغاة",
+  () => issueInvoice({ lifecycleStatus: InvoiceLifecycle.CANCELLED }),
+);
+
+section("إلغاء الفاتورة");
+
+const toCancel = { id: 2, invoiceNumber: "INV-2", total: 1000, lifecycleStatus: InvoiceLifecycle.ISSUED };
+const cancelledInvoice = cancelInvoice(toCancel, { reason: "خطأ في تسجيل الخدمة", cancelledAt: "2026-10-05T11:00:00Z", cancelledBy: "عبدالله محمد" });
+assert("lifecycleStatus يصبح cancelled", cancelledInvoice.lifecycleStatus === InvoiceLifecycle.CANCELLED);
+assert("يسجّل السبب", cancelledInvoice.cancellationReason === "خطأ في تسجيل الخدمة");
+assert("يسجّل من ألغى ومتى", cancelledInvoice.cancelledBy === "عبدالله محمد" && cancelledInvoice.cancelledAt === "2026-10-05T11:00:00Z");
+assert("لا يُعدِّل الكائن الأصلي", toCancel.lifecycleStatus === InvoiceLifecycle.ISSUED);
+
+assertThrows(
+  "الإلغاء يتطلب سببًا",
+  () => cancelInvoice({ lifecycleStatus: InvoiceLifecycle.ISSUED }, {}),
+  (error) => error.code === "BUSINESS_RULE_VIOLATION" && error.fields?.reason,
+);
+assertThrows(
+  "سبب فارغ (مسافات فقط) يُرفض",
+  () => cancelInvoice({ lifecycleStatus: InvoiceLifecycle.ISSUED }, { reason: "   " }),
+);
+assertThrows(
+  "لا يمكن إلغاء فاتورة ملغاة بالفعل",
+  () => cancelInvoice({ lifecycleStatus: InvoiceLifecycle.CANCELLED }, { reason: "أي سبب" }),
+);
+
+section("منع تعديل مستندات الردّ بعد مراجعتها");
+
+{
+  let threw = false;
+  try {
+    assertDocumentMutable({ status: DocumentStatus.PENDING }, "مرتجع");
+  } catch {
+    threw = true;
+  }
+  assert("لا ترمي على مستند معلّق", threw === false);
+}
+
+assertThrows(
+  "ترمي على مرتجع معتمد",
+  () => assertDocumentMutable({ status: DocumentStatus.APPROVED }, "مرتجع"),
+  (error) => /مرتجع/.test(error.message) && /APPROVED|approved/.test(error.message),
+);
+assertThrows(
+  "ترمي على إشعار دائن مرفوض، وتذكر النوع في الرسالة",
+  () => assertDocumentMutable({ status: DocumentStatus.REJECTED }, "إشعار دائن"),
+  (error) => /إشعار دائن/.test(error.message),
+);
+
+section("حدود الردّ والتصحيح");
+
+const issuedWithHistory = { lifecycleStatus: InvoiceLifecycle.ISSUED, total: 1000 };
+
+assertMoney(
+  "أقصى مرتجع = المدفوع − المرتجع السابق",
+  maxRefundable(issuedWithHistory, {
+    payments: [{ amount: 1000 }],
+    refunds: [{ amount: 300, status: "approved" }],
+  }),
+  700,
+);
+assertMoney(
+  "أقصى مرتجع لا يقل عن صفر",
+  maxRefundable(issuedWithHistory, {
+    payments: [{ amount: 100 }],
+    refunds: [{ amount: 300, status: "approved" }],
+  }),
+  0,
+);
+assertMoney(
+  "أقصى إشعار دائن = الإجمالي − الإشعارات السابقة",
+  maxCreditable(issuedWithHistory, { creditNotes: [{ amount: 400, status: "approved" }] }),
+  600,
+);
+assertMoney(
+  "لا رد ولا تصحيح على فاتورة مسودة",
+  maxRefundable({ lifecycleStatus: InvoiceLifecycle.DRAFT, total: 1000 }, { payments: [{ amount: 1000 }] }),
+  0,
+);
+assertMoney(
+  "ولا على فاتورة ملغاة",
+  maxCreditable({ lifecycleStatus: InvoiceLifecycle.CANCELLED, total: 1000 }, {}),
+  0,
+);
+
+/* ==========================================================================
+   السجل الزمني للفاتورة
+   ========================================================================== */
+
+section("السجل الزمني");
+
+const timeline = buildInvoiceTimeline(
+  { invoiceNumber: "INV-9", date: "2026-09-01", total: 1000 },
+  {
+    payments: [{ date: "2026-09-05", amount: 600, reference: "RCT-1" }],
+    refunds: [{ date: "2026-09-10", amount: 100, refundNumber: "REF-1", status: "approved" }],
+    creditNotes: [{ date: "2026-09-08", amount: 200, creditNoteNumber: "CN-1", status: "approved" }],
+  },
+);
+
+assert("يضم كل الأحداث الأربعة", timeline.length === 4, `${timeline.length}`);
+assert(
+  "مرتَّب زمنيًا",
+  timeline.map((event) => event.date).join(",") ===
+    ["2026-09-01", "2026-09-05", "2026-09-08", "2026-09-10"].join(","),
+  timeline.map((event) => event.date).join(","),
+);
+assert("أول حدث هو الإصدار", timeline[0].type === "issued" && timeline[0].reference === "INV-9");
+assert("يضم حدث الدفعة بمرجعها", timeline.some((event) => event.type === "payment" && event.reference === "RCT-1"));
+assert(
+  "يضم حدث الإشعار الدائن بحالته",
+  timeline.some((event) => event.type === "credit_note" && event.status === "approved"),
+);
+assert(
+  "يضم حدث المرتجع بحالته",
+  timeline.some((event) => event.type === "refund" && event.status === "approved"),
+);
+
+const cancelledTimeline = buildInvoiceTimeline(
+  {
+    date: "2026-09-01",
+    lifecycleStatus: InvoiceLifecycle.CANCELLED,
+    cancelledAt: "2026-09-15",
+    cancellationReason: "خطأ إداري",
+  },
+  {},
+);
+assert(
+  "يضم حدث الإلغاء",
+  cancelledTimeline.some((event) => event.type === "cancelled" && event.reference === "خطأ إداري"),
+);
+
+const emptyTimeline = buildInvoiceTimeline({}, {});
+assert("فاتورة بلا تاريخ ولا حركات: سجل فارغ لا خطأ", Array.isArray(emptyTimeline) && emptyTimeline.length === 0);
 
 /* ==========================================================================
    كشف حساب المريض — عدة فواتير
@@ -221,11 +551,12 @@ assert("متبقٍ سالب → overpaid", deriveInvoiceStatus({ total: 100, net
 section("كشف الحساب — عدة فواتير لنفس المريض");
 
 const invoices = [
-  { id: 1, total: 1000, discount: 0, status: "unpaid" },        // مفتوحة
-  { id: 2, total: 2000, discount: 200, status: "paid" },        // مسدَّدة
-  { id: 3, total: 1500, discount: 0, status: "partially_paid" },// جزئية
-  { id: 4, total: 3000, discount: 0, status: "paid" },          // مسدَّدة + مرتجع
-  { id: 5, total: 800, discount: 100, status: "cancelled" },    // ملغاة
+  { id: 1, total: 1000, discount: 0, status: "unpaid" },         // مفتوحة
+  { id: 2, total: 2000, discount: 200, status: "paid" },         // مسدَّدة
+  { id: 3, total: 1500, discount: 0, status: "partially_paid" }, // جزئية + إشعار دائن
+  { id: 4, total: 3000, discount: 0, status: "paid" },           // مسدَّدة + مرتجع
+  { id: 5, total: 800, discount: 100, status: "cancelled" },     // ملغاة
+  { id: 6, total: 5000, lifecycleStatus: InvoiceLifecycle.DRAFT }, // مسودة — لم تُصدَر بعد
 ];
 
 const accountPayments = [
@@ -240,40 +571,47 @@ const accountRefunds = [
   { invoiceId: 2, amount: 300, status: "pending" },
 ];
 
+const accountCreditNotes = [{ invoiceId: 3, amount: 300, status: "approved" }];
+
 const account = summarizePatientAccount({
   invoices,
   payments: accountPayments,
   refunds: accountRefunds,
+  creditNotes: accountCreditNotes,
 });
 
 const s = account.summary;
 
-assert("عدد الفواتير الفعّالة 4", s.invoicesCount === 4, String(s.invoicesCount));
+assert("عدد الفواتير الفعّالة 4 (تستبعد المسودة والملغاة)", s.invoicesCount === 4, String(s.invoicesCount));
+assert("عدد المسودات 1", s.draftCount === 1, String(s.draftCount));
 assert("عدد الملغاة 1", s.cancelledCount === 1, String(s.cancelledCount));
 
-assertMoney("إجمالي المفوتر يستبعد الملغاة", s.totalInvoiced, 7500);
-assertMoney("إجمالي الخصم يستبعد الملغاة", s.totalDiscount, 200);
+assertMoney("إجمالي المفوتر يستبعد المسودة والملغاة", s.totalInvoiced, 7500);
+assertMoney("إجمالي الخصم (ما قبل الإصدار)", s.totalDiscount, 200);
+assertMoney("إجمالي إشعارات الدائن (ما بعد الإصدار)", s.totalCredited, 300);
+assertMoney("صافي المفوتر = المفوتر − الإشعارات", s.totalInvoicedNet, 7200);
 assertMoney("إجمالي المدفوع يستبعد دفعات الملغاة", s.totalPaid, 5500);
 assertMoney("إجمالي المرتجع المعتمد", s.totalRefunded, 750);
-assertMoney("صافي المدفوع", s.netPaid, 4750);
-assertMoney("الرصيد المتبقي", s.remainingBalance, 2750);
+assertMoney("صافي المحصَّل = المدفوع − المرتجع", s.netPaid, 4750);
+assertMoney("الرصيد المتبقي = صافي المفوتر − صافي المحصَّل", s.remainingBalance, 2450);
 
 /* الضمانة الأساسية التي كانت مفقودة */
-const sumOfRemaining = money.sumBy(
-  account.invoices.filter((invoice) => invoice.status !== "cancelled"),
-  "remaining",
-);
-assertMoney("الرصيد = مجموع متبقي الفواتير (تطابق الشاشتين)", sumOfRemaining, s.remainingBalance);
+const sumOfRemaining = money.sumBy(account.invoices.filter(isFinalized), "remaining");
+assertMoney("الرصيد = مجموع متبقي الفواتير الصادرة (تطابق الشاشتين)", sumOfRemaining, s.remainingBalance);
 
 const byId = new Map(account.invoices.map((invoice) => [invoice.id, invoice]));
 assert("الفاتورة 1 unpaid", byId.get(1).status === "unpaid", byId.get(1).status);
 assert("الفاتورة 2 paid (مرتجع معلّق)", byId.get(2).status === "paid", byId.get(2).status);
-assert("الفاتورة 3 partially_paid", byId.get(3).status === "partially_paid", byId.get(3).status);
+assert("الفاتورة 3 partially_paid رغم الإشعار الدائن", byId.get(3).status === "partially_paid", byId.get(3).status);
+assertMoney("effectiveTotal الفاتورة 3 = 1500 − 300", byId.get(3).effectiveTotal, 1200);
+assertMoney("متبقي الفاتورة 3 = 1200 − 500", byId.get(3).remaining, 700);
 assert("الفاتورة 4 partially_paid بعد المرتجع", byId.get(4).status === "partially_paid", byId.get(4).status);
 assert("الفاتورة 5 cancelled", byId.get(5).status === "cancelled", byId.get(5).status);
+assert("الفاتورة 6 draft", byId.get(6).status === InvoiceLifecycle.DRAFT, byId.get(6).status);
 assertMoney("متبقي الفاتورة 4 = المرتجع", byId.get(4).remaining, 750);
 assertMoney("متبقي الملغاة صفر", byId.get(5).remaining, 0);
-assert("الملغاة تظهر في الكشف للشفافية", account.invoices.length === 5);
+assertMoney("متبقي المسودة صفر — لا مديونية قبل الإصدار", byId.get(6).remaining, 0);
+assert("المسودة والملغاة تظهران في الكشف للشفافية", account.invoices.length === 6);
 
 section("كشف الحساب — حالات حدّية");
 
@@ -304,14 +642,16 @@ assertMoney("كل الفواتير ملغاة: رصيد صفر", allCancelled.su
 section("مجاميع النظام");
 
 const systemInvoices = [
-  { total: 1000, remaining: 400, status: "partially_paid" },
-  { total: 2000, remaining: 0, status: "paid" },
-  { total: 500, remaining: 500, status: "unpaid" },
-  { total: 900, remaining: 0, status: "cancelled" },
+  { total: 1000, remaining: 400, credited: 0, status: "partially_paid" },
+  { total: 2000, remaining: 0, credited: 100, status: "paid" },
+  { total: 500, remaining: 500, credited: 0, status: "unpaid" },
+  { total: 900, remaining: 0, credited: 0, status: "cancelled" },
+  { total: 700, remaining: 0, credited: 0, lifecycleStatus: InvoiceLifecycle.DRAFT },
 ];
 
-assertMoney("إجمالي المديونية يستبعد الملغاة", totalOutstanding(systemInvoices), 900);
-assertMoney("إجمالي المفوتر يستبعد الملغاة", totalInvoiced(systemInvoices), 3500);
+assertMoney("إجمالي المديونية يستبعد المسودة والملغاة", totalOutstanding(systemInvoices), 900);
+assertMoney("إجمالي المفوتر يستبعد المسودة والملغاة", totalInvoiced(systemInvoices), 3500);
+assertMoney("إجمالي إشعارات الدائن يستبعد المسودة والملغاة", totalCredited(systemInvoices), 100);
 
 assertMoney(
   "المحصَّل = المدفوعات − المرتجعات المعتمدة",

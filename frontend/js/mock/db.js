@@ -13,7 +13,7 @@
 import { matchesFields, compareValues } from "../core/text.js";
 import { TABLE } from "../core/config.js";
 import { patients } from "./patients.mock.js";
-import { invoices, invoiceLines, payments, refunds } from "./invoices.mock.js";
+import { invoices, invoiceLines, payments, refunds, creditNotes } from "./invoices.mock.js";
 import {
   items,
   batches,
@@ -43,6 +43,7 @@ export const db = {
   invoiceLines: [...invoiceLines],
   payments: [...payments],
   refunds: [...refunds],
+  creditNotes: [...creditNotes],
   items: [...items],
   batches: [...batches],
   stockMovements: [...stockMovements],
@@ -81,6 +82,7 @@ const SEARCHABLE = {
   invoices: ["invoiceNumber", "patientName", "patientCode", "doctorName"],
   payments: ["reference"],
   refunds: ["refundNumber", "invoiceNumber", "patientName", "reason"],
+  creditNotes: ["creditNoteNumber", "invoiceNumber", "patientName", "reason"],
   items: ["name", "code", "category"],
   batches: ["batchNumber", "itemName", "itemCode"],
   stockMovements: ["reference", "itemName", "itemCode", "performedBy"],
@@ -95,6 +97,7 @@ const DATE_FIELD = {
   invoices: "date",
   payments: "date",
   refunds: "date",
+  creditNotes: "date",
   batches: "expiryDate",
   stockMovements: "date",
 };

@@ -171,6 +171,96 @@ assert(
 );
 
 /* ==========================================================================
+   فصل المرتجع عن إشعار الدائن
+
+   هذا القسم يحرس قرارًا معماريًا صريحًا: المرتجع (جانب التحصيل) وإشعار الدائن
+   (جانب الفاتورة) كيانان منفصلان تمامًا — راجع docs/12-BILLING-DOMAIN-MODEL.md.
+   قبل هذا القرار اختلط المفهومان تحت اسم «مرتجع» واحد. هذه الفحوص تمنع
+   الانزلاق إلى نفس الخلط مستقبلاً، لا تثبت صحة الحساب (ذلك عمل
+   tests/billing.test.mjs و tests/data.test.mjs).
+   ========================================================================== */
+
+section("فصل المرتجع عن إشعار الدائن");
+
+const billingDomainFile = files.find((f) => f.rel === "js/domain/billing.js");
+assert("js/domain/billing.js موجود", Boolean(billingDomainFile));
+
+const REQUIRED_BILLING_EXPORTS = [
+  "InvoiceLifecycle",
+  "DocumentStatus",
+  "isDraft",
+  "isIssued",
+  "isCancelled",
+  "isFinalized",
+  "assertMutable",
+  "assertDocumentMutable",
+  "issueInvoice",
+  "cancelInvoice",
+  "maxRefundable",
+  "maxCreditable",
+  "settleInvoice",
+  "summarizePatientAccount",
+  "buildInvoiceTimeline",
+  "totalCredited",
+];
+const missingBillingExports = REQUIRED_BILLING_EXPORTS.filter(
+  (name) => !billingDomainFile?.src.includes(`export function ${name}`) &&
+    !billingDomainFile?.src.includes(`export const ${name}`),
+);
+assert(
+  "وحدة الفوترة تُصدّر كل عناصر النموذج المطلوبة (دورة الحياة + المرتجع + الإشعار الدائن)",
+  missingBillingExports.length === 0,
+  missingBillingExports.join("، "),
+);
+
+// `settleInvoice` يجب أن يقبل creditNotes كمعامل مستقل عن refunds — لا بديلاً عنه.
+assert(
+  "settleInvoice يستقبل creditNotes منفصلة عن refunds",
+  /settleInvoice\s*\([^)]*\{[^}]*refunds[^}]*creditNotes/s.test(billingDomainFile?.src ?? "") ||
+    /refunds\s*=\s*\[\][\s\S]{0,40}creditNotes\s*=\s*\[\]/.test(billingDomainFile?.src ?? ""),
+);
+
+// الإشعار الدائن له حقل كود مرجعي خاص به، لا يُعاد استخدام رقم المرتجع.
+assert(
+  "إشعار الدائن له رقم مستند مستقل (creditNoteNumber) لا refundNumber",
+  billingDomainFile?.src.includes("creditNoteNumber"),
+);
+
+const mockDbFile = files.find((f) => f.rel === "js/mock/db.js");
+assert(
+  "مجموعة creditNotes مسجَّلة في db.js منفصلة عن refunds",
+  mockDbFile?.src.includes('creditNotes:') && mockDbFile?.src.includes('refunds:'),
+);
+
+const mockAdapterFile = files.find((f) => f.rel === "js/api/mock-adapter.js");
+assert(
+  "GET /credit-notes مسار مستقل عن GET /refunds",
+  mockAdapterFile?.src.includes('"GET /credit-notes"') && mockAdapterFile?.src.includes('"GET /refunds"'),
+);
+
+const billingApiFile = files.find((f) => f.rel === "js/api/billing.api.js");
+assert(
+  "billing.api.js يُصدّر listCreditNotes منفصلة عن listRefunds",
+  billingApiFile?.src.includes("export function listCreditNotes") &&
+    billingApiFile?.src.includes("export function listRefunds"),
+);
+
+const invoicesMockFile = files.find((f) => f.rel === "js/mock/invoices.mock.js");
+assert(
+  "توليد البيانات التجريبية يُنشئ creditNotes منفصلة عن refunds",
+  invoicesMockFile?.src.includes("CREDIT_NOTE_REASONS") && invoicesMockFile?.src.includes("REFUND_REASONS"),
+);
+
+const billingDomainDoc = (() => {
+  try {
+    return readFileSync(join(ROOT, "..", "docs", "12-BILLING-DOMAIN-MODEL.md"), "utf8");
+  } catch {
+    return null;
+  }
+})();
+assert("docs/12-BILLING-DOMAIN-MODEL.md موجود", Boolean(billingDomainDoc));
+
+/* ==========================================================================
    اتجاه النص (RTL)
    ========================================================================== */
 

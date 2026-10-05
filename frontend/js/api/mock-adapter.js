@@ -18,6 +18,7 @@ import { REFERENCE_DATE } from "../mock/seed.js";
 import { deriveBatchStatus } from "../mock/inventory.mock.js";
 import {
   summarizePatientAccount,
+  buildInvoiceTimeline,
   totalInvoiced,
   totalCollected,
   totalOutstanding,
@@ -85,12 +86,14 @@ const ROUTES = {
 
     const patientPayments = where("payments", (row) => invoiceIds.has(row.invoiceId));
     const patientRefunds = where("refunds", (row) => invoiceIds.has(row.invoiceId));
+    const patientCreditNotes = where("creditNotes", (row) => invoiceIds.has(row.invoiceId));
 
     // كل الحساب في وحدة المجال — لا رياضيات مالية في طبقة الـ API.
     const { invoices: settled, summary } = summarizePatientAccount({
       invoices: patientInvoices,
       payments: patientPayments,
       refunds: patientRefunds,
+      creditNotes: patientCreditNotes,
     });
 
     return {
@@ -99,6 +102,7 @@ const ROUTES = {
         invoices: settled,
         payments: patientPayments,
         refunds: patientRefunds,
+        creditNotes: patientCreditNotes,
         summary,
       },
     };
@@ -112,17 +116,31 @@ const ROUTES = {
     const invoice = find("invoices", params.id);
     if (!invoice) throw notFound("الفاتورة غير موجودة.");
 
+    const lines = where("invoiceLines", (row) => String(row.invoiceId) === String(params.id));
+    const invoicePayments = where("payments", (row) => String(row.invoiceId) === String(params.id));
+    const invoiceRefunds = where("refunds", (row) => String(row.invoiceId) === String(params.id));
+    const invoiceCreditNotes = where("creditNotes", (row) => String(row.invoiceId) === String(params.id));
+
     return {
       data: {
         ...invoice,
-        lines: where("invoiceLines", (row) => String(row.invoiceId) === String(params.id)),
-        payments: where("payments", (row) => String(row.invoiceId) === String(params.id)),
+        lines,
+        payments: invoicePayments,
+        refunds: invoiceRefunds,
+        creditNotes: invoiceCreditNotes,
+        /** للتدقيق — عرض مُشتَق لا سجل مُخزَّن، راجع buildInvoiceTimeline. */
+        timeline: buildInvoiceTimeline(invoice, {
+          payments: invoicePayments,
+          refunds: invoiceRefunds,
+          creditNotes: invoiceCreditNotes,
+        }),
       },
     };
   },
 
   "GET /payments": ({ params }) => query("payments", params),
   "GET /refunds": ({ params }) => query("refunds", params),
+  "GET /credit-notes": ({ params }) => query("creditNotes", params),
 
   /** الأرصدة المستحقة — فواتير لم تُسدَّد كاملة. */
   "GET /billing/outstanding": ({ params }) =>
@@ -228,6 +246,8 @@ const ROUTES = {
             (row) => row.type === "adjustment" && row.status === "pending",
           ).length,
           refunds: all("refunds").filter((row) => row.status === "pending").length,
+          /** إشعارات الدائن تمر بنفس مسار المراجعة — بند منفصل لا جزء من المرتجعات. */
+          creditNotes: all("creditNotes").filter((row) => row.status === "pending").length,
         },
       },
     };

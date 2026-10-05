@@ -54,6 +54,8 @@ export const ErrorCode = {
   SERVER: "SERVER_ERROR",
   NOT_IMPLEMENTED: "NOT_IMPLEMENTED",
   REPORT_INCOMPLETE: "REPORT_SECTION_FAILED",
+  /** مخالفة قاعدة عمل — مثل تعديل فاتورة مُصدَرة أو تجاوز المبلغ القابل للرد. */
+  RULE_VIOLATION: "BUSINESS_RULE_VIOLATION",
   UNKNOWN: "UNKNOWN",
 };
 
@@ -81,6 +83,20 @@ export function notFound(message = "العنصر المطلوب غير موجو�
 
 export function forbidden(message = "لا تملك صلاحية تنفيذ هذا الإجراء.") {
   return new ApiError({ code: ErrorCode.FORBIDDEN, status: 403, message });
+}
+
+/**
+ * مخالفة قاعدة عمل — الفعل مفهوم وصحيح الشكل لكن الحالة لا تسمح به.
+ * مثال: محاولة تعديل فاتورة مُصدَرة، أو رد مبلغ أكبر من القابل للرد.
+ * هذا خطأ متوقَّع في تدفق العمل الطبيعي، لا عطل — لذلك كود 409 لا 400.
+ */
+export function ruleViolation(message, { field } = {}) {
+  return new ApiError({
+    code: ErrorCode.RULE_VIOLATION,
+    status: 409,
+    message,
+    fields: field ? { [field]: message } : null,
+  });
 }
 
 /** يلفّ أي خطأ مجهول في ApiError حتى تتعامل الواجهة مع شكل واحد. */

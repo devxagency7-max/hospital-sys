@@ -21,6 +21,14 @@ export function listRefunds(params = {}) {
   return fetchList("/refunds", params);
 }
 
+/**
+ * إشعارات الدائن — تصحيح لقيمة فاتورة بعد إصدارها، منفصلة عن المرتجعات.
+ * راجع docs/12-BILLING-DOMAIN-MODEL.md للفرق بين المفهومين.
+ */
+export function listCreditNotes(params = {}) {
+  return fetchList("/credit-notes", params);
+}
+
 /** الفواتير غير المسدَّدة كاملة، مرتبة بتاريخ الاستحقاق. */
 export function listOutstanding(params = {}) {
   return fetchList("/billing/outstanding", params);
@@ -44,5 +52,15 @@ export async function recordPayment(invoiceId, payment) {
 
 export async function createRefund(refund) {
   const payload = await http.post("/refunds", refund);
+  return payload.data;
+}
+
+/**
+ * يصدر إشعار دائن على فاتورة — لا على مبلغ مُسدَّد.
+ * خطأ شائع عند البناء: استدعاء `createRefund` لتصحيح قيمة فاتورة لم تُقدَّم
+ * خدمتها كاملة. ذاك تصحيح لجانب الفاتورة، لا لجانب التحصيل — هذه الدالة له.
+ */
+export async function createCreditNote(creditNote) {
+  const payload = await http.post("/credit-notes", creditNote);
   return payload.data;
 }
