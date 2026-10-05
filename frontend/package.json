@@ -8,10 +8,14 @@
     "build": "tailwindcss -i ./css/tailwind.src.css -o ./css/app.css --minify",
     "watch": "tailwindcss -i ./css/tailwind.src.css -o ./css/app.css --watch",
     "serve": "node tools/dev-server.mjs",
-    "dev": "node tools/dev.mjs"
+    "dev": "node tools/dev.mjs",
+    "test": "node tools/run-tests.mjs",
+    "test:unit": "node tools/run-tests.mjs --unit",
+    "test:browser": "node tools/run-tests.mjs --browser"
   },
   "devDependencies": {
     "@tailwindcss/cli": "^4.1.14",
+    "playwright": "^1.63.0",
     "tailwindcss": "^4.1.14"
   }
 }

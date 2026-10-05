@@ -43,9 +43,10 @@ import {
 } from "../../components/feedback/states.js";
 import { openModal, openDrawer, confirmAction } from "../../components/modals/overlay.js";
 import { dataTable, twoLineCell, summaryCells } from "../../components/tables/data-table.js";
+import { ltr, ref, code, codeBlock, phoneValue } from "../../components/common/value.js";
 import { STATUSES } from "../../js/core/statuses.js";
 import { PERMISSIONS, currentRole, effectivePermissions } from "../../js/core/permissions.js";
-import { registeredEndpoints } from "../../js/api/mock-adapter.js";
+import { describeEndpoints } from "../../js/api/meta.api.js";
 import { listPatients } from "../../js/api/patients.api.js";
 import { listInvoices } from "../../js/api/billing.api.js";
 import { getGovernorates, toOptions } from "../../js/api/lookups.api.js";
@@ -203,7 +204,11 @@ function tokensTab() {
         dataRow("تاريخ ووقت", fmt.dateTime("2026-10-05T14:30:00Z")),
         dataRow("وقت نسبي", fmt.relativeTime("2026-10-02T09:00:00Z")),
         dataRow("العمر", fmt.age("1998-05-10")),
-        dataRow("هاتف", fmt.phone("01012345678")),
+        dataRow("هاتف", phoneValue(fmt.phone("01012345678"))),
+        dataRow("كود مريض", ref("P-1001")),
+        dataRow("رقم فاتورة", ref("INV-2026-0042")),
+        dataRow("رمز تقني", code("VALIDATION_ERROR")),
+        dataRow("نص لاتيني حر", ltr("Paracetamol 500 mg")),
         dataRow("حجم ملف", fmt.fileSize(2_458_112)),
         dataRow("قيمة فارغة", fmt.currency(null)),
       ),
@@ -820,7 +825,7 @@ function patientsTableTab() {
         alwaysVisible: true,
         render: (row) => twoLineCell(row.name, row.patientCode),
       },
-      { key: "phone", label: "الهاتف", render: (row) => fmt.phone(row.phone) },
+      { key: "phone", label: "الهاتف", render: (row) => phoneValue(fmt.phone(row.phone)) },
       {
         key: "gender",
         label: "النوع",
@@ -934,7 +939,13 @@ function invoicesTableTab() {
     syncUrl: false,
     initialParams: { sort: "date", order: "desc" },
     columns: [
-      { key: "invoiceNumber", label: "رقم الفاتورة", sortable: true, alwaysVisible: true },
+      {
+        key: "invoiceNumber",
+        label: "رقم الفاتورة",
+        sortable: true,
+        alwaysVisible: true,
+        render: (row) => ref(row.invoiceNumber),
+      },
       {
         key: "patientName",
         label: "المريض",
@@ -1012,8 +1023,9 @@ function invoicesTableTab() {
 /*  طبقة البيانات والصلاحيات                                                   */
 /* ========================================================================== */
 
-function dataLayerTab() {
-  const endpoints = registeredEndpoints();
+async function dataLayerTab() {
+  // الصفحة تسأل طبقة الـ API ولا تعرف أن البيانات تجريبية.
+  const endpoints = await describeEndpoints();
   const role = currentRole();
   const grantedPermissions = effectivePermissions();
 
@@ -1029,14 +1041,9 @@ function dataLayerTab() {
           "كل طلب في التطبيق يمر من js/api/http.js. تحويل الواجهة إلى API حقيقي يحتاج " +
             "تعديل حقلين في js/core/config.js — ولا تعديل في أي شاشة أو مكوّن.",
         ),
-        el(
-          "pre",
-          {
-            class:
-              "text-xs font-mono bg-rail text-rail-text p-3.5 rounded-[var(--radius-control)] " +
-              "overflow-x-auto [direction:ltr] text-start leading-relaxed",
-          },
+        codeBlock(
           `export const API = {\n  mode: "live",        // كان "mock"\n  baseUrl: "/api/v1",\n  timeoutMs: 20000,\n};`,
+          { class: "bg-rail! text-rail-text border-rail! text-xs p-3.5" },
         ),
       ),
     }),
@@ -1056,11 +1063,7 @@ function dataLayerTab() {
             "div",
             { class: "flex items-center gap-2 px-2 py-1.5 rounded hover:bg-subtle" },
             badge(method, { tone: methodTone, size: "sm" }),
-            el(
-              "code",
-              { class: "text-xs font-mono text-muted [direction:ltr] text-start truncate-1" },
-              rest.join(" "),
-            ),
+            code(rest.join(" "), { class: "text-xs text-muted truncate-1" }),
           );
         }),
       ),
@@ -1075,13 +1078,7 @@ function dataLayerTab() {
           "div",
           {},
           el("p", { class: "text-xs font-medium text-ink mb-1.5" }, "قائمة مُرقَّمة"),
-          el(
-            "pre",
-            {
-              class:
-                "text-[11px] font-mono bg-subtle border border-line p-3 rounded-[var(--radius-control)] " +
-                "overflow-x-auto [direction:ltr] text-start leading-relaxed",
-            },
+          codeBlock(
             `{\n  "data": [ … ],\n  "meta": {\n    "page": 1,\n    "perPage": 25,\n    "total": 148,\n    "totalPages": 6\n  }\n}`,
           ),
         ),
@@ -1089,13 +1086,7 @@ function dataLayerTab() {
           "div",
           {},
           el("p", { class: "text-xs font-medium text-ink mb-1.5" }, "خطأ"),
-          el(
-            "pre",
-            {
-              class:
-                "text-[11px] font-mono bg-subtle border border-line p-3 rounded-[var(--radius-control)] " +
-                "overflow-x-auto [direction:ltr] text-start leading-relaxed",
-            },
+          codeBlock(
             `{\n  "error": {\n    "code": "VALIDATION_ERROR",\n    "message": "راجع الحقول المظلَّلة.",\n    "fields": {\n      "phone": "رقم غير صحيح."\n    }\n  }\n}`,
           ),
         ),
@@ -1125,7 +1116,7 @@ function dataLayerTab() {
               icon(isGranted ? "check" : "close", { size: 13 }),
             ),
             el("span", { class: "truncate-1 flex-1" }, label),
-            el("code", { class: "text-[10px] font-mono text-faint [direction:ltr] hidden lg:inline" }, key),
+            code(key, { class: "text-[10px] hidden lg:inline" }),
           );
         }),
       ),

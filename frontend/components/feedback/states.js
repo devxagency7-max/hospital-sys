@@ -11,6 +11,7 @@
 import { el, cx } from "../../js/core/dom.js";
 import { icon } from "../common/icon.js";
 import { button } from "../common/button.js";
+import { code } from "../common/value.js";
 import { describeError, toApiError, ErrorCode } from "../../js/core/errors.js";
 
 /* ==========================================================================
@@ -218,7 +219,7 @@ export function errorState({ error, onRetry, title, compact = false } = {}) {
     el("p", { class: "text-xs text-muted mt-1 max-w-md leading-relaxed" }, describeError(apiError)),
     // الرمز يُسرّع على الدعم الفني تشخيص ما حدث.
     apiError.code !== ErrorCode.UNKNOWN
-      ? el("code", { class: "text-[11px] text-faint mt-2 font-mono" }, apiError.code)
+      ? el("div", { class: "mt-2" }, code(apiError.code))
       : null,
     onRetry && apiError.isRetryable
       ? el(
@@ -249,7 +250,7 @@ export function forbiddenState({ route } = {}) {
         : "هذه الشاشة تتطلب صلاحية غير متاحة لدورك الحالي.",
     ),
     route?.permission
-      ? el("code", { class: "text-[11px] text-faint mt-2 font-mono" }, route.permission)
+      ? el("div", { class: "mt-2" }, code(route.permission))
       : null,
     el(
       "div",
@@ -271,7 +272,7 @@ export function notFoundState({ path } = {}) {
       { class: "text-sm text-muted mt-1.5" },
       "الرابط الذي فتحته غير مسجَّل في النظام.",
     ),
-    path ? el("code", { class: "text-[11px] text-faint mt-2 font-mono" }, path) : null,
+    path ? el("div", { class: "mt-2" }, code(path)) : null,
     el(
       "div",
       { class: "mt-5" },

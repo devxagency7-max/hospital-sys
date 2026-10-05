@@ -19,6 +19,8 @@ export const STATUSES = {
   paid: { label: "مدفوعة", tone: "success" },
   partially_paid: { label: "مدفوعة جزئيًا", tone: "warning" },
   unpaid: { label: "غير مدفوعة", tone: "danger" },
+  /** صافي المدفوع تجاوز الإجمالي — رصيد لصالح المريض، تشتقها `deriveInvoiceStatus`. */
+  overpaid: { label: "دفع زائد", tone: "info" },
   cancelled: { label: "ملغاة", tone: "muted" },
   active: { label: "نشط", tone: "success" },
   inactive: { label: "غير نشط", tone: "muted" },

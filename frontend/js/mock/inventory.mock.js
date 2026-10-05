@@ -6,8 +6,7 @@
  */
 
 import { createRandom, WAREHOUSES, SUPPLIERS, REFERENCE_DATE } from "./seed.js";
-
-const round2 = (value) => Math.round(value * 100) / 100;
+import * as money from "../core/money.js";
 
 export const itemCategories = [
   { id: 1, name: "أدوية", code: "MED" },
@@ -94,7 +93,7 @@ function generateItems() {
             ? random.int(1, minimumQuantity)
             : random.int(minimumQuantity + 1, minimumQuantity * 8);
 
-      const costPrice = round2(
+      const costPrice = money.round(
         category.id === 1 ? random.money(4, 320) : random.money(1.5, 1400),
       );
 
@@ -110,7 +109,7 @@ function generateItems() {
         minimumQuantity,
         reorderQuantity: minimumQuantity * 3,
         costPrice,
-        sellingPrice: round2(costPrice * random.pick([1.2, 1.3, 1.45, 1.6])),
+        sellingPrice: money.multiply(costPrice, random.pick([1.2, 1.3, 1.45, 1.6])),
         warehouseId: random.pick(warehouses).id,
         preferredSupplierId: random.pick(suppliers).id,
         /** يُشتق في `db.js` — لا نثبّته هنا لئلا يتناقض مع الكمية بعد أي حركة. */
@@ -197,7 +196,7 @@ export const stockMovements = (() => {
       quantity,
       signedQuantity,
       unitCost: item.costPrice,
-      totalCost: round2(item.costPrice * quantity),
+      totalCost: money.multiply(item.costPrice, quantity),
       warehouseId: item.warehouseId,
       toWarehouseId: type === "transfer" ? random.pick(warehouses).id : null,
       date: random.dateTime(random.int(0, 180)),

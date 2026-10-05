@@ -202,12 +202,17 @@ export function stripBidi(value) {
 }
 
 /**
- * رقم هاتف مصري: 01012345678 → 0101 234 5678.
+ * رقم هاتف مصري: 01012345678 → 0101 234 5678.
  *
  * الفاصل مسافة غير فاصلة (U+00A0) لا مسافة عادية، لسببين معًا:
  *   - منع الالتفاف: العمود الضيق كان يكسر الرقم على ثلاثة أسطر.
- *   - توحيد المقطع: NBSP فاصل مشترك (CS) بين رقمين، فتبقى المجموعات الثلاث
- *     مقطعًا رقميًا واحدًا لا ثلاثة مقاطع يُعيد ترتيبها اتجاه الفقرة.
+ *   - تصحيح الاتجاه: NBSP فاصل مشترك (CS) بين رقمين، فتبقى المجموعات الثلاث
+ *     مقطعًا رقميًا واحدًا. المسافة العادية محايدة اتجاهيًا فتتبع اتجاه الفقرة
+ *     وتعرض الرقم «5678 234 0101» — رقم مختلف في عين من سيتصل به.
+ *
+ * لا نُضيف حروف عزل غير مرئية هنا: فحص المتصفح أثبت أن NBSP وحدها كافية،
+ * والنص يبقى نظيفًا عند النسخ أو التصدير. عزل الـ DOM مسؤولية `phoneValue()`
+ * في components/common/value.js.
  */
 export function phone(value) {
   if (!value) return EMPTY;
@@ -215,8 +220,7 @@ export function phone(value) {
   const digits = String(value).replace(/\D/g, "");
   if (digits.length !== 11) return String(value);
 
-  const grouped = `${digits.slice(0, 4)} ${digits.slice(4, 7)} ${digits.slice(7)}`;
-  return ltrIsolate(grouped);
+  return `${digits.slice(0, 4)} ${digits.slice(4, 7)} ${digits.slice(7)}`;
 }
 
 /** حجم ملف للمرفقات. */

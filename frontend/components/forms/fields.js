@@ -345,8 +345,8 @@ export function dateField({
     min,
     max,
     disabled,
-    // المتصفح يعرض التاريخ بلغة الواجهة؛ نُجبر LTR حتى لا تنعكس أجزاء التاريخ.
-    class: controlClasses({ size, invalid, class: "tabular [direction:ltr] text-start" }),
+    // منتقي التاريخ الأصلي يعرض أجزاءه بترتيب يعتمد الاتجاه؛ العزل يُثبّته.
+    class: controlClasses({ size, invalid, class: "num ltr-start" }),
     onChange,
     ...rest,
   });

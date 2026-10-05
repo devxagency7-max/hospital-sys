@@ -16,8 +16,14 @@ import { notImplemented, notFound, validationError } from "../core/errors.js";
 import { db, query, find, all, insert, update, archive, where } from "../mock/db.js";
 import { REFERENCE_DATE } from "../mock/seed.js";
 import { deriveBatchStatus } from "../mock/inventory.mock.js";
-
-const round2 = (value) => Math.round(value * 100) / 100;
+import {
+  summarizePatientAccount,
+  totalInvoiced,
+  totalCollected,
+  totalOutstanding,
+  inventoryValuation,
+  isOverdue,
+} from "../domain/billing.js";
 
 /* --------------------------------------------------------------------------
    جدول المسارات
@@ -80,35 +86,20 @@ const ROUTES = {
     const patientPayments = where("payments", (row) => invoiceIds.has(row.invoiceId));
     const patientRefunds = where("refunds", (row) => invoiceIds.has(row.invoiceId));
 
-    /**
-     * الفواتير الملغاة تُعرض في الكشف للشفافية، لكنها لا تدخل أي مجموع مالي:
-     * إدخالها في «إجمالي المفوتر» يُظهر على المريض مديونية لفاتورة أُلغيت أصلاً.
-     */
-    const effective = patientInvoices.filter((row) => row.status !== "cancelled");
-
-    const totalInvoiced = round2(effective.reduce((total, row) => total + row.total, 0));
-    const totalPaid = round2(patientPayments.reduce((total, row) => total + row.amount, 0));
-    const totalRefunded = round2(
-      patientRefunds
-        .filter((row) => row.status === "approved")
-        .reduce((total, row) => total + row.amount, 0),
-    );
+    // كل الحساب في وحدة المجال — لا رياضيات مالية في طبقة الـ API.
+    const { invoices: settled, summary } = summarizePatientAccount({
+      invoices: patientInvoices,
+      payments: patientPayments,
+      refunds: patientRefunds,
+    });
 
     return {
       data: {
         patient,
-        invoices: patientInvoices,
+        invoices: settled,
         payments: patientPayments,
         refunds: patientRefunds,
-        summary: {
-          invoicesCount: effective.length,
-          cancelledCount: patientInvoices.length - effective.length,
-          totalInvoiced,
-          totalDiscount: round2(effective.reduce((total, row) => total + row.discount, 0)),
-          totalPaid,
-          totalRefunded,
-          remainingBalance: round2(totalInvoiced - totalPaid + totalRefunded),
-        },
+        summary,
       },
     };
   },
@@ -193,11 +184,15 @@ const ROUTES = {
   /* ========================= لوحة التحكم ========================= */
 
   "GET /dashboard/summary": () => {
-    const invoiceRows = all("invoices").filter((row) => row.status !== "cancelled");
+    const allInvoices = all("invoices");
     const itemRows = all("items");
 
     const today = REFERENCE_DATE.toISOString().slice(0, 10);
     const monthPrefix = today.slice(0, 7);
+
+    // دوال المجال تستبعد الملغاة بنفسها — لا نكرر الشرط في كل مجموع.
+    const thisMonth = allInvoices.filter((row) => row.date.startsWith(monthPrefix));
+    const invoiceRows = allInvoices.filter((row) => row.status !== "cancelled");
 
     return {
       data: {
@@ -208,31 +203,25 @@ const ROUTES = {
           newThisMonth: db.patients.filter((row) => row.registeredAt?.startsWith(monthPrefix)).length,
         },
         revenue: {
-          invoicedThisMonth: round2(
-            invoiceRows
-              .filter((row) => row.date.startsWith(monthPrefix))
-              .reduce((total, row) => total + row.total, 0),
-          ),
-          collectedThisMonth: round2(
-            all("payments")
-              .filter((row) => row.date.startsWith(monthPrefix))
-              .reduce((total, row) => total + row.amount, 0),
-          ),
-          outstanding: round2(invoiceRows.reduce((total, row) => total + row.remaining, 0)),
+          invoicedThisMonth: totalInvoiced(thisMonth),
+          // المحصَّل فعلًا = المدفوعات ناقص المرتجعات المعتمدة في نفس الشهر.
+          collectedThisMonth: totalCollected({
+            payments: all("payments").filter((row) => row.date.startsWith(monthPrefix)),
+            refunds: all("refunds").filter((row) => row.date.startsWith(monthPrefix)),
+          }),
+          outstanding: totalOutstanding(allInvoices),
         },
         invoices: {
           total: invoiceRows.length,
           unpaid: invoiceRows.filter((row) => row.status === "unpaid").length,
           partiallyPaid: invoiceRows.filter((row) => row.status === "partially_paid").length,
-          overdue: invoiceRows.filter((row) => row.remaining > 0 && row.dueDate < today).length,
+          overdue: allInvoices.filter((row) => isOverdue(row, today)).length,
         },
         inventory: {
           items: itemRows.length,
           lowStock: itemRows.filter((row) => row.status === "low_stock").length,
           outOfStock: itemRows.filter((row) => row.status === "out_of_stock").length,
-          valuation: round2(
-            itemRows.reduce((total, row) => total + row.quantity * row.costPrice, 0),
-          ),
+          valuation: inventoryValuation(itemRows),
         },
         approvals: {
           stockAdjustments: all("stockMovements").filter(

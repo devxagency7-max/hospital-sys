@@ -15,7 +15,8 @@ import { currentUser, currentRole, ROLES, setRole } from "../../js/core/permissi
 import { appState } from "../../js/core/store.js";
 import { on } from "../../js/core/events.js";
 import { toggleCollapsed } from "./sidebar.js";
-import { API, APP } from "../../js/core/config.js";
+import { describeDataLayer } from "../../js/api/meta.api.js";
+import { APP } from "../../js/core/config.js";
 
 export function header({ onOpenMobileNav } = {}) {
   /* --- شريط التقدّم: الدليل الوحيد على وجود طلب جارٍ خارج محتوى الصفحة --- */
@@ -53,7 +54,7 @@ export function header({ onOpenMobileNav } = {}) {
     el("div", { class: "flex-1" }),
 
     /* --- يسار (النهاية في RTL) --- */
-    API.mode === "mock" ? mockBadge() : null,
+    dataLayerBadge(),
     roleSwitcher(),
     iconButton("bell", { label: "الإشعارات", size: "icon", onClick: () => {} }),
     userMenuHost,
@@ -119,15 +120,24 @@ export function header({ onOpenMobileNav } = {}) {
   return element;
 }
 
-/** وسم يُذكّر بأن البيانات تجريبية — يمنع الخلط بين عرض ونظام حقيقي. */
-function mockBadge() {
+/**
+ * وسم يُذكّر بأن البيانات تجريبية — يمنع الخلط بين عرض ونظام حقيقي.
+ *
+ * الحالة تُقرأ من طبقة الـ API لا من ثابت الإعداد مباشرة: المكوّن لا يحتاج
+ * أن يعرف أن هناك شيئًا اسمه «mock»، يكفيه أن يسأل «هل البيانات حقيقية؟».
+ * يختفي الوسم تلقائيًا عند الربط بباك-إند حقيقي.
+ */
+function dataLayerBadge() {
+  const { isMock } = describeDataLayer();
+  if (!isMock) return null;
+
   return el(
     "span",
     {
       class:
         "hidden md:inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full " +
         "bg-warning-50 border border-warning-200 text-warning-700 text-[11px] font-medium",
-      title: "الواجهة تعمل على بيانات تجريبية. غيّر API.mode في js/core/config.js للربط بباك-إند حقيقي.",
+      title: "الواجهة تعمل على بيانات تجريبية. راجع js/core/config.js للربط بباك-إند حقيقي.",
     },
     icon("info", { size: 13 }),
     el("span", {}, "بيانات تجريبية"),

@@ -17,8 +17,10 @@ import { TABLE } from "../../js/core/config.js";
 import { icon } from "../common/icon.js";
 import { button, iconButton } from "../common/button.js";
 import { searchInput, select } from "../forms/fields.js";
+import { ref } from "../common/value.js";
 import { tableSkeleton, emptyState, errorState } from "../feedback/states.js";
 import { readPreference, writePreference } from "../../js/core/store.js";
+import { registerCleanup } from "../../js/core/lifecycle.js";
 import { toApiError } from "../../js/core/errors.js";
 
 /**
@@ -563,23 +565,35 @@ export function dataTable({
 
   const columnsMenu = el("div", { class: "relative" });
 
+  /*
+   * حالة قائمة الأعمدة على مستوى المكوّن لا داخل دالة الرسم: مستمع النقر
+   * الخارجي معلّق على `document`، فلو غادر المستخدم الشاشة والقائمة مفتوحة
+   * لبقي المستمع حيًا بعد اختفاء الجدول.
+   */
+  let columnsPanel = null;
+  let detachOutsideClick = () => {};
+
+  function closeColumnsMenu() {
+    columnsPanel?.remove();
+    columnsPanel = null;
+    detachOutsideClick();
+    detachOutsideClick = () => {};
+  }
+
   function paintColumnsMenu() {
     const hideable = columns.filter((column) => !column.alwaysVisible);
     if (!hideable.length) return;
-
-    let panel = null;
 
     const toggle = iconButton("columns", {
       label: "الأعمدة الظاهرة",
       size: "icon",
       onClick: () => {
-        if (panel) {
-          panel.remove();
-          panel = null;
+        if (columnsPanel) {
+          closeColumnsMenu();
           return;
         }
 
-        panel = el(
+        columnsPanel = el(
           "div",
           {
             class:
@@ -608,19 +622,20 @@ export function dataTable({
           ),
         );
 
-        columnsMenu.appendChild(panel);
+        columnsMenu.appendChild(columnsPanel);
 
         // الإغلاق بالنقر خارج القائمة — نؤجّل الربط دورة حتى لا يُلغيه نفس النقر.
-        setTimeout(() => {
+        const timer = setTimeout(() => {
           const onOutside = (evt) => {
-            if (!columnsMenu.contains(evt.target)) {
-              panel?.remove();
-              panel = null;
-              document.removeEventListener("mousedown", onOutside);
-            }
+            if (!columnsMenu.contains(evt.target)) closeColumnsMenu();
           };
+
           document.addEventListener("mousedown", onOutside);
+          detachOutsideClick = () => document.removeEventListener("mousedown", onOutside);
         }, 0);
+
+        // لو أُغلقت القائمة قبل انقضاء المهلة، نُلغيها حتى لا يُربط مستمع يتيم.
+        detachOutsideClick = () => clearTimeout(timer);
       },
     });
 
@@ -684,6 +699,21 @@ export function dataTable({
       })
     : () => {};
 
+  function destroy() {
+    requestToken += 1; // يُبطل أي استجابة في الطريق
+    onSearch.cancel();
+    unbindRowClick();
+    closeColumnsMenu();
+  }
+
+  /*
+   * التنظيف يُسجَّل تلقائيًا: الصفحة لا تملك مرجعًا للجدول حين يُنشأ داخل
+   * تبويب كسول، فلا يمكن الاعتماد على أن تستدعي `destroy` بنفسها. بدون هذا
+   * كان البحث المؤجَّل يُنفَّذ بعد مغادرة الشاشة فيكتب فلاتره في رابط الصفحة
+   * التالية.
+   */
+  registerCleanup(destroy);
+
   paintColumnsMenu();
   paintFilters();
   load();
@@ -695,11 +725,7 @@ export function dataTable({
     setParams,
     getRows: () => [...rows],
     getSelection: () => rows.filter((row) => selection.has(row.id)),
-    destroy() {
-      requestToken += 1; // يُبطل أي استجابة في الطريق
-      onSearch.cancel();
-      unbindRowClick();
-    },
+    destroy,
   };
 }
 
@@ -727,13 +753,24 @@ function pageNumbers(current, total) {
   return out;
 }
 
-/** خلية نصية من سطرين — «الاسم» فوق و«الكود» تحت، نمط متكرر في الجداول. */
-export function twoLineCell(primary, secondary) {
+/**
+ * خلية من سطرين — «الاسم» فوق و«الكود» تحت، نمط متكرر في الجداول.
+ *
+ * السطر الثاني يُعزل اتجاهيًا افتراضيًا لأنه كود أو مرجع في أغلب الحالات
+ * (P-1001، INV-2026-0042). مرّر `{ isolateSecondary: false }` لو كان نصًا عربيًا.
+ */
+export function twoLineCell(primary, secondary, { isolateSecondary = true } = {}) {
   return el(
     "div",
     { class: "min-w-0" },
     el("div", { class: "text-ink truncate-1" }, primary ?? "—"),
-    secondary ? el("div", { class: "text-xs text-faint truncate-1 mt-0.5" }, secondary) : null,
+    secondary
+      ? el(
+          "div",
+          { class: "text-xs text-faint truncate-1 mt-0.5" },
+          isolateSecondary ? ref(secondary) : secondary,
+        )
+      : null,
   );
 }
 

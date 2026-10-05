@@ -1,21 +1,32 @@
 /**
- * فواتير ودفعات تجريبية.
+ * فواتير ومدفوعات ومرتجعات تجريبية.
  *
- * ملاحظة مهمة: الأرقام هنا متماسكة حسابيًا — subtotal − discount + tax = total،
- * ومجموع البنود = subtotal، ومجموع الدفعات المسجَّلة = حقل `paid`.
- * بيانات مالية غير متوازنة تجعل كل جدول ومؤشر وتقرير يبدو كأن فيه عطلاً،
- * ويُهدر وقتًا في تتبّع خطأ غير موجود.
+ * البيانات متماسكة **بالبناء لا بالصدفة**: كل إجمالي وحالة سداد يُشتق باستدعاء
+ * `js/domain/billing.js` — نفس الوحدة التي تستخدمها طبقة الـ API والاختبارات.
  *
- * استثناء مقصود — الفاتورة الملغاة: تحتفظ بـ `total` وبنودها للتدقيق، لكن
- * `paid` و `remaining` فيها صفر، فلا تسري عليها معادلة paid + remaining = total.
- * لذلك أي مجموع مديونية أو إيراد يجب أن يستبعد `status === "cancelled"` أولاً.
- * «ممنوع حذف تاريخ المعاملات المالية من الواجهة» — فالإلغاء لا يمحو الفاتورة.
+ * قبل هذا، كانت الحالة تُكتب هنا يدويًا والرصيد يُحسب في `mock-adapter.js`،
+ * فانحرف التعريفان: ظهرت فواتير «مدفوعة» برصيد صفر رغم وجود مرتجع معتمد
+ * عليها، بينما كشف حساب نفس المريض يطالبه بالمبلغ. توليد البيانات من نفس
+ * الدوال يجعل هذا التناقض مستحيلًا.
+ *
+ * ملاحظة محاسبية: الفاتورة الملغاة تحتفظ بإجماليها وبنودها للتدقيق، لكن
+ * `paid` و `remaining` فيها صفر. أي مجموع مديونية أو إيراد يستبعدها.
  */
 
 import { createRandom, SERVICES, PAYMENT_METHODS, DOCTORS } from "./seed.js";
 import { patients } from "./patients.mock.js";
+import * as money from "../core/money.js";
+import { calculateInvoiceTotals, settleInvoice } from "../domain/billing.js";
 
-const round2 = (value) => Math.round(value * 100) / 100;
+/** الخدمات الطبية في مصر معفاة من ض.ق.م غالبًا؛ نطبّقها على قلة منها فقط. */
+const TAX_RATE = 0.14;
+
+const REFUND_REASONS = [
+  "إلغاء خدمة لم تُقدَّم",
+  "تحصيل مزدوج",
+  "تعديل فاتورة بعد السداد",
+  "إلغاء عملية بناءً على طلب المريض",
+];
 
 function generate() {
   const random = createRandom(720_033);
@@ -23,20 +34,25 @@ function generate() {
   const invoices = [];
   const invoiceLines = [];
   const payments = [];
+  const refunds = [];
 
-  // مرضى نشطون فقط تُصدر لهم فواتير.
   const billable = patients.filter((patient) => patient.status !== "archived");
+
   let lineId = 50_001;
   let paymentId = 60_001;
+  let refundId = 70_001;
+  let refundSequence = 0;
 
   for (let index = 0; index < 236; index += 1) {
     const id = 2001 + index;
     const patient = random.pick(billable);
     const date = random.date(random.int(0, 420));
 
-    /* --- البنود --- */
+    /* ---------------------------------------------------- البنود والإجماليات */
+
     const lines = random.sample(SERVICES, random.int(1, 5)).map((service) => {
       const quantity = service.category === "إقامة" ? random.int(1, 6) : random.int(1, 2);
+
       return {
         id: lineId++,
         invoiceId: id,
@@ -46,21 +62,19 @@ function generate() {
         category: service.category,
         quantity,
         unitPrice: service.price,
-        lineTotal: round2(service.price * quantity),
+        lineTotal: money.multiply(service.price, quantity),
       };
     });
 
-    const subtotal = round2(lines.reduce((sum, line) => sum + line.lineTotal, 0));
-
-    /* --- الخصم والضريبة --- */
     const discountRate = random.chance(0.26) ? random.pick([0.05, 0.1, 0.15, 0.2]) : 0;
-    const discount = round2(subtotal * discountRate);
-    // الخدمات الطبية في مصر معفاة من ض.ق.م في الغالب؛ نترك ضريبة على قلة منها.
-    const tax = random.chance(0.12) ? round2((subtotal - discount) * 0.14) : 0;
-    const total = round2(subtotal - discount + tax);
+    const taxRate = random.chance(0.12) ? TAX_RATE : 0;
 
-    /* --- الدفعات: تُولَّد أولاً، ثم يُشتق منها `paid` --- */
-    const settlement = random.pickWeighted([
+    // الإجماليات تُحسب بوحدة المجال لا يدويًا — نفس الدالة التي سيطابقها الباك-إند.
+    const totals = calculateInvoiceTotals({ lines, discountRate, taxRate });
+
+    /* ------------------------------------------------- نية السداد ثم الحركات */
+
+    const intent = random.pickWeighted([
       ["paid", 52],
       ["partially_paid", 22],
       ["unpaid", 20],
@@ -68,16 +82,15 @@ function generate() {
     ]);
 
     const invoicePayments = [];
+    const invoiceRefunds = [];
 
-    if (settlement === "paid") {
+    if (intent === "paid") {
+      // سداد على دفعة واحدة غالبًا، وعلى دفعتين أحيانًا.
       const installments = random.chance(0.75) ? 1 : 2;
-      let left = total;
+      const shares =
+        installments === 1 ? [totals.total] : money.allocate(totals.total, 2);
 
-      for (let part = 0; part < installments; part += 1) {
-        const isLast = part === installments - 1;
-        const amount = isLast ? round2(left) : round2(total * 0.5);
-        left = round2(left - amount);
-
+      for (const amount of shares) {
         invoicePayments.push({
           id: paymentId++,
           invoiceId: id,
@@ -89,28 +102,46 @@ function generate() {
           status: "completed",
         });
       }
-    } else if (settlement === "partially_paid") {
+
+      // مرتجع على فاتورة مسدَّدة — نادر، كما في الواقع.
+      if (random.chance(0.05)) {
+        refundSequence += 1;
+        const refundStatus = random.pickWeighted([
+          ["approved", 6],
+          ["pending", 2],
+          ["rejected", 1],
+        ]);
+
+        invoiceRefunds.push({
+          id: refundId++,
+          refundNumber: `REF-2026-${String(refundSequence).padStart(3, "0")}`,
+          invoiceId: id,
+          invoiceNumber: `INV-2026-${String(index + 1).padStart(4, "0")}`,
+          patientId: patient.id,
+          patientName: patient.name,
+          date: random.date(random.int(0, 90)),
+          amount: money.multiply(totals.total, random.pick([0.25, 0.5, 1])),
+          reason: random.pick(REFUND_REASONS),
+          method: random.pick(PAYMENT_METHODS).id,
+          status: refundStatus,
+        });
+      }
+    } else if (intent === "partially_paid") {
       invoicePayments.push({
         id: paymentId++,
         invoiceId: id,
         patientId: patient.id,
         date: random.date(random.int(0, 30)),
-        amount: round2(total * random.pick([0.25, 0.3, 0.5, 0.6, 0.75])),
+        amount: money.multiply(totals.total, random.pick([0.25, 0.3, 0.5, 0.6, 0.75])),
         method: random.pick(PAYMENT_METHODS).id,
         reference: `RCT-${paymentId}`,
         status: "completed",
       });
     }
 
-    const paid = round2(invoicePayments.reduce((sum, payment) => sum + payment.amount, 0));
-    const remaining = round2(total - paid);
+    /* ------------------------------------------------------------- التسوية */
 
-    // الحالة مشتقة من الأرقام، لا مستقلة عنها — إلا الملغاة.
-    let status;
-    if (settlement === "cancelled") status = "cancelled";
-    else if (remaining <= 0) status = "paid";
-    else if (paid > 0) status = "partially_paid";
-    else status = "unpaid";
+    const doctor = random.pick(DOCTORS);
 
     const dueDate = (() => {
       const due = new Date(date);
@@ -118,9 +149,7 @@ function generate() {
       return due.toISOString().slice(0, 10);
     })();
 
-    const doctor = random.pick(DOCTORS);
-
-    invoices.push({
+    const base = {
       id,
       invoiceNumber: `INV-2026-${String(index + 1).padStart(4, "0")}`,
       patientId: patient.id,
@@ -131,15 +160,13 @@ function generate() {
       departmentId: doctor.departmentId,
       date,
       dueDate,
-      subtotal,
-      discount,
+      subtotal: totals.subtotal,
+      discount: totals.discount,
       discountRate,
-      tax,
-      total,
-      paid: settlement === "cancelled" ? 0 : paid,
-      remaining: settlement === "cancelled" ? 0 : remaining,
-      status,
-      /** حالة الفاتورة الإلكترونية — تكامل ETA يُنفَّذ في Phase 7. */
+      tax: totals.tax,
+      taxRate,
+      total: totals.total,
+      status: intent === "cancelled" ? "cancelled" : undefined,
       etaStatus: random.pickWeighted([
         ["accepted", 6],
         ["submitted", 2],
@@ -149,13 +176,25 @@ function generate() {
       etaUuid: null,
       createdBy: "عبدالله محمد",
       notes: null,
+    };
+
+    // `paid` و `refunded` و `remaining` و `status` كلها مشتقة من نفس الدالة.
+    const settlement = settleInvoice(base, {
+      payments: invoicePayments,
+      refunds: invoiceRefunds,
     });
 
+    invoices.push({ ...base, ...settlement });
     invoiceLines.push(...lines);
-    if (settlement !== "cancelled") payments.push(...invoicePayments);
+
+    // الفاتورة الملغاة لا تحمل حركات مالية.
+    if (intent !== "cancelled") {
+      payments.push(...invoicePayments);
+      refunds.push(...invoiceRefunds);
+    }
   }
 
-  return { invoices, invoiceLines, payments };
+  return { invoices, invoiceLines, payments, refunds };
 }
 
 const generated = generate();
@@ -163,32 +202,4 @@ const generated = generate();
 export const invoices = generated.invoices;
 export const invoiceLines = generated.invoiceLines;
 export const payments = generated.payments;
-
-/** مرتجعات — قليلة عن قصد، كما في الواقع. */
-export const refunds = (() => {
-  const random = createRandom(410_077);
-  const paidInvoices = invoices.filter((invoice) => invoice.status === "paid");
-
-  return random.sample(paidInvoices, 9).map((invoice, index) => ({
-    id: 70_001 + index,
-    refundNumber: `REF-2026-${String(index + 1).padStart(3, "0")}`,
-    invoiceId: invoice.id,
-    invoiceNumber: invoice.invoiceNumber,
-    patientId: invoice.patientId,
-    patientName: invoice.patientName,
-    date: random.date(random.int(0, 90)),
-    amount: round2(invoice.total * random.pick([0.25, 0.5, 1])),
-    reason: random.pick([
-      "إلغاء خدمة لم تُقدَّم",
-      "تحصيل مزدوج",
-      "تعديل فاتورة بعد السداد",
-      "إلغاء عملية بناءً على طلب المريض",
-    ]),
-    method: random.pick(PAYMENT_METHODS).id,
-    status: random.pickWeighted([
-      ["approved", 6],
-      ["pending", 2],
-      ["rejected", 1],
-    ]),
-  }));
-})();
+export const refunds = generated.refunds;

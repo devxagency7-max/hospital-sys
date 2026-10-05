@@ -18,6 +18,8 @@ npm run dev     # بناء CSS بالمراقبة + خادم ثابت على htt
 | `npm run build` | بناء `css/app.css` للإنتاج |
 | `npm run watch` | مراقبة CSS فقط |
 | `npm run serve` | خادم فقط (`-- --port 4174` لتغيير المنفذ) |
+| `npm test` | كل الاختبارات |
+| `npm run test:unit` | الوحدات فقط — بلا متصفح، ثوانٍ |
 
 `css/app.css` **مُولَّد** وغير متتبَّع في Git. شغّل `npm run build` بعد أي checkout.
 
@@ -37,7 +39,8 @@ npm run dev     # بناء CSS بالمراقبة + خادم ثابت على htt
 index.html              نقطة التركيب الوحيدة — الإطار يُبنى في JS
 css/tailwind.src.css    المصدر + كل الـ design tokens
 js/
-├── core/               أساسيات: dom, router, format, errors, permissions, text
+├── core/               أساسيات: dom, router, format, money, lifecycle, …
+├── domain/             قواعد العمل الخالصة — الحساب المالي
 ├── api/                طبقة البيانات — http.js هي نقطة التبديل الوحيدة
 ├── mock/               بيانات تجريبية معزولة + محرك استعلام
 └── config/             خريطة التنقل وجدول المسارات
@@ -49,7 +52,8 @@ components/
 ├── modals/             النوافذ والأدراج ونوافذ التأكيد
 └── feedback/           إشعارات، تنبيهات، حالات تحميل/فراغ/خطأ
 pages/                  شاشة واحدة لكل ملف: <اسم>.page.js
-tools/                  خادم التطوير (بدون اعتماديات)
+tests/                  مجموعات الاختبار
+tools/                  خادم التطوير ومُشغّل الاختبارات
 ```
 
 ## قواعد لا تُكسر
@@ -61,14 +65,21 @@ tools/                  خادم التطوير (بدون اعتماديات)
 5. **لا تصدير تقرير ناقص** — مرّ من `assertExportable()`.
 6. **لا حذف لسجل مالي** — `archive()` فقط.
 7. **لا حالة غير مسجَّلة** في `js/core/statuses.js`.
+8. **لا حساب مالي في شاشة** — استخدم `js/domain/billing.js` و `js/core/money.js`.
+9. **لا إصلاح اتجاه مفرد** — استخدم `components/common/value.js` وأدوات `ltr-isolate`.
+
+القواعد 1–9 يحرسها `tests/architecture.test.mjs` آليًا.
 
 التفاصيل والأسباب في [`../docs/11-FRONTEND-CONVENTIONS.md`](../docs/11-FRONTEND-CONVENTIONS.md)
 و [`../docs/07-FRONTEND-RULES.md`](../docs/07-FRONTEND-RULES.md).
 
 ## الاعتماديات
 
-Tailwind فقط، وكأداة بناء — **صفر مكتبات في المتصفح**. الأيقونات SVG inline،
-والتواريخ والأرقام عبر `Intl`، وخادم التطوير مكتوب بـ Node الخام.
+**صفر مكتبات في المتصفح.** الأيقونات SVG inline، والتواريخ والأرقام عبر `Intl`،
+وخادم التطوير مكتوب بـ Node الخام.
+
+أدوات التطوير فقط: Tailwind للبناء، و Playwright لاختبارات المتصفح
+(`npx playwright install chromium` بعد أول `npm install`).
 
 `npm audit` يُبلّغ عن ثغرة في `braces` داخل `@parcel/watcher` التابع لـ
 `@tailwindcss/cli`. تخص مراقبة الملفات وقت التطوير فقط، ولا تصل إلى المتصفح

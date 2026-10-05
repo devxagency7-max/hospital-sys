@@ -12,6 +12,7 @@ import { el, render, clear } from "./dom.js";
 import { emit } from "./events.js";
 import { can } from "./permissions.js";
 import { toApiError } from "./errors.js";
+import { runCleanups } from "./lifecycle.js";
 
 /** @type {Array<object>} */
 let routes = [];
@@ -165,6 +166,10 @@ async function handleChange() {
   runDispose();
 
   if (!found) {
+    // الإطار يُحدَّث حتى على 404، وإلا بقي مسار التنقل يعرض الصفحة السابقة
+    // فيبدو المستخدم واقفًا في مكان غير الذي يراه.
+    document.title = "صفحة غير موجودة — Hospital ERP";
+    hooks.onNavigated?.({ path, params: {}, query, route: null, navigate, setQuery });
     renderFallback(hooks.onNotFound, { path }, token);
     emit("router:navigated", { path, route: null });
     return;
@@ -179,13 +184,15 @@ async function handleChange() {
     return;
   }
 
+  const context = { path, params, query, route, navigate, setQuery };
+
   if (!can(route.permission)) {
+    document.title = `${route.title ?? "غير مصرّح"} — Hospital ERP`;
+    hooks.onNavigated?.(context);
     renderFallback(hooks.onForbidden, { route }, token);
     emit("router:navigated", { path, route });
     return;
   }
-
-  const context = { path, params, query, route, navigate, setQuery };
 
   document.title = route.title ? `${route.title} — Hospital ERP` : "Hospital ERP";
   emit("router:navigating", context);
@@ -227,6 +234,9 @@ async function handleChange() {
 }
 
 function runDispose() {
+  // المكوّنات التي سجّلت تنظيفها بنفسها (جداول، تبويبات، قوائم منسدلة).
+  runCleanups();
+
   if (!disposeCurrent) return;
 
   try {
