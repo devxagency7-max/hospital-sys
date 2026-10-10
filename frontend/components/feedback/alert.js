@@ -11,10 +11,10 @@ import { icon } from "../common/icon.js";
 import { button } from "../common/button.js";
 
 const TONES = {
-  info: { wrap: "bg-info-50 border-info-200 text-info-700", icon: "info" },
-  success: { wrap: "bg-success-50 border-success-200 text-success-700", icon: "success" },
-  warning: { wrap: "bg-warning-50 border-warning-200 text-warning-700", icon: "warning" },
-  danger: { wrap: "bg-danger-50 border-danger-200 text-danger-700", icon: "error" },
+  info: { wrap: "bg-info-50 border-info-200 text-info-300", icon: "info" },
+  success: { wrap: "bg-success-50 border-success-200 text-success-300", icon: "success" },
+  warning: { wrap: "bg-warning-50 border-warning-200 text-warning-300", icon: "warning" },
+  danger: { wrap: "bg-danger-50 border-danger-200 text-danger-300", icon: "error" },
   neutral: { wrap: "bg-subtle border-line text-muted", icon: "info" },
 };
 

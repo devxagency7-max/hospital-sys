@@ -101,7 +101,7 @@ export default function plannedPage({ path, route }) {
                     href: `#${sibling.path}`,
                     class:
                       "px-2.5 py-1 rounded-full border border-line text-xs text-muted " +
-                      "hover:border-brand-300 hover:text-brand-700 transition-colors",
+                      "hover:border-brand-400 hover:text-brand-300 transition-colors",
                   },
                   sibling.label,
                 ),

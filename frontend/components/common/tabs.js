@@ -77,7 +77,7 @@ export function tabs({ tabs: definitions, active, syncUrl = true } = {}) {
               "inline-flex items-center gap-2 px-3.5 py-2.5 text-sm whitespace-nowrap",
               "border-b-2 transition-colors",
               isActive
-                ? "border-brand-600 text-brand-700 font-medium"
+                ? "border-brand-400 text-brand-300 font-medium"
                 : "border-transparent text-muted hover:text-ink hover:border-line-strong",
             ),
             onClick: () => select(tab.key),

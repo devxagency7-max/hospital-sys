@@ -3,29 +3,72 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="color-scheme" content="light" />
+    <meta name="color-scheme" content="dark light" />
+    <meta name="theme-color" content="#0a0e17" />
     <meta name="description" content="نظام إدارة مستشفى — واجهة عربية" />
 
     <title>Hospital ERP</title>
 
     <!--
-      الخط من Google Fonts مؤقتًا. قبل التسليم النهائي يُستضاف محليًا في
-      assets/fonts/ — شبكة المستشفى قد تكون مغلقة على الإنترنت الخارجي.
+      لا خط خارجي: الخط الأساسي "Cairo" مُرفَق محليًا ضمن الملف نفسه
+      (assets/fonts، @font-face في css/tailwind.src.css)، و"Dubai"/"Segoe UI"
+      احتياط محلي أيضًا. صفر طلب شبكة، صفر وميض تحميل خط — ضروري لشبكة
+      مستشفى قد تكون مغلقة على الإنترنت الخارجي تمامًا.
     -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
 
     <!-- ملف مُولَّد عبر `npm run build`. لا تحرّره — المصدر css/tailwind.src.css -->
     <link rel="stylesheet" href="css/app.css" />
 
     <link rel="icon" href="data:," />
+
+    <!--
+      خلفية فورية قبل تحميل app.css — تمنع وميضًا أبيض لحظيًا بين عرض الصفحة
+      الخام وتطبيق الأنماط، وهو كسر ملحوظ في واجهة داكنة تحديدًا.
+    -->
+    <style>
+      html {
+        background: #0a0e17;
+      }
+      html[data-theme="light"] {
+        background: #f4f6fb;
+      }
+    </style>
+
+    <!--
+      تطبيق السمة قبل أي رسم: يقرأ localStorage مباشرة (الوحدات لم تُحمَّل
+      بعد) فيضبط data-theme على <html> في نفس اللحظة التي يُحسب فيها CSS
+      الأول — بلا هذا السكربت، صفحة بتفضيل "فاتح" محفوظ كانت ستُرسم داكنة
+      للحظة ثم تنقلب فجأة، وميض ملحوظ وغير احترافي عند كل تحميل.
+      js/core/theme.js يتولى ما بعد هذه اللحظة (التبديل التفاعلي ومتابعة
+      تغيّر تفضيل النظام) بنفس المفتاح والمنطق.
+    -->
+    <script>
+      (function () {
+        try {
+          var raw = localStorage.getItem("hospital-erp:themePreference");
+          var pref = raw ? JSON.parse(raw) : "light";
+          var effective =
+            pref === "system"
+              ? (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches === false
+                  ? "light"
+                  : "dark")
+              : pref;
+          document.documentElement.dataset.theme = effective === "dark" ? "dark" : "light";
+        } catch (_err) {
+          document.documentElement.dataset.theme = "light";
+        }
+      })();
+    </script>
   </head>
 
   <body>
+    <!--
+      طبقة الخلفية القابلة للتخصيص (/settings/appearance) — ثابتة خلف كل
+      شيء، تُدار بالكامل عبر متغيرات CSS يكتب فوقها
+      js/core/background-studio.js حيًّا. راجع #bg-layer في tailwind.src.css.
+    -->
+    <div id="bg-layer" aria-hidden="true"></div>
+
     <!-- الإطار كله يُبنى في JS. هذا العنصر هو نقطة التركيب الوحيدة. -->
     <div id="app"></div>
 
@@ -34,9 +77,9 @@
       بلا تفسير. هذا العنصر يُحذف من داخل app.js بعد نجاح الإقلاع.
     -->
     <noscript>
-      <div style="padding: 2rem; font-family: Tahoma, sans-serif; text-align: center">
+      <div style="padding: 2rem; font-family: 'Dubai', 'Segoe UI', Tahoma, sans-serif; text-align: center; color: #eef1f8">
         <h1 style="font-size: 1.125rem">هذا التطبيق يحتاج JavaScript</h1>
-        <p style="color: #5a6677; margin-top: 0.5rem">فضلاً مكّن JavaScript في المتصفح ثم أعد تحميل الصفحة.</p>
+        <p style="color: #8e9bb3; margin-top: 0.5rem">فضلاً مكّن JavaScript في المتصفح ثم أعد تحميل الصفحة.</p>
       </div>
     </noscript>
 

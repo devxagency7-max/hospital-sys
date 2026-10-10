@@ -59,8 +59,10 @@ check(
 const railBg = await page.locator("aside").evaluate((n) => getComputedStyle(n).backgroundColor);
 check("أنماط Tailwind مُطبَّقة", railBg !== "rgba(0, 0, 0, 0)", railBg);
 
+// Cairo أولًا: خط محلي مُرفَق ضمن الملف (assets/fonts، @font-face)، صفر طلب
+// شبكة خارجية — راجع css/tailwind.src.css. Dubai/Segoe UI احتياط محلي أيضًا.
 const bodyFont = await page.evaluate(() => getComputedStyle(document.body).fontFamily);
-check("الخط العربي مُحمَّل", /IBM Plex Sans Arabic/.test(bodyFont), bodyFont.slice(0, 40));
+check("مكدّس الخط العربي مُطبَّق (Cairo أولًا)", /^["']?Cairo/.test(bodyFont), bodyFont.slice(0, 40));
 
 /* ───────────────────────── الشريط الجانبي ───────────────────────── */
 section("الشريط الجانبي والتنقل");
@@ -354,6 +356,307 @@ check(
 );
 check("الشاشة التالية تُرسم سليمة", await page.locator("#page h1").isVisible());
 
+/* ───────────────────────── لوحة التحكم (Phase 1) ───────────────────────── */
+section("لوحة التحكم — المحتوى");
+
+await go("/");
+await page.waitForSelector("#page h1");
+await page.waitForTimeout(1300); // استقرار عدّاد المؤشرات (900ms) + هامش
+
+check("العنوان لوحة التحكم", (await page.locator("#page h1").textContent()) === "لوحة التحكم");
+
+/*
+ * فحص ظهور كل تسمية على حدة لا `.count()` على نمط واحد: `getByText` يُطابق
+ * أي عنصر يحتوي نصّه (مع نصوص أبنائه) على النمط، فتُحتسَب كل العناصر
+ * الأصل في السلسلة أيضًا — أربع تسميات ورقية حقيقية أنتجت عدّات أعلى من 4
+ * بسبب هذا السلوك، لا لأن شيئًا تكرَّر فعليًا في الصفحة.
+ */
+for (const label of ["محصَّل اليوم", "فواتير اليوم", "مرضى اليوم", "الأرصدة المستحقة"]) {
+  check(`بطاقة «${label}» ظاهرة`, await page.locator("#page").getByText(label, { exact: true }).isVisible());
+}
+
+// لا نص خام مُسرَّب — فحص عام يكشف أي قيمة undefined/NaN نسيت صياغتها بأداة التنسيق.
+const pageText = await page.locator("#page").innerText();
+check(
+  "لا 'undefined' أو 'NaN' أو '[object Object]' مُسرَّبة في النص",
+  !/undefined|NaN|\[object Object\]/.test(pageText),
+  pageText.match(/.{0,20}(undefined|NaN|\[object Object\]).{0,20}/)?.[0] ?? "",
+);
+
+check("رسم الإيرادات يحتوي مسارات SVG", (await page.locator("#page svg path").count()) > 0);
+
+// العدّاد المتحرك استقرّ على قيمة نهائية ثابتة — لا يتغيّر بين قراءتين متتاليتين.
+const firstTileValue = await page.locator("#page p.num").first().textContent();
+await page.waitForTimeout(300);
+const firstTileValueAgain = await page.locator("#page p.num").first().textContent();
+check("عدّاد البطاقة الأولى استقرّ على قيمة ثابتة", firstTileValue === firstTileValueAgain, `${firstTileValue} / ${firstTileValueAgain}`);
+check("قيمة البطاقة ليست صفرًا أو شرطة فارغة", firstTileValue !== "0" && firstTileValue !== "—" && firstTileValue !== "", firstTileValue);
+
+// أعمدة توزيع الأقسام تحرّكت عن صفر بعد التسوية.
+const barWidths = await page.locator("#page .bg-gradient-to-l.from-brand-500").evaluateAll((nodes) =>
+  nodes.map((n) => n.style.width),
+);
+check(
+  "أعمدة توزيع الأقسام لا تبقى صفرًا بعد التحريك",
+  barWidths.length > 0 && barWidths.every((w) => w !== "0%" && w !== ""),
+  barWidths.slice(0, 3).join(", "),
+);
+
+section("لوحة التحكم — شريط البحث الرئيسي");
+
+check("عنوان قسم البحث ظاهر", await page.getByText("البحث والاستعلام عن المرضى").isVisible());
+
+await page.getByRole("button", { name: "الهاتف", exact: true }).click();
+await page.waitForTimeout(150);
+check(
+  "تبديل شريحة النطاق يُغيّر النص التوضيحي للحقل",
+  (await page.locator('input[aria-label="ابحث عن مريض"]').getAttribute("placeholder")) === "أدخل رقم الهاتف…",
+);
+
+await page.locator('input[aria-label="ابحث عن مريض"]').fill("احمد");
+await page.keyboard.press("Enter");
+await page.waitForTimeout(600);
+check(
+  "إرسال البحث ينتقل فعليًا لقائمة المرضى بمعامل بحث حقيقي",
+  page.url().includes("/patients?search=") && page.url().includes("%D8%A7%D8%AD%D9%85%D8%AF"),
+  page.url(),
+);
+await page.goBack();
+await page.waitForSelector("#page h1");
+await page.waitForTimeout(400);
+
+/*
+ * باگ فعلي ظهر أثناء تطبيق المرجع البصري الجديد: إصلاح backdrop-filter (راجع
+ * تعليق glass في tailwind.src.css) جعل الهيدر يُنشئ سياق تكديس حقيقيًا لأول
+ * مرة — وبلا z-index صريح عليه، كانت قائمة المستخدم المنسدلة (ابنة الهيدر)
+ * تُرسَم تحت <main> الشقيق فعليًا رغم ظهورها بصريًا فوقه، فتعترض بطاقات لوحة
+ * التحكم كل نقرة داخل القائمة. الفحص هنا يتحقق من قابلية النقر الفعلية لا
+ * الظهور البصري فقط.
+ */
+section("لوحة التحكم — تكديس قائمة المستخدم فوق المحتوى");
+await page.locator('button[aria-haspopup="true"]').click();
+await page.waitForTimeout(300);
+const settingsLink = page.getByRole("menu").getByText("الإعدادات");
+const elAtSettingsPoint = await settingsLink.evaluate((el) => {
+  const r = el.getBoundingClientRect();
+  const hit = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+  return hit === el || el.contains(hit) || hit.contains(el);
+});
+check("عنصر «الإعدادات» في القائمة قابل للنقر فعليًا لا محجوبًا بالمحتوى", elAtSettingsPoint);
+// إغلاق اللوحة بالنقر خارجها — القائمة لا تستمع لـ Escape (نمط ثابت في هذا المشروع).
+await page.mouse.click(800, 500);
+await page.waitForTimeout(200);
+
+section("لوحة التحكم — لوحة الأوامر (بحث سريع)");
+
+await page.keyboard.press("Control+k");
+await page.waitForTimeout(300);
+check("Ctrl+K يفتح لوحة الأوامر", await page.locator('input[aria-label="بحث سريع"]').isVisible());
+
+// كل الفحوص مُقيَّدة بمربع حوار لوحة الأوامر تحديدًا — الشريط الجانبي خلفها
+// يحمل عناصر بنفس النصوص («المرضى» وغيرها)، فبحث غير مُقيَّد يُطابقها خطأً.
+const paletteDialog = page.getByRole("dialog", { name: "بحث سريع" });
+
+await page.locator('input[aria-label="بحث سريع"]').fill("احمد");
+/*
+ * انتظار محتوى فعلي لا مهلة ثابتة: debounce البحث (280ms) + كمون الشبكة
+ * التجريبي (حتى 420ms) قد يتجاوزا معًا 500ms تحت حِمل — مهلة ثابتة هنا
+ * كانت تُفشِل الفحص أحيانًا بسبب التوقيت لا بخلل فعلي.
+ */
+await paletteDialog.getByText(/أحمد/).first().waitFor({ timeout: 3000 }).catch(() => {});
+check(
+  "البحث يُظهر نتائج مرضى حقيقية (تطبيع عربي: «احمد» بلا همزة يجد «أحمد»)",
+  await paletteDialog.getByText(/أحمد/).first().isVisible(),
+);
+check("قسم «المرضى» ظاهر في نتائج البحث", await paletteDialog.getByText("المرضى", { exact: true }).isVisible());
+
+await page.keyboard.press("Escape");
+await page.waitForTimeout(300);
+check("Escape يُغلق لوحة الأوامر", (await page.locator('input[aria-label="بحث سريع"]').count()) === 0);
+
+section("لوحة التحكم — الإشعارات وقائمة المستخدم");
+
+await page.locator('button[aria-label="الإشعارات"]').click();
+await page.waitForTimeout(600);
+check("لوحة الإشعارات تُفتح", await page.getByText("تنبيهات المخزون").isVisible());
+
+/*
+ * باگ فعلي ظهر في هذه الجلسة: «كمية / حد أدنى» لصنف نافد (0 من 10) كانت
+ * تُعرض «10 / 0» — نفس فئة باگ الهاتف من المرحلة 0 (رقمان متجاوران بفاصل
+ * محايد في فقرة RTL يُعاد ترتيبهما). يُفحَص هنا تحديدًا حتى لا يتكرر صمتًا.
+ */
+const quantityRatio = await page.evaluate(() => {
+  const holder = document.querySelector('[role="region"][aria-label="الإشعارات"] bdi');
+  if (!holder) return { missing: true };
+  const node = holder.firstChild;
+  const text = node.textContent;
+  const [a, , b] = text.trim().split(/\s+/);
+  const parts = text.trim().split(/\s+/).map((part) => {
+    const i = text.indexOf(part);
+    const r = document.createRange();
+    r.setStart(node, i);
+    r.setEnd(node, i + part.length);
+    return { part, x: r.getBoundingClientRect().x };
+  });
+  const visual = [...parts].sort((x, y) => x.x - y.x).map((p) => p.part);
+  return { logical: [a, b], visualFirst: visual[0], text };
+});
+check(
+  "نسبة الكمية/الحد الأدنى معزولة اتجاهيًا وبترتيبها الصحيح",
+  !quantityRatio.missing && quantityRatio.visualFirst === quantityRatio.logical[0],
+  JSON.stringify(quantityRatio),
+);
+
+/*
+ * باگ فعلي ثانٍ ظهر في الجلسة نفسها: صفوف «تشغيلات منتهية» تحمل حقل quantity
+ * أيضًا (كما صفوف الرصيد)، فالتمييز بوجود الحقل وحده كان يُحوِّلها خطأً لعرض
+ * «40 / —» بدل تاريخ الانتهاء. التمييز الصحيح بنوع المجموعة (kind) لا الحقل.
+ */
+const expiryRowText = await page.evaluate(() => {
+  const region = document.querySelector('[role="region"][aria-label="الإشعارات"]');
+  const groups = [...(region?.querySelectorAll(".max-h-96 > div > div") ?? [])];
+  const group = groups.find((g) => /تشغيلات منتهية|قاربت الانتهاء/.test(g.textContent ?? ""));
+  const row = group?.querySelector("a");
+  return row ? row.querySelector("span:last-child")?.textContent?.trim() : null;
+});
+check(
+  "صفوف انتهاء الصلاحية تعرض تاريخًا لا نسبة رصيد مكسورة",
+  // تاريخ حقيقي (مثل 30‏/06‏/2026) يحتوي 4 رقمًا فأكثر؛ نسبة رصيد مكسورة
+  // كانت تظهر كـ«40 / —» — شرطة بلا حد أدنى حقيقي، فنرفض وجود «—» فقط.
+  Boolean(expiryRowText) && !/—/.test(expiryRowText) && /\d{4}/.test(expiryRowText),
+  String(expiryRowText),
+);
+
+// إغلاق بإعادة النقر على زر الجرس: اللوحة قائمة مُنسدلة بسيطة، لا نافذة
+// منبثقة كاملة — لا تستمع لـ Escape، تستمع فقط للنقر خارجها أو تبديل الزر.
+await page.locator('button[aria-label="الإشعارات"]').click();
+await page.waitForTimeout(250);
+
+const avatarButton = page.locator('button[aria-haspopup="true"]');
+await avatarButton.click();
+await page.waitForTimeout(300);
+// محدَّد ضمن role=menu لا نصًا عامًا: الشريط الجانبي يحمل زر خروج مستقلاً
+// بنفس النص المرئي (المرجع البصري الجديد)، باسم وصولي مختلف («... من الشريط
+// الجانبي») حتى لا يتشابه مع هذا — لكن getByText يطابق النص المرئي بصرف
+// النظر عن aria-label، فالفحص هنا يحتاج تضييقًا صريحًا بالحاوية لا بالاسم.
+const userMenu = page.getByRole("menu");
+check("قائمة المستخدم تُفتح", await userMenu.getByText("تسجيل الخروج").isVisible());
+
+await userMenu.getByText("تسجيل الخروج").click();
+await page.waitForTimeout(400);
+check(
+  "تسجيل الخروج صريح بعدم التنفيذ — لا يدّعي نجاحًا وهميًا",
+  await page.getByText(/غير منفَّذ بعد/).isVisible(),
+);
+
+section("لوحة التحكم — طيّ الشريط الجانبي");
+
+const sidebarBefore = await page.locator("aside").first().boundingBox();
+await page.locator('button[title="طيّ القائمة الجانبية"], button[title="توسيع القائمة الجانبية"]').first().click();
+await page.waitForTimeout(400);
+const sidebarAfter = await page.locator("aside").first().boundingBox();
+check("طيّ الشريط يُغيّر عرضه فعليًا", sidebarBefore.width !== sidebarAfter.width, `${sidebarBefore.width} → ${sidebarAfter.width}`);
+
+// نعيده كما كان حتى لا يؤثر على فحوص لاحقة تعتمد شريطًا مفتوحًا.
+await page.locator('button[title="طيّ القائمة الجانبية"], button[title="توسيع القائمة الجانبية"]').first().click();
+await page.waitForTimeout(400);
+
+section("نظام السمات (داكن/فاتح/النظام)");
+
+/*
+ * باگ فعلي حرج اكتُشف أثناء بناء نظام السمات: readPreference في store.js
+ * كانت تُستدعى (داخل appState) قبل سطر `const STORAGE_PREFIX` نصيًا — منطقة
+ * ميتة زمنيًا (TDZ) ترمي ReferenceError يبتلعه try/catch في readPreference
+ * بصمت، فتُعيد القيمة الافتراضية دائمًا بصرف النظر عمّا هو محفوظ فعليًا في
+ * localStorage. أثّر هذا على كل تفضيل محفوظ منذ المرحلة 1 (بما فيها طيّ
+ * الشريط)، ولم يظهر من قبل لأن القيمة الافتراضية الخاطئة والصحيحة كانتا
+ * غالبًا متطابقتين في الاختبار اليدوي. يُفحص هنا مباشرة حتى لا يتكرر صمتًا.
+ */
+await page.evaluate(() => localStorage.setItem("hospital-erp:themePreference", JSON.stringify("light")));
+await page.reload({ waitUntil: "load" });
+await page.waitForSelector("#page h1");
+await page.waitForTimeout(500);
+check(
+  "تفضيل محفوظ في localStorage يُقرأ فعليًا بعد إعادة التحميل (فحص باگ TDZ)",
+  (await page.evaluate(() => document.documentElement.dataset.theme)) === "light",
+);
+
+// التبديل التفاعلي عبر قائمة المستخدم.
+await page.locator('button[aria-haspopup="true"]').click();
+await page.waitForTimeout(300);
+await page.getByRole("radio", { name: "داكن" }).click();
+await page.waitForTimeout(300);
+check(
+  "التبديل لداكن من قائمة المستخدم يُحدِّث data-theme فورًا",
+  (await page.evaluate(() => document.documentElement.dataset.theme)) === "dark",
+);
+
+const tokensAfterDark = await page.evaluate(() => ({
+  canvas: getComputedStyle(document.documentElement).getPropertyValue("--color-canvas").trim(),
+}));
+check(
+  "توكن --color-canvas يتغيّر فعليًا مع السمة (لا مجرد data-theme بلا أثر)",
+  tokensAfterDark.canvas !== "#eef1f7",
+  tokensAfterDark.canvas,
+);
+
+await page.getByRole("radio", { name: "فاتح" }).click();
+await page.waitForTimeout(300);
+await page.keyboard.press("Escape").catch(() => {});
+
+check(
+  "الوضع الفاتح لا يُسقط Tailwind ولا يكسر الرسم",
+  await page.locator("aside nav").isVisible(),
+);
+
+// نعيده للداكن (الحالة الافتراضية لبقية الاختبارات) حتى لا يؤثر على ما بعده.
+await page.evaluate(() => localStorage.setItem("hospital-erp:themePreference", JSON.stringify("dark")));
+await page.reload({ waitUntil: "load" });
+await page.waitForSelector("#page h1");
+await page.waitForTimeout(400);
+
+section("تخصيص المظهر — استوديو الخلفية");
+
+await page.evaluate(() => localStorage.removeItem("hospital-erp:backgroundStudio"));
+await go("/settings/appearance");
+check("شاشة تخصيص المظهر منفَّذة لا «مخطَّطة»", await page.getByText("صورة الخلفية").isVisible());
+
+// اختيار شريحة لون جاهزة يُغيّر خلفية #bg-layer فعليًا، لا عرضًا بصريًا فقط.
+const bgBefore = await page.evaluate(() => document.getElementById("bg-layer").style.backgroundColor);
+await page.getByRole("button", { name: /كحلي داكن/ }).click();
+await page.waitForTimeout(200);
+const bgAfter = await page.evaluate(() => document.getElementById("bg-layer").style.backgroundColor);
+check("اختيار شريحة لون يُحدِّث خلفية #bg-layer فعليًا", bgAfter !== bgBefore && bgAfter.includes("15, 23, 42"), bgAfter);
+
+// شريحة الضبابية تُحدِّث متغيّر CSS حيًّا — نفس الآلية التي يقرأها .glass.
+const blurSlider = page.locator('input[type="range"]').first();
+await blurSlider.fill("30");
+await blurSlider.dispatchEvent("input");
+await page.waitForTimeout(150);
+const blurVar = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--glass-blur").trim());
+check("شريحة الضبابية تُحدِّث --glass-blur حيًّا", blurVar === "30px", blurVar);
+
+// الاستمرارية: القيم المحفوظة تُقرأ فعليًا بعد إعادة تحميل كاملة — نفس فحص
+// باگ TDZ أعلاه، لكن لمفتاح backgroundStudio هذه المرة (مسار كود مختلف).
+await page.reload({ waitUntil: "load" });
+await page.waitForSelector("#page h1");
+await page.waitForTimeout(400);
+const blurVarAfterReload = await page.evaluate(() =>
+  getComputedStyle(document.documentElement).getPropertyValue("--glass-blur").trim(),
+);
+check("إعدادات الخلفية تبقى محفوظة بعد إعادة التحميل", blurVarAfterReload === "30px", blurVarAfterReload);
+
+// زر إعادة الضبط يُعيد كل القيم للافتراضي الموثَّق في DEFAULTS.
+await page.getByRole("button", { name: "إعادة ضبط المصنع" }).click();
+await page.waitForTimeout(300);
+const blurVarAfterReset = await page.evaluate(() =>
+  getComputedStyle(document.documentElement).getPropertyValue("--glass-blur").trim(),
+);
+check("إعادة ضبط المصنع تُعيد الضبابية للقيمة الافتراضية (20px)", blurVarAfterReset === "20px", blurVarAfterReset);
+
+await page.evaluate(() => localStorage.removeItem("hospital-erp:backgroundStudio"));
+await go("/");
+
 /* ───────────────────────── 404 والاستجابة ───────────────────────── */
 section("404 والتجاوب");
 await go("/no/such/screen");
@@ -362,6 +665,19 @@ check("مسار غير موجود يُظهر 404", await page.getByText("الص�
 await page.setViewportSize({ width: 390, height: 844 });
 await go("/design-system?tab=tokens");
 check("الشريط الجانبي يختفي على الموبايل", !(await page.locator("aside").first().isVisible()));
+
+/*
+ * باگ فعلي ظهر في هذه الجلسة: iconButton الأساسي (button.js) يُلحق inline-flex
+ * غير المشروط بكل زر عبر BASE، فتضارب لاحقًا مع hidden غير المشروط لزر طيّ
+ * الشريط على سطح المكتب — ترتيب القاعدتين في مخرجات Tailwind حسم الفائز بصرف
+ * النظر عن ترتيب الأصناف في HTML، فظهر زرّا القائمة معًا على الموبايل. أُصلح
+ * باستخدام max-lg:hidden (مؤهَّل داخل media query فلا يصطدم بقاعدة غير مشروطة).
+ */
+check(
+  "زر واحد فقط لفتح/طيّ القائمة ظاهر على الموبايل",
+  (await page.locator('header button[aria-label="طي القائمة"]').isVisible()) === false &&
+    (await page.locator('header button[aria-label="فتح القائمة"]').isVisible()) === true,
+);
 
 const hScroll = await page.evaluate(
   () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 2,

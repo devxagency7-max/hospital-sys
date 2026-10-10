@@ -183,17 +183,17 @@ export function errorState({ error, onRetry, title, compact = false } = {}) {
       title: "غير منفَّذ بعد",
       tone: "text-muted",
     },
-    [ErrorCode.FORBIDDEN]: { icon: "lock", title: "لا تملك الصلاحية", tone: "text-warning-700" },
-    [ErrorCode.UNAUTHENTICATED]: { icon: "lock", title: "انتهت الجلسة", tone: "text-warning-700" },
+    [ErrorCode.FORBIDDEN]: { icon: "lock", title: "لا تملك الصلاحية", tone: "text-warning-300" },
+    [ErrorCode.UNAUTHENTICATED]: { icon: "lock", title: "انتهت الجلسة", tone: "text-warning-300" },
     [ErrorCode.NOT_FOUND]: { icon: "search", title: "غير موجود", tone: "text-muted" },
-    [ErrorCode.NETWORK]: { icon: "refresh", title: "تعذّر الاتصال", tone: "text-danger-700" },
-    [ErrorCode.TIMEOUT]: { icon: "refresh", title: "انتهت مهلة الطلب", tone: "text-danger-700" },
+    [ErrorCode.NETWORK]: { icon: "refresh", title: "تعذّر الاتصال", tone: "text-danger-300" },
+    [ErrorCode.TIMEOUT]: { icon: "refresh", title: "انتهت مهلة الطلب", tone: "text-danger-300" },
   };
 
   const preset = presets[apiError.code] ?? {
     icon: "error",
     title: "حدث خطأ",
-    tone: "text-danger-700",
+    tone: "text-danger-300",
   };
 
   return el(

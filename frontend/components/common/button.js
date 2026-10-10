@@ -9,34 +9,49 @@ import { el, cx } from "../../js/core/dom.js";
 import { icon } from "./icon.js";
 import { can } from "../../js/core/permissions.js";
 
+/*
+ * تعبئات صلبة (primary/danger/success) تأخذ رفعة خفيفة عند التحويم (hover lift)
+ * — لمسة الفخامة المطلوبة في المرجع البصري لأزرار الإجراء الأساسي تحديدًا؛
+ * ثانوي/شبح/رابط تبقى بلا رفعة فلا يتنافس كل زر في الشاشة على الانتباه.
+ */
+const LIFT = "hover:-translate-y-px";
+
 const VARIANTS = {
-  primary:
-    "bg-brand-600 text-white border-brand-600 hover:bg-brand-700 hover:border-brand-700 active:bg-brand-800",
+  primary: cx(
+    "bg-brand-600 text-white border-brand-600 shadow-[0_1px_2px_rgb(0_0_0/0.05)]",
+    "hover:bg-brand-700 hover:border-brand-700 hover:shadow-glow-brand active:bg-brand-800",
+    LIFT,
+  ),
   secondary:
     "bg-surface text-ink border-line-strong hover:bg-subtle hover:border-faint active:bg-line",
   ghost: "bg-transparent text-muted border-transparent hover:bg-line/60 hover:text-ink",
-  danger:
+  danger: cx(
     "bg-danger-600 text-white border-danger-600 hover:bg-danger-700 hover:border-danger-700",
+    LIFT,
+  ),
   "danger-ghost":
-    "bg-transparent text-danger-600 border-transparent hover:bg-danger-50 hover:text-danger-700",
-  success:
+    "bg-transparent text-danger-600 border-transparent hover:bg-danger-50 hover:text-danger-300",
+  success: cx(
     "bg-success-600 text-white border-success-600 hover:bg-success-700 hover:border-success-700",
-  link: "bg-transparent text-brand-700 border-transparent hover:text-brand-800 hover:underline px-0",
+    LIFT,
+  ),
+  link: "bg-transparent text-brand-300 border-transparent hover:text-brand-400 hover:underline px-0",
 };
 
 const SIZES = {
-  sm: "h-8 px-2.5 text-xs gap-1.5",
-  md: "h-9 px-3.5 text-sm gap-2",
-  lg: "h-11 px-5 text-sm gap-2",
+  sm: "h-8 px-3 text-xs gap-1.5",
+  md: "h-10 px-4 text-sm gap-2",
+  lg: "h-12 px-6 text-sm gap-2",
   /** زر أيقونة مربع — للإجراءات داخل صفوف الجداول. */
-  icon: "h-8 w-8 p-0 justify-center",
+  icon: "h-9 w-9 p-0 justify-center",
   "icon-sm": "h-7 w-7 p-0 justify-center",
 };
 
 const BASE =
-  "inline-flex items-center justify-center font-medium border rounded-[var(--radius-control)] " +
-  "transition-colors select-none whitespace-nowrap " +
-  "disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none";
+  "hx-press inline-flex items-center justify-center font-medium border rounded-[var(--radius-control)] " +
+  "transition-[background-color,border-color,box-shadow,transform,color] duration-200 ease-(--ease-premium) " +
+  "select-none whitespace-nowrap " +
+  "disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none disabled:translate-y-0 disabled:shadow-none";
 
 /**
  * @param {object} options

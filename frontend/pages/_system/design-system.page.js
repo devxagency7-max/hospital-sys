@@ -145,7 +145,6 @@ function tokensTab() {
         scale("الشريط الجانبي", [
           { token: "rail", label: "rail", dark: true },
           { token: "rail-hover", label: "hover", dark: true },
-          { token: "rail-active", label: "active", dark: true },
         ]),
       ),
     }),
@@ -654,7 +653,7 @@ function feedbackTab() {
           button({ label: "طباعة", icon: "print", variant: "secondary", disabled: true }),
           el(
             "span",
-            { class: "text-xs text-danger-700" },
+            { class: "text-xs text-danger-300" },
             "أزرار التصدير معطّلة لأن report.exportable = false",
           ),
         ),
@@ -854,7 +853,7 @@ function patientsTableTab() {
         sortable: true,
         render: (row) =>
           row.outstandingBalance > 0
-            ? el("span", { class: "text-danger-700 font-medium" }, fmt.amount(row.outstandingBalance))
+            ? el("span", { class: "text-danger-300 font-medium" }, fmt.amount(row.outstandingBalance))
             : el("span", { class: "text-faint" }, "—"),
       },
       {
@@ -964,7 +963,7 @@ function invoicesTableTab() {
         sortable: true,
         render: (row) =>
           row.remaining > 0
-            ? el("span", { class: "text-danger-700 font-medium" }, fmt.amount(row.remaining))
+            ? el("span", { class: "text-danger-300 font-medium" }, fmt.amount(row.remaining))
             : el("span", { class: "text-faint" }, "—"),
       },
       { key: "status", label: "الحالة", width: "8rem", render: (row) => statusBadge(row.status) },

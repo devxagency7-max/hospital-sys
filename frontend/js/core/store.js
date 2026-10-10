@@ -66,20 +66,20 @@ export function createStore(initialState = {}) {
   };
 }
 
-/**
- * حالة التطبيق العامة — ما يحتاجه الإطار (الشريط الجانبي/الهيدر) فقط.
- * لا تضع بيانات شاشة هنا.
- */
-export const appState = createStore({
-  sidebarCollapsed: readPreference("sidebarCollapsed", false),
-  mobileNavOpen: false,
-  /** عدد الطلبات الجارية — يشغّل شريط التقدّم العلوي. */
-  pendingRequests: 0,
-});
-
 /* --------------------------------------------------------------------------
    تفضيلات محلية
    localStorage قد يُرفض (تصفّح خاص / سياسة مؤسسية)، لذلك كل وصول محمي.
+
+   يجب أن يسبق هذا القسم appState أدناه: appState يستدعي readPreference في
+   مهّئ كائنه الحرفي، وهو استدعاء متزامن يُنفَّذ فورًا عند تقييم الوحدة — لو
+   بقي STORAGE_PREFIX (ثابت const) معرَّفًا بعد appState نصيًا، فإن استدعاء
+   readPreference سيقع داخل "المنطقة الميتة زمنيًا" لذلك الثابت ويرمي
+   ReferenceError، والذي يبتلعه try/catch في readPreference بصمت ويُعيد
+   القيمة الافتراضية دائمًا — تفضيل محفوظ فعليًا في localStorage يبدو وكأنه
+   غير موجود أبدًا. باگ فعلي حقيقي اكتُشف أثناء تطوير نظام السمات (كل تفضيل
+   عبر readPreference كان متأثرًا، بما فيها sidebarCollapsed من Phase 1 —
+   لم يظهر العطل من قبل لأن قيمته الافتراضية الخاطئة وقيمته الصحيحة الشائعة
+   كانتا كلتاهما "false" في معظم الاختبارات اليدوية).
    -------------------------------------------------------------------------- */
 
 const STORAGE_PREFIX = "hospital-erp:";
@@ -100,3 +100,18 @@ export function writePreference(key, value) {
     // التفضيلات تحسين لا أكثر؛ فشل الحفظ لا يوقف شيئًا.
   }
 }
+
+/**
+ * حالة التطبيق العامة — ما يحتاجه الإطار (الشريط الجانبي/الهيدر) فقط.
+ * لا تضع بيانات شاشة هنا.
+ */
+export const appState = createStore({
+  sidebarCollapsed: readPreference("sidebarCollapsed", false),
+  mobileNavOpen: false,
+  /** عدد الطلبات الجارية — يشغّل شريط التقدّم العلوي. */
+  pendingRequests: 0,
+  /** "dark" | "light" | "system" — التطبيق الفعلي عبر js/core/theme.js. */
+  themePreference: readPreference("themePreference", "light"),
+  /** طبقة الخلفية القابلة للتخصيص — راجع js/core/background-studio.js. */
+  backgroundStudio: readPreference("backgroundStudio", null),
+});

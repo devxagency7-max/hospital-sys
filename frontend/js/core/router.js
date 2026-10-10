@@ -221,6 +221,14 @@ async function handleChange() {
 
     if (typeof result?.destroy === "function") disposeCurrent = result.destroy;
 
+    /*
+     * الانتقال يُضبط مركزيًا هنا لا داخل كل شاشة — وإلا احتاجت كل شاشة
+     * مستقبلية أن «تتذكر» إضافة الفئة بنفسها، وهو بالضبط ما يُنسى أولاً.
+     * فئة CSS خالصة (hx-page-in)، لا حالة JS، فتعمل بصرف النظر عن بنية جذر
+     * الشاشة، وتحترم prefers-reduced-motion تلقائيًا عبر تعريفها في CSS.
+     */
+    element.classList.add("hx-page-in");
+
     render(outlet, element);
     afterRender(context);
   } catch (error) {

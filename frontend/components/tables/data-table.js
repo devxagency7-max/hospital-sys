@@ -392,7 +392,7 @@ export function dataTable({
       bulkBar,
       el(
         "span",
-        { class: "text-xs font-medium text-brand-800" },
+        { class: "text-xs font-medium text-brand-300" },
         `تم تحديد ${selection.size} ${selection.size === 1 ? "صف" : "صفوف"}`,
       ),
       el(
@@ -683,7 +683,7 @@ export function dataTable({
   const element = el(
     "div",
     {
-      class: "bg-surface border border-line rounded-[var(--radius-card)] shadow-card overflow-hidden",
+      class: "glass-card rounded-2xl shadow-card overflow-hidden",
     },
     el("div", { class: "no-print" }, toolbar, filterHost),
     bulkBar,

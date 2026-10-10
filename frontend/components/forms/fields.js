@@ -79,7 +79,7 @@ export function field({ label, control, required = false, error, hint, id, span 
     error
       ? el(
           "p",
-          { id: messageId, class: "flex items-start gap-1 text-xs text-danger-700 mt-1.5" },
+          { id: messageId, class: "flex items-start gap-1 text-xs text-danger-300 mt-1.5" },
           icon("error", { size: 13, class: "mt-0.5" }),
           el("span", {}, error),
         )
@@ -158,6 +158,21 @@ export function input({
         )
       : null,
   );
+}
+
+/**
+ * حقل نصي مدمج مع التسمية والتلميح ورسائل التحقق.
+ */
+export function textField({ label, required, error, hint, span, id, ...inputProps } = {}) {
+  return field({
+    label,
+    required,
+    error,
+    hint,
+    span,
+    id,
+    control: input(inputProps),
+  });
 }
 
 /** حقل مبلغ مالي — يضيف رمز العملة ويضبط الخطوة. */

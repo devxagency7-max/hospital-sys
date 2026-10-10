@@ -28,7 +28,7 @@ export function breadcrumbs({ path, route } = {}) {
         : entry.path
           ? el(
               "a",
-              { href: `#${entry.path}`, class: "text-muted hover:text-brand-700 transition-colors truncate-1" },
+              { href: `#${entry.path}`, class: "text-muted hover:text-brand-300 transition-colors truncate-1" },
               entry.label,
             )
           : el("span", { class: "text-muted truncate-1" }, entry.label);

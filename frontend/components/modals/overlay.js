@@ -22,15 +22,27 @@ function unlockScroll() {
 }
 
 /**
- * القاعدة المشتركة.
+ * القاعدة المشتركة. مُصدَّرة عمدًا: أي سطح منبثق جديد لا يطابق شكل نافذة أو
+ * درج أو تأكيد (مثل لوحة أوامر بحث) يبنيها فوق هذه، لا بتكرار منطق حصر
+ * التركيز والإغلاق من الصفر.
  * @returns {{ close: Function, element: HTMLElement }}
  */
-function openOverlay({ panel, onClose, dismissible = true, align = "center" }) {
+export function openOverlay({ panel, onClose, dismissible = true, align = "center" }) {
+  /*
+   * "center": نافذة/تأكيد — وسط الشاشة تمامًا.
+   * "end": درج — نهاية المحور المنطقي، أي يسار الشاشة في RTL، بكامل الارتفاع.
+   * "top": لوحة أوامر — أعلى الشاشة، وسطًا أفقيًا، بلا تمدد رأسي كامل.
+   */
+  const ALIGN = {
+    center: "items-center justify-center p-4",
+    end: "items-stretch justify-end",
+    top: "items-start justify-center pt-[12vh] p-4",
+  };
+
   const backdrop = el("div", {
     class: cx(
       "hx-backdrop fixed inset-0 z-50 bg-ink/40 backdrop-blur-[1px] flex no-print",
-      // "end" للأدراج: نهاية المحور المنطقي، أي يسار الشاشة في RTL.
-      align === "center" ? "items-center justify-center p-4" : "items-stretch justify-end",
+      ALIGN[align] ?? ALIGN.center,
     ),
   });
 

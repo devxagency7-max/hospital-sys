@@ -11,7 +11,7 @@ export const APP = {
   organization: "مستشفى النيل التخصصي",
   version: "0.1.0",
   /** مرحلة التنفيذ الحالية حسب docs/08-IMPLEMENTATION-PLAN.md. */
-  phase: 0,
+  phase: 1,
 };
 
 export const API = {

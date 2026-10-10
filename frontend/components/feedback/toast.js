@@ -82,7 +82,7 @@ export function showToast({ tone = "info", message, title, duration, action } = 
               "button",
               {
                 type: "button",
-                class: "text-xs font-medium text-brand-700 hover:underline mt-1.5",
+                class: "text-xs font-medium text-brand-300 hover:text-brand-400 hover:underline mt-1.5",
                 onClick: () => {
                   action.onClick();
                   dismiss();

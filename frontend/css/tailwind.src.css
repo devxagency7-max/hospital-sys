@@ -5,6 +5,20 @@
 
 @import "tailwindcss";
 
+/*
+ * باگ فعلي حرج: مكوّنات حديثة (sidebar.js وغيره) بدأت تستخدم بادئة `dark:`
+ * من Tailwind مباشرة (105 استخدامًا عبر المكوّنات) — لكن افتراضي Tailwind v4
+ * يربط `dark:` بـ `@media (prefers-color-scheme: dark)`، أي تفضيل *نظام
+ * التشغيل*، لا تفضيل *التطبيق* (`data-theme` على <html> الذي يضبطه
+ * js/core/theme.js فعليًا عند اختيار المستخدم من قائمة السمات). تأكَّد
+ * تجريبيًا: نظام تشغيل فاتح + تفضيل تطبيق "داكن" → خلفية داكنة صحيحة (تتبع
+ * data-theme) لكن نص بلون الوضع الفاتح (الغامق) فوقها — تباين شبه معدوم،
+ * نص غير مقروء كليًا في القائمة الجانبية. إعادة تعريف المتغيّر هنا تجعل كل
+ * استخدام لاحق لـ`dark:` في أي ملف JS يتبع `data-theme` بدل تفضيل النظام —
+ * بلا حاجة لتعديل الـ 105 استخدامًا الحالية واحدًا واحدًا.
+ */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 /* فئات Tailwind مكتوبة داخل ملفات JS، لذلك نحدد مصادر الفحص صراحةً. */
 @source "../index.html";
 @source "../js";
@@ -12,99 +26,354 @@
 @source "../pages";
 
 /* --------------------------------------------------------------------------
-   Design tokens
+   Design tokens — نظام سمتين (داكن افتراضي + فاتح، المرحلة Theme System)
+
    كل لون/خط/مقاس في المشروع يُعرَّف هنا ولا شيء آخر. تغيير هوية المستشفى
    يبدأ وينتهي في هذا الـ block.
+
+   البنية: `@theme` يُعرِّف القيم الداكنة كافتراضي غير مشروط (توافقًا مع
+   Phase 1 وحتى لا ينكسر أي شيء قبل تحميل JS). طبقة `@layer base` أسفله
+   تُعيد تعريف نفس متغيرات `--color-*` داخل `:root[data-theme="light"]`
+   و `:root[data-theme="dark"]` صراحة — بالضبط نفس تقنية `@media print`
+   المستخدمة أصلاً في هذا الملف، معمَّمة الآن على سمة تفاعلية بدل سياق طباعة
+   فقط. `js/core/theme.js` يضبط `data-theme` على <html>؛ لا كود JS آخر يعرف
+   قيمة لون واحدة — كل مكوّن يستخدم طبقات دلالية (bg-surface, text-ink,
+   border-line) لا ألوانًا حرفية، ففحص السمة بالكامل ينعكس تلقائيًا على كل
+   شاشة بلا تعديل مكوّن واحد.
+
+   قاعدة الدرجات الموحَّدة عبر خمس عائلات الألوان (brand + success/warning/
+   danger/info) — كما في الداكن، نفس الأدوار تتكرر في الفاتح بقيم معكوسة:
+     -50/-100   خلفية شريحة مُصبوغة بالدرجة (داكنة غامقة في Dark، فاتحة ناعمة
+                في Light) — ليست شفافة، لون صلب
+     -200       حدّ الشريحة — رؤية خافتة لكن واضحة
+     -300       نص/أيقونة على خلفية الشريحة: ساطعة في Dark (تُقرأ على غامق)،
+                غامقة في Light (تُقرأ على فاتح) — نفس الدور، قطبان معكوسان
+     -600       تعبئة صلبة (أزرار، نقاط الحالة) — ثابتة عبر السمتين، لون
+                كتلة مكتفٍ بذاته بصرف النظر عمّا خلفه
+     -700       تغميق عند المرور لتعبئة -600 الصلبة — ثابتة للسبب نفسه
    -------------------------------------------------------------------------- */
 @theme {
-  /* --- الخطوط --- */
-  --font-sans: "IBM Plex Sans Arabic", "Segoe UI", Tahoma, Arial, sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Code", monospace;
+  /* --- الخطوط ---
+     Cairo مُرفَق محليًا (frontend/assets/fonts، @font-face أسفل الملف) —
+     لا رابط Google Fonts خارجي: شبكة المستشفى قد تكون مغلقة تمامًا عن
+     الإنترنت العام، وأي طلب خط خارجي يفشل بصمت هناك ويُسقط الخط لخط النظام
+     دون تفسير. Dubai وSegoe UI يبقيان احتياطًا محليًا أيضًا (مُرفَقان مع
+     ويندوز) فلا ينكسر شيء حتى لو تعطَّل تحميل Cairo لأي سبب. */
+  --font-sans: "Cairo", "Dubai", "Segoe UI", -apple-system, "Segoe UI Variable", system-ui, Tahoma,
+    Arial, sans-serif;
+  --font-mono: "Cascadia Code", "Consolas", ui-monospace, "Segoe UI Mono", monospace;
 
-  /* --- اللون الأساسي (هوية المستشفى) --- */
-  --color-brand-50: #eefdf9;
-  --color-brand-100: #d5f9f0;
-  --color-brand-200: #aef1e3;
-  --color-brand-300: #78e4d1;
-  --color-brand-400: #3ecdb8;
-  --color-brand-500: #17b19f;
-  --color-brand-600: #0d8f82;
-  --color-brand-700: #0f7269;
-  --color-brand-800: #115b55;
-  --color-brand-900: #124b47;
-  --color-brand-950: #042d2b;
+  /* --- اللون الأساسي (هوية المستشفى) ---
+     أزرق #1d4ed8 — مطابقة حرفية للمرجع البصري (nahda-webb-main)، لا تيل كما
+     في مرحلة سابقة. -600/-700 مُقفَلان على القيمتين الحرفيتين من المرجع
+     (--color-primary / --color-primary-hover هناك) فلا ينحرفان عن المرجع
+     بصريًا في أكثر عنصرين ظهورًا: الأزرار الأساسية والعنصر النشط بالتنقّل. */
+  --color-brand-50: #0e1c30;
+  --color-brand-100: #12243c;
+  --color-brand-200: #1f3a5c;
+  --color-brand-300: #67a6fb;
+  --color-brand-400: #5b9bf5;
+  --color-brand-500: #3b74f0;
+  --color-brand-600: #1d4ed8;
+  --color-brand-700: #1e40af;
+  --color-brand-800: #1e3a8a;
+  --color-brand-900: #182f6e;
+  --color-brand-950: #101d45;
 
   /* --- النصوص --- */
-  --color-ink: #0f172a; /* نص أساسي */
-  --color-muted: #5a6677; /* نص ثانوي */
-  --color-faint: #8a97a8; /* نص خفيف / تلميحات */
+  --color-ink: #eef1f8; /* نص أساسي */
+  --color-muted: #8e9bb3; /* نص ثانوي */
+  --color-faint: #5c6882; /* نص خفيف / تلميحات */
 
   /* --- الأسطح --- */
-  --color-canvas: #f5f7f9; /* خلفية الصفحة */
-  --color-surface: #ffffff; /* خلفية الكروت والجداول */
-  --color-subtle: #f8fafc; /* رؤوس الجداول، صفوف متبادلة */
-  --color-line: #e3e8ef; /* حدود */
-  --color-line-strong: #cbd4e1; /* حدود بارزة */
+  --color-canvas: #0a0e17; /* خلفية الصفحة — الأعمق باستثناء القضيب */
+  --color-surface: #121929; /* خلفية الكروت والجداول والنوافذ */
+  --color-subtle: #1a2338; /* رؤوس الجداول، صفوف متبادلة، خلفية الحقول */
+  --color-line: #273349; /* حدود */
+  --color-line-strong: #39465f; /* حدود بارزة */
 
-  /* --- الشريط الجانبي (قضيب داكن) --- */
-  --color-rail: #101a2b;
-  --color-rail-hover: #1b2840;
-  --color-rail-active: #0d8f82;
-  --color-rail-text: #aab6c8;
-  --color-rail-heading: #65758c;
+  /* --- الشريط الجانبي ---
+     توكنات مستقلة لا نسخة من --color-surface: القضيب زجاج بدرجة شدّة مختلفة
+     عن بقية السطوح في كلتا السمتين، فيحتاج قيمه الخاصة — داكن شبه أسود هنا،
+     ويُعاد تعريفه زجاجًا فاتحًا داخل :root[data-theme="light"] أدناه. */
+  --color-rail: #060911;
+  --color-rail-hover: #131c2e;
+  --color-rail-text: #8b98b0;
+  --color-rail-heading: #4c5873;
+  /* نص قوي/عنوان على سطح القضيب — بديل عن text-white المكتوب حرفيًا سابقًا
+     في sidebar.js، والذي افترض أن القضيب داكن دائمًا. بعد أن صار القضيب
+     يتبع السمة (زجاج فاتح في Light)، النص الأبيض الحرفي يختفي على خلفية
+     بيضاء — هذا التوكن هو ما يحل محله، ويُعرَّف أبيض في الداكن وشبه أسود
+     في الفاتح. */
+  --color-rail-ink: #ffffff;
+  /* فاصل شبه شفاف بين قطاعات القضيب — كان حرفيًا border-white/[0.06] في
+     sidebar.js. توكن الآن فتختلف قيمته بين السمتين (القضيب نفسه داكن في
+     كلتا السمتين، لكن طبقة الزجاج فوقه تختلف شدّتها). */
+  --color-rail-line: rgb(255 255 255 / 0.06);
 
   /* --- ألوان دلالية --- */
-  --color-success-50: #ecfdf5;
-  --color-success-200: #a7f3d0;
+  --color-success-50: #0b2318;
+  --color-success-100: #0f2e20;
+  --color-success-200: #1c4a30;
+  --color-success-300: #5fe3a0;
   --color-success-600: #059669;
   --color-success-700: #047857;
 
-  --color-warning-50: #fffbeb;
-  --color-warning-200: #fde68a;
+  --color-warning-50: #2a1e09;
+  --color-warning-100: #36280c;
+  --color-warning-200: #5c4513;
+  --color-warning-300: #fbbf24;
   --color-warning-600: #d97706;
   --color-warning-700: #b45309;
 
-  --color-danger-50: #fff1f2;
-  --color-danger-200: #fecdd3;
+  --color-danger-50: #2c0f16;
+  --color-danger-100: #38131b;
+  --color-danger-200: #5c1f2c;
+  --color-danger-300: #fb7185;
   --color-danger-600: #e11d48;
   --color-danger-700: #be123c;
 
-  --color-info-50: #eff6ff;
-  --color-info-200: #bfdbfe;
+  --color-info-50: #0e1c30;
+  --color-info-100: #12243c;
+  --color-info-200: #1f3a5c;
+  --color-info-300: #67a6fb;
   --color-info-600: #2563eb;
   --color-info-700: #1d4ed8;
 
-  /* --- الاستدارة --- */
-  --radius-card: 0.75rem;
-  --radius-control: 0.5rem;
+  /* --- الاستدارة ---
+     استدارة كبيرة ومتسقة في كل مكان — هوية «Gen-Z enterprise premium»
+     المطلوبة تعتمد على زوايا سخية لا زوايا شبه حادة. --radius-pill لعناصر
+     تستحق شكل الكبسولة الكاملة (مدخل بحث، شرائح مؤشرات، صفوف تنقّل). */
+  --radius-card: 1.25rem;
+  --radius-control: 0.875rem;
+  --radius-pill: 999px;
 
-  /* --- الظلال --- */
-  --shadow-card: 0 1px 2px 0 rgb(16 26 43 / 0.04), 0 1px 3px 0 rgb(16 26 43 / 0.06);
-  --shadow-raised: 0 4px 12px -2px rgb(16 26 43 / 0.1), 0 2px 4px -2px rgb(16 26 43 / 0.06);
-  --shadow-overlay: 0 24px 48px -12px rgb(16 26 43 / 0.28);
+  /* --- الظلال ---
+     على خلفية داكنة لا يكفي ظل أسود وحده ليُقرأ كارتفاع — نضيف خطًا داخليًا
+     علويًا خافتًا جدًا (inset highlight) يحاكي انعكاس ضوء على حافة زجاجية،
+     فوق ظل أسود حقيقي للثقل. تقنية واحدة متكررة بثلاث شدّات.
+     القيم هنا افتراضية (= الداكنة)؛ `@layer base` أسفله يُعيد تعريفها داخل
+     `:root[data-theme="light"]` بشدّات أخف بكثير — ظل ثقيل بنفس كثافة الداكن
+     فوق سطح فاتح يبدو كبقعة وسخة لا ارتفاعًا أنيقًا. */
+  --shadow-card: inset 0 1px 0 0 rgb(255 255 255 / 0.04), 0 1px 2px 0 rgb(0 0 0 / 0.3),
+    0 12px 32px -12px rgb(0 0 0 / 0.45);
+  --shadow-raised: inset 0 1px 0 0 rgb(255 255 255 / 0.06), 0 2px 6px 0 rgb(0 0 0 / 0.3),
+    0 20px 48px -14px rgb(0 0 0 / 0.6);
+  --shadow-overlay: inset 0 1px 0 0 rgb(255 255 255 / 0.06), 0 0 0 1px rgb(255 255 255 / 0.06),
+    0 32px 80px -16px rgb(0 0 0 / 0.75);
+  /* توهّج طموح خافت — لعناصر قليلة مقصودة (زر أساسي عند التركيز، بطاقة مؤشر
+     نشطة)، لا لكل شيء. الإفراط فيه هو بالضبط ما طُلب تجنّبه. */
+  --shadow-glow-brand: 0 0 0 1px rgb(29 78 216 / 0.35), 0 0 32px -6px rgb(29 78 216 / 0.4);
+
+  /* --- أسطح الزجاج (glassmorphism) ---
+     قيم افتراضية داكنة؛ `@layer base` يعيد تعريفها فاتحة أسفله. */
+  --color-glass: rgb(18 25 41 / 0.75);
+  --color-glass-rail: rgb(6 9 17 / 0.82);
+  --color-glass-card: rgb(18 25 41 / 0.72);
+  --color-glass-border: rgb(255 255 255 / 0.09);
 
   /* --- أبعاد اللياوت --- */
-  --spacing-sidebar: 16rem;
+  --spacing-sidebar: 17.25rem;
   --spacing-sidebar-collapsed: 4.5rem;
   --spacing-header: 3.75rem;
+
+  /* --- مدد الحركة --- */
+  --ease-premium: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* --- شدّة ضبابية الزجاج ---
+     متغيّر لا رقم مكتوب حرفيًا داخل .glass/.glass-rail: استوديو تخصيص
+     المظهر (js/core/background-studio.js) يُعيد كتابة هذه القيمة حيًّا عبر
+     style.setProperty عند تحريك شريحة «الضبابية» — فتتبعها كل الأسطح
+     الزجاجية في الواجهة فورًا بلا الحاجة لإعادة رسم أي مكوّن. */
+  --glass-blur: 20px;
+  --glass-blur-rail: 24px;
+}
+
+/* --------------------------------------------------------------------------
+   خط Cairo — محلي بالكامل، بلا أي طلب شبكة
+   -------------------------------------------------------------------------- */
+@font-face {
+  font-family: "Cairo";
+  src: url("../assets/fonts/Cairo-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Cairo";
+  src: url("../assets/fonts/Cairo-Bold.ttf") format("truetype");
+  font-weight: 700 800;
+  font-style: normal;
+  font-display: swap;
 }
 
 /* --------------------------------------------------------------------------
    الطبقة الأساسية
    -------------------------------------------------------------------------- */
 @layer base {
+  /*
+   * إعادة تعريف صريحة لنفس متغيرات --color، --shadow، و--color-glass داخل
+   * كل سمة — تمامًا تقنية `@media print` أدناه، معمَّمة الآن على data-theme.
+   * كل مكوّن يستهلك هذه المتغيرات عبر فئات Tailwind (bg-surface, text-ink،
+   * …)؛ لا سطر JS واحد يعرف قيمة لون، فتبديل data-theme على <html> ينعكس
+   * فورًا وصحيحًا على كل شاشة بلا استثناء.
+   *
+   * [data-theme="dark"] مكرِّرة لقيم @theme أعلاه حرفيًا — تبدو زائدة، لكنها
+   * ضرورية: لو تُرك الداكن "يرث" من القيم الافتراضية غير المشروطة فقط،
+   * فتبديل المستخدم من فاتح إلى داكن صراحة (لا "نظام") لن يكون له أي قاعدة
+   * CSS تُطبَّق فوق [data-theme="light"] السابقة — الفاتح سيبقى عالقًا.
+   */
+  :root[data-theme="dark"] {
+    --color-ink: #eef1f8;
+    --color-muted: #8e9bb3;
+    --color-faint: #5c6882;
+
+    --color-canvas: #0a0e17;
+    --color-surface: #121929;
+    --color-subtle: #1a2338;
+    --color-line: #273349;
+    --color-line-strong: #39465f;
+
+    --color-rail: rgba(15, 23, 42, 0.60);
+    --color-rail-hover: rgba(255, 255, 255, 0.08);
+    --color-rail-text: #cbd5e1;
+    --color-rail-heading: #94a3b8;
+    --color-rail-ink: #ffffff;
+    --color-rail-line: rgba(255, 255, 255, 0.12);
+
+    --color-brand-50: #0e1c30;
+    --color-brand-100: #12243c;
+    --color-brand-200: #1f3a5c;
+    --color-brand-300: #67a6fb;
+
+    --color-success-50: #0b2318;
+    --color-success-100: #0f2e20;
+    --color-success-200: #1c4a30;
+    --color-success-300: #5fe3a0;
+
+    --color-warning-50: #2a1e09;
+    --color-warning-100: #36280c;
+    --color-warning-200: #5c4513;
+    --color-warning-300: #fbbf24;
+
+    --color-danger-50: #2c0f16;
+    --color-danger-100: #38131b;
+    --color-danger-200: #5c1f2c;
+    --color-danger-300: #fb7185;
+
+    --color-info-50: #0e1c30;
+    --color-info-100: #12243c;
+    --color-info-200: #1f3a5c;
+    --color-info-300: #67a6fb;
+
+    --color-surface: rgba(18, 25, 41, 0.72);
+    --color-glass: rgba(18, 25, 41, 0.75);
+    --color-glass-rail: rgba(15, 23, 42, 0.60);
+    --color-glass-card: rgba(18, 25, 41, 0.72);
+    --color-glass-border: rgba(255, 255, 255, 0.12);
+
+    --shadow-card: inset 0 1px 0 0 rgb(255 255 255 / 0.04), 0 1px 2px 0 rgb(0 0 0 / 0.3),
+      0 12px 32px -12px rgb(0 0 0 / 0.45);
+    --shadow-raised: inset 0 1px 0 0 rgb(255 255 255 / 0.06), 0 2px 6px 0 rgb(0 0 0 / 0.3),
+      0 20px 48px -14px rgb(0 0 0 / 0.6);
+    --shadow-overlay: inset 0 1px 0 0 rgb(255 255 255 / 0.06), 0 0 0 1px rgb(255 255 255 / 0.06),
+      0 32px 80px -16px rgb(0 0 0 / 0.75);
+
+    /* طبقة الخلفية خلف الزجاج — افتراضي: تدرّج رمادي-أزرق هادئ (لا مشبَّع) يحاكي
+       أثر صورة طبيعية مموَّهة، لا تدرّجًا صريحًا بلون العلامة — قابل للاستبدال
+       الكامل من استوديو تخصيص المظهر (/settings/appearance). */
+    --bg-layer-image: linear-gradient(135deg, #1e293b 0%, #334155 50%, #64748b 100%);
+    --bg-overlay-color: rgb(10 14 23 / 0.3);
+  }
+
+  /*
+   * فاتح مؤسسي فاخر مطابق لمؤسسة النهضة: أسطح زجاجية بيضاء شبه شفافة (surface)
+   * مع ضبابية عالية تبرز الخلفية الطبيعية بسلاسة وفخامة.
+   */
+  :root[data-theme="light"] {
+    --color-ink: #000000;
+    --color-muted: #334155;
+    --color-faint: #64748b;
+
+    /* قماش شفاف لكي تظهر طبقة الخلفية الطبيعية بوضوح تام */
+    --color-canvas: transparent;
+    --color-surface: rgba(255, 255, 255, 0.88);
+    --color-subtle: rgba(255, 255, 255, 0.55);
+    --color-line: rgba(226, 232, 240, 0.8);
+    --color-line-strong: rgba(203, 213, 225, 0.9);
+
+    /* القضيب الجانبي زجاج أبيض شفاف فخم مطابق للمرجع البصري لمؤسسة النهضة */
+    --color-rail: rgba(255, 255, 255, 0.40);
+    --color-rail-hover: rgba(255, 255, 255, 0.70);
+    --color-rail-text: #1e293b;
+    --color-rail-heading: #64748b;
+    --color-rail-ink: #0f172a;
+    --color-rail-line: rgba(255, 255, 255, 0.85);
+
+    --color-brand-50: #eff6ff;
+    --color-brand-100: #dbeafe;
+    --color-brand-200: #bfdbfe;
+    --color-brand-300: #1d4ed8;
+
+    --color-success-50: #ecfdf5;
+    --color-success-100: #d1fae5;
+    --color-success-200: #a7f3d0;
+    --color-success-300: #059669;
+
+    --color-warning-50: #fffbeb;
+    --color-warning-100: #fef3c7;
+    --color-warning-200: #fde68a;
+    --color-warning-300: #d97706;
+
+    --color-danger-50: #fff1f2;
+    --color-danger-100: #ffe4e6;
+    --color-danger-200: #fecdd3;
+    --color-danger-300: #e11d48;
+
+    --color-info-50: #f0f9ff;
+    --color-info-100: #e0f2fe;
+    --color-info-200: #bae6fd;
+    --color-info-300: #0284c7;
+
+    --color-glass: rgba(255, 255, 255, 0.82);
+    --color-glass-rail: rgba(255, 255, 255, 0.40);
+    --color-glass-card: rgba(255, 255, 255, 0.82);
+    --color-glass-border: rgba(255, 255, 255, 0.85);
+
+    /* ظلال ناعمة متعددة الطبقات مع انعكاس ضوئي علوي شفاف (inset highlight) */
+    --shadow-card: 0 4px 20px -2px rgba(15, 23, 42, 0.05), inset 0 1px 1px 0 rgba(255, 255, 255, 0.95);
+    --shadow-raised: 0 10px 30px -4px rgba(15, 23, 42, 0.08), inset 0 1px 2px 0 rgba(255, 255, 255, 1);
+    --shadow-overlay: 0 24px 60px -12px rgba(15, 23, 42, 0.18), inset 0 1px 2px 0 rgba(255, 255, 255, 1);
+
+    /* خلفية المرجع البصري وغطاء ناعم محايد بنسبة 88% يطابق لقطة الشاشة الأصلية */
+    --bg-layer-image: url("../assets/background.jpg");
+    --bg-overlay-color: rgba(234, 239, 245, 0.88);
+  }
+
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+  }
+  :root[data-theme="light"] {
+    color-scheme: light;
+  }
+
   html {
     -webkit-text-size-adjust: 100%;
     scroll-behavior: smooth;
   }
 
   body {
-    background-color: var(--color-canvas);
+    /* شفاف لا color-canvas صلب: #bg-layer (ثابت خلف كل شيء، inset.html)
+       يحمل الآن لون/صورة/تدرّج الخلفية الفعلي القابل للتخصيص. لو بقي body
+       صلبًا لحجب الطبقة كاملة ولن يظهر أي تخصيص من الاستوديو إطلاقًا. */
+    background-color: transparent;
     color: var(--color-ink);
     font-family: var(--font-sans);
     font-size: 0.875rem;
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
   }
 
   /* أرقام لاتينية بعرض ثابت — ضرورية لمحاذاة الأعمدة المالية في الجداول. */
@@ -122,11 +391,12 @@
     color: var(--color-ink);
     font-weight: 600;
     line-height: 1.35;
+    letter-spacing: -0.01em;
   }
 
   /* حلقة تركيز واحدة متسقة لكل العناصر التفاعلية. */
   :focus-visible {
-    outline: 2px solid var(--color-brand-500);
+    outline: 2px solid var(--color-brand-400);
     outline-offset: 2px;
     border-radius: 3px;
   }
@@ -217,6 +487,89 @@
 }
 
 /* --------------------------------------------------------------------------
+   زجاج مُقيَّد (restrained glassmorphism)
+
+   «لا إفراط في الزجاج» — مطبَّقة حرفيًا: الأداة متاحة لعدد قليل من الأسطح
+   المقصودة (الهيدر، الشريط الجانبي، النوافذ المنبثقة) لا للجداول ولا للنماذج
+   ولا لكل كرت. بيانات مالية كثيفة تحتاج سطحًا صلبًا يُقرأ بثقة، لا طبقة ضبابية.
+
+   `backdrop-filter` قد لا يكون مدعومًا (نادر اليوم)؛ `@supports not` يوفّر
+   سطحًا صلبًا عاديًا بدلاً منه — لا زجاج مكسور يظهر كخلفية باهتة فارغة.
+
+   باگ فعلي اكتُشف أثناء مراجعة بصرية: كتابة `-webkit-backdrop-filter` يدويًا
+   إلى جانب `backdrop-filter` هنا كانت تجعل مُصغِّر Tailwind v4 (Lightning
+   CSS، مرحلة --minify) يحذف الخاصية القياسية من المخرجات تمامًا — فيبقى
+   `-webkit-` فقط، وهو وحده لا يُفعِّل التمويه في Chromium الحديث إطلاقًا
+   (تأكَّد مباشرة: `getComputedStyle().backdropFilter` يعود "none"). الزجاج
+   كان "يعمل" بصريًا رغم ذلك لأن الشفافية وحدها كانت كافية لإخفاء الخلل — لا
+   تمويه فعليًا خلف أي سطح `glass`/`glass-rail` منذ المرحلة 1. الحل: كتابة
+   `backdrop-filter` القياسية فقط وترك Lightning CSS يُولِّد `-webkit-`
+   تلقائيًا (دوره الصحيح أصلاً) — عندها يُبقي كلتا الخاصيتين في المخرج.
+   -------------------------------------------------------------------------- */
+/* زجاج الكروت والأسطح الزجاجية الرئيسية — مطابقة بصرية لمؤسسة النهضة */
+.glass {
+  background-color: var(--color-glass);
+  backdrop-filter: blur(var(--glass-blur, 18px)) saturate(160%);
+  border-color: var(--color-line);
+}
+
+.glass-rail {
+  background-color: var(--color-glass-rail);
+  backdrop-filter: blur(var(--glass-blur-rail, 24px)) saturate(180%);
+  border: 1px solid var(--color-rail-line);
+  box-shadow: 0 10px 35px -5px rgba(15, 23, 42, 0.07), inset 0 1px 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+:root[data-theme="dark"] .glass-rail {
+  box-shadow: 0 10px 35px -5px rgba(0, 0, 0, 0.4), inset 0 1px 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.glass-card {
+  background-color: var(--color-glass-card, var(--color-surface));
+  backdrop-filter: blur(var(--glass-blur, 16px)) saturate(160%);
+  border: 1px solid var(--color-glass-border, var(--color-line));
+  box-shadow: var(--shadow-card);
+}
+
+/* --------------------------------------------------------------------------
+   طبقة الخلفية (استوديو تخصيص المظهر)
+
+   عنصر واحد ثابت (#bg-layer، يُركَّب مرة واحدة في index.html) خلف كل شيء —
+   صورة/لون/تدرّج يختاره المستخدم من /settings/appearance، بفلتر CSS حيّ
+   (ضبابية/سطوع/تباين/تشبّع) فوقه، وغطاء شبه شفاف يضمن بقاء النص والأسطح
+   الزجاجية مقروءة بصرف النظر عن تباين الخلفية المختارة. لا "@utility" عام
+   هنا — هذا عنصر وحيد لا نمط مُكرَّر، فمُعرِّف #bg-layer مباشرة أوضح وأبسط
+   من فئة Tailwind تُستخدم مرة واحدة فقط.
+
+   القيم الافتراضية (--bg-layer-image أعلاه) والفلتر هنا جميعها متغيّرات
+   CSS يكتب فوقها js/core/background-studio.js حيًّا عبر
+   document.documentElement.style.setProperty عند كل تغيير في الاستوديو —
+   فلا حاجة لإعادة رسم أي عنصر آخر في الواجهة عند تعديل الخلفية.
+   -------------------------------------------------------------------------- */
+#bg-layer {
+  position: fixed;
+  inset: -12px;
+  z-index: -2;
+  background-image: var(--bg-layer-image);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  filter: blur(var(--bg-blur, 20px)) brightness(var(--bg-brightness, 100%))
+    contrast(var(--bg-contrast, 100%)) saturate(var(--bg-saturate, 100%));
+  transform: scale(1.03);
+  transition: filter 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+}
+
+#bg-layer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-color: var(--bg-overlay-color);
+  transition: background-color 0.15s ease;
+}
+
+/* --------------------------------------------------------------------------
    حركات
    -------------------------------------------------------------------------- */
 @keyframes hx-shimmer {
@@ -268,12 +621,34 @@
   }
 }
 
+/* دخول الصفحة عند كل تنقّل SPA — ارتفاع خفيف جدًا مع تلاشٍ، لا شريحة كبيرة
+   تلفت الانتباه عن المحتوى نفسه. */
+@keyframes hx-page-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+/* نبضة خافتة لنقطة «مباشر» على مؤشرات لوحة التحكم. */
+@keyframes hx-pulse-dot {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.55;
+    transform: scale(1.35);
+  }
+}
+
 @layer components {
   /* هيكل تحميل (skeleton) — يرث لون السطح ويمرّر لمعة خفيفة. */
   .hx-skeleton {
     position: relative;
     overflow: hidden;
-    background-color: var(--color-line);
+    background-color: var(--color-subtle);
     border-radius: 0.375rem;
   }
   .hx-skeleton::after {
@@ -284,7 +659,7 @@
     background-image: linear-gradient(
       90deg,
       transparent,
-      rgb(255 255 255 / 0.65),
+      rgb(255 255 255 / 0.07),
       transparent
     );
     animation: hx-shimmer 1.4s infinite;
@@ -302,16 +677,31 @@
     animation: hx-fade-in 0.15s ease-out;
   }
   .hx-rise {
-    animation: hx-rise 0.18s ease-out;
+    animation: hx-rise 0.18s var(--ease-premium);
   }
   .hx-toast {
-    animation: hx-toast-in 0.2s ease-out;
+    animation: hx-toast-in 0.2s var(--ease-premium);
   }
   .hx-drawer {
-    animation: hx-drawer-in-rtl 0.22s ease-out;
+    animation: hx-drawer-in-rtl 0.26s var(--ease-premium);
   }
   [dir="ltr"] .hx-drawer {
     animation-name: hx-drawer-in-ltr;
+  }
+  .hx-page-in {
+    animation: hx-page-in 0.28s var(--ease-premium);
+  }
+  .hx-pulse-dot {
+    animation: hx-pulse-dot 2s ease-in-out infinite;
+  }
+
+  /* زر/بطاقة قابلة للضغط — انكماش خفيف جدًا عند الضغط الفعلي، لا عند التحويم.
+     اللمسة الصغيرة التي تجعل الواجهة تبدو «ماديّة» بدل مسطَّحة. */
+  .hx-press {
+    transition: transform 0.12s var(--ease-premium);
+  }
+  .hx-press:active {
+    transform: scale(0.97);
   }
 }
 
@@ -328,20 +718,43 @@
 }
 
 /* --------------------------------------------------------------------------
-   الطباعة — التقارير تُطبع من نفس الشاشة، فلا بد أن يختفي الإطار.
+   الطباعة — التقارير تُطبع من نفس الشاشة، والمطبوع يجب أن يبقى أبيض/أسود
+   واضحًا بصرف النظر عن أن الشاشة داكنة؛ لا أحد يريد تقريرًا ماليًا مطبوعًا
+   بحبر داكن كامل الصفحة.
    -------------------------------------------------------------------------- */
 @media print {
   @page {
     margin: 14mm;
   }
 
+  /*
+   * إعادة تعريف التوكنات نفسها، لا `body.color` فقط: كل مكوّن يضبط `color`
+   * صراحةً عبر فئة مثل `text-ink` التي تُترجم إلى `color: var(--color-ink)`
+   * — وهذا إسناد مباشر لا يتوارث من body. لو تُرك التوكن على قيمته الداكنة
+   * (نص شبه أبيض) لظهر تقرير مالي مطبوع بحبر شبه غائب على ورق أبيض.
+   * إعادة الإسناد هنا تصل لكل عنصر يستخدم التوكن، بصرف النظر عن أين عُرِّف.
+   */
+  :root {
+    color-scheme: light;
+    --color-ink: #0f172a;
+    --color-muted: #475569;
+    --color-faint: #64748b;
+    --color-canvas: #ffffff;
+    --color-surface: #ffffff;
+    --color-subtle: #f8fafc;
+    --color-line: #e2e8f0;
+    --color-line-strong: #cbd5e1;
+  }
+
   body {
     background: #fff;
+    color: var(--color-ink);
     font-size: 11pt;
   }
 
   .no-print,
-  [data-print="hide"] {
+  [data-print="hide"],
+  #bg-layer {
     display: none !important;
   }
 
@@ -371,4 +784,79 @@
 
 .print-only {
   display: none;
+}
+
+/* --------------------------------------------------------------------------
+   تقرير الحالة وملف البحث (Printable Case Dossier Sheet)
+   -------------------------------------------------------------------------- */
+.case-sheet {
+  background-color: #ffffff;
+  color: #0f172a;
+  font-family: "Cairo", system-ui, sans-serif;
+  box-sizing: border-box;
+}
+
+@media screen {
+  .case-sheet {
+    box-shadow: 0 12px 36px -4px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.05);
+    border-radius: 0.75rem;
+  }
+}
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 8mm 10mm;
+  }
+  html,
+  body,
+  #app,
+  #app > div,
+  main,
+  #page {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    position: static !important;
+    display: block !important;
+  }
+  body {
+    background: #ffffff !important;
+  }
+  #header,
+  aside,
+  #bg-layer,
+  .no-print,
+  [data-print="hide"] {
+    display: none !important;
+  }
+  main,
+  #page {
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+  }
+  .case-sheet {
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    border: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    page-break-after: always !important;
+    break-after: page !important;
+    min-height: 265mm;
+  }
+  .case-sheet:last-child,
+  .case-sheet-last {
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    margin-bottom: 0 !important;
+  }
+  .case-no-break {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
 }

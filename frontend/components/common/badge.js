@@ -5,14 +5,18 @@
 import { el, cx } from "../../js/core/dom.js";
 import { describeStatus } from "../../js/core/statuses.js";
 
+/*
+ * -300 لا -700: على سطح داكن، نص الشريحة يحتاج أن يكون ساطعًا لا غامقًا.
+ * راجع شرح قاعدة الدرجات في أعلى css/tailwind.src.css.
+ */
 const TONES = {
   neutral: "bg-subtle text-muted border-line-strong",
-  info: "bg-info-50 text-info-700 border-info-200",
-  success: "bg-success-50 text-success-700 border-success-200",
-  warning: "bg-warning-50 text-warning-700 border-warning-200",
-  danger: "bg-danger-50 text-danger-700 border-danger-200",
+  info: "bg-info-50 text-info-300 border-info-200",
+  success: "bg-success-50 text-success-300 border-success-200",
+  warning: "bg-warning-50 text-warning-300 border-warning-200",
+  danger: "bg-danger-50 text-danger-300 border-danger-200",
   muted: "bg-line/50 text-faint border-line",
-  brand: "bg-brand-50 text-brand-700 border-brand-200",
+  brand: "bg-brand-50 text-brand-300 border-brand-200",
 };
 
 const DOT_TONES = {

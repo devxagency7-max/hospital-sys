@@ -203,6 +203,7 @@ export const navigation = [
     icon: "settings",
     permission: "settings.view",
     children: [
+      { label: "تخصيص المظهر", path: "/settings/appearance", permission: "settings.manage", phase: 1 },
       { label: "بيانات المستشفى", path: "/settings/hospital", permission: "settings.view", phase: 6 },
       { label: "الأقسام", path: "/settings/departments", permission: "settings.manage", phase: 6 },
       { label: "العيادات", path: "/settings/clinics", permission: "settings.manage", phase: 6 },

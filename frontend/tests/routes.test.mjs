@@ -35,7 +35,20 @@ let blank = 0;
 for (const screen of screens) {
   currentPath = screen.path;
   await page.goto(`${BASE}/#${screen.path}`, { waitUntil: "load" });
-  await page.waitForTimeout(260);
+
+  /*
+   * انتظار محتوى فعلي لا مهلة ثابتة: معظم الشاشات «مخطَّطة» تُرسم فورًا
+   * ولا تحتاج أكثر من إطارين، لكن شاشة تجلب بيانات حقيقية (لوحة التحكم) قد
+   * تستغرق حتى حد MOCK.latencyMs الأقصى (420ms) لطلبين متوازيين. مهلة ثابتة
+   * 260ms كانت تلتقط لوحة التحكم منتصف الهيكل العظمي دون محتوى — ليس عطلاً،
+   * توقيت فحص مبكر فقط. الانتظار حتى ظهور h1 فعليًا يصحّح هذا للجميع دفعة
+   * واحدة دون تبطيء الشاشات السريعة بمهلة موحَّدة كبيرة.
+   */
+  await page
+    .waitForFunction(() => Boolean(document.querySelector("#page h1, #page [data-page-title]")), {
+      timeout: 2000,
+    })
+    .catch(() => {}); // نترك الفحص أدناه يُسجِّل الفشل بالتفصيل بدل رمي هنا
 
   // كل شاشة يجب أن تُنتج عنوانًا (h1) ومحتوى غير فارغ.
   const info = await page.evaluate(() => {

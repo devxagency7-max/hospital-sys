@@ -32,6 +32,27 @@ import {
   PAYMENT_METHODS,
   GOVERNORATES,
 } from "./seed.js";
+import {
+  accounts,
+  journalEntries,
+  cashBoxes,
+  bankAccounts,
+  costCenters,
+  accountingPeriods,
+  appointments,
+  purchaseRequests,
+  purchaseOrders,
+  supplierInvoices,
+  prescriptions,
+  labRequests,
+  radiologyRequests,
+  users,
+  roles,
+  auditLogs,
+  hospitalInfo,
+  clinics,
+  taxes,
+} from "./modules.mock.js";
 
 /**
  * المجموعات. نُنسخ المصفوفات حتى لا تُعدّل ملفات البيانات الأصلية في مكانها،
@@ -56,6 +77,25 @@ export const db = {
   services: [...SERVICES],
   paymentMethods: [...PAYMENT_METHODS],
   governorates: GOVERNORATES.map((name, index) => ({ id: index + 1, name })),
+  accounts: [...accounts],
+  journalEntries: [...journalEntries],
+  cashBoxes: [...cashBoxes],
+  bankAccounts: [...bankAccounts],
+  costCenters: [...costCenters],
+  accountingPeriods: [...accountingPeriods],
+  appointments: [...appointments],
+  purchaseRequests: [...purchaseRequests],
+  purchaseOrders: [...purchaseOrders],
+  supplierInvoices: [...supplierInvoices],
+  prescriptions: [...prescriptions],
+  labRequests: [...labRequests],
+  radiologyRequests: [...radiologyRequests],
+  users: [...users],
+  roles: [...roles],
+  auditLogs: [...auditLogs],
+  hospitalInfo: { ...hospitalInfo },
+  clinics: [...clinics],
+  taxes: [...taxes],
 };
 
 /* --------------------------------------------------------------------------
@@ -89,6 +129,24 @@ const SEARCHABLE = {
   suppliers: ["name", "code", "phone"],
   doctors: ["name", "title"],
   services: ["name", "code", "category"],
+  accounts: ["code", "name", "type"],
+  journalEntries: ["entryNumber", "description", "createdBy"],
+  cashBoxes: ["code", "name", "custodian", "location"],
+  bankAccounts: ["bankName", "accountName", "accountNumber", "iban"],
+  costCenters: ["code", "name", "manager"],
+  accountingPeriods: ["name", "status"],
+  appointments: ["appointmentNumber", "patientName", "doctorName", "clinicName", "notes"],
+  purchaseRequests: ["requestNumber", "department", "requestedBy"],
+  purchaseOrders: ["orderNumber", "supplierName"],
+  supplierInvoices: ["invoiceNumber", "poNumber", "supplierName"],
+  prescriptions: ["prescriptionNumber", "patientName", "doctorName"],
+  labRequests: ["requestNumber", "patientName", "doctorName", "testName"],
+  radiologyRequests: ["requestNumber", "patientName", "doctorName", "scanName"],
+  users: ["name", "username", "email", "phone", "roleName", "department"],
+  roles: ["code", "name", "description"],
+  auditLogs: ["user", "action", "module", "entity", "ip", "details"],
+  clinics: ["code", "name", "departmentName", "doctor", "room"],
+  taxes: ["code", "name", "applicableTo"],
 };
 
 /** حقل التاريخ الذي يستهدفه فلتر `dateFrom` / `dateTo` لكل مجموعة. */
@@ -100,6 +158,15 @@ const DATE_FIELD = {
   creditNotes: "date",
   batches: "expiryDate",
   stockMovements: "date",
+  journalEntries: "date",
+  appointments: "date",
+  purchaseRequests: "date",
+  purchaseOrders: "date",
+  supplierInvoices: "date",
+  prescriptions: "date",
+  labRequests: "date",
+  radiologyRequests: "date",
+  auditLogs: "timestamp",
 };
 
 /** معاملات لا تُعامل كفلاتر على الحقول. */

@@ -13,6 +13,8 @@ import { toast } from "../components/feedback/toast.js";
 import { on } from "./core/events.js";
 import { ErrorCode } from "./core/errors.js";
 import { APP, LOCALE } from "./core/config.js";
+import { initTheme } from "./core/theme.js";
+import { initBackgroundStudio } from "./core/background-studio.js";
 
 function boot() {
   const root = qs("#app");
@@ -26,6 +28,14 @@ function boot() {
   document.documentElement.lang = LOCALE.language;
   document.documentElement.dir = LOCALE.direction;
   document.title = APP.name;
+
+  /*
+   * السمة طُبِّقت مبدئيًا بسكربت inline في index.html (قبل تحميل أي وحدة JS،
+   * لمنع وميض السمة الخطأ). initTheme هنا يتولى ما بعد ذلك: مزامنة التبديل
+   * التفاعلي وتتبّع تغيّر تفضيل نظام التشغيل عند اختيار "النظام".
+   */
+  initTheme();
+  initBackgroundStudio();
 
   /* --- الإطار --- */
   const shell = appShell();

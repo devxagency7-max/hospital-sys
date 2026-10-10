@@ -29,7 +29,7 @@ export function appShell() {
 
   const mobileHost = el(
     "div",
-    { class: "fixed inset-y-0 start-0 z-50 hidden lg:hidden" },
+    { class: "fixed inset-y-0 start-0 z-50 hidden lg:hidden p-2.5" },
   );
 
   function openMobileNav() {
@@ -44,7 +44,7 @@ export function appShell() {
     desktopHost.appendChild(navPanel);
   }
 
-  const desktopHost = el("div", { class: "hidden lg:block h-full" }, navPanel);
+  const desktopHost = el("div", { class: "hidden lg:flex flex-col h-full shrink-0" }, navPanel);
 
   const topBar = header({ onOpenMobileNav: openMobileNav });
 

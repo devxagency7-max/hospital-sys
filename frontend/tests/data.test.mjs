@@ -4,7 +4,8 @@
  */
 
 import { patients } from "../js/mock/patients.mock.js";
-import { invoices, payments, invoiceLines, creditNotes } from "../js/mock/invoices.mock.js";
+import { invoices, payments, invoiceLines, refunds, creditNotes } from "../js/mock/invoices.mock.js";
+import { REFERENCE_DATE } from "../js/mock/seed.js";
 import { isFinalized, isCancelled } from "../js/domain/billing.js";
 import { items, batches, deriveItemStatus } from "../js/mock/inventory.mock.js";
 import { query, find, all } from "../js/mock/db.js";
@@ -30,6 +31,27 @@ check("تشغيلات", batches.length > 30, `${batches.length}`);
 
 /* ───────────────────── تماسك الأرقام المالية ───────────────────── */
 section("تماسك الأرقام المالية");
+
+/*
+ * لا سجل مالي مؤرَّخ بعد REFERENCE_DATE («الآن» الذي يفترضه التطبيق كله).
+ * باگ فعلي ظهر أثناء بناء لوحة التحكم: السرد الزمني لمثال مرتجع+إشعار دائن
+ * المُركَّب يدويًا كان يُضيف أيامًا للأمام من تاريخ آخر دفعة بلا سقف، فأنتج
+ * مرتجعًا مؤرَّخًا بعد أربعة أيام من «اليوم» — ظهر فورًا كأول صف في أعلى
+ * قائمة «النشاط الحديث» بلوحة التحكم. لم يكشفه شيء قبل عرضه مُرتَّبًا زمنيًا
+ * في واجهة فعلية، وهذا بالضبط سبب تثبيته كفحص دائم.
+ */
+const today = REFERENCE_DATE.toISOString().slice(0, 10);
+const futureDated = [
+  ...invoices.filter((i) => i.date > today),
+  ...payments.filter((p) => p.date > today),
+  ...refunds.filter((r) => r.date > today),
+  ...creditNotes.filter((c) => c.date > today),
+];
+check(
+  "لا سجل مالي مؤرَّخ في المستقبل بالنسبة لـ REFERENCE_DATE",
+  futureDated.length === 0,
+  futureDated.length ? `مثال: ${JSON.stringify(futureDated[0])}` : "",
+);
 
 const headerMath = invoices.filter(
   (i) => Math.abs(r2(i.subtotal - i.discount + i.tax) - i.total) > 0.011,
@@ -291,6 +313,54 @@ check(
   "الأرصدة المستحقة موجبة",
   dash.data.revenue.outstanding > 0,
   `${dash.data.revenue.outstanding}`,
+);
+
+/* --- حقول لوحة التحكم (Phase 1) --- */
+check(
+  "today يضم كل الحقول المطلوبة",
+  ["collected", "invoicesIssued", "patientsVisited", "newPatients"].every((k) => k in dash.data.today),
+);
+check("محصَّل اليوم غير سالب", dash.data.today.collected >= 0, `${dash.data.today.collected}`);
+
+check("revenueTrend 14 نقطة", dash.data.revenueTrend.length === 14, `${dash.data.revenueTrend.length}`);
+check(
+  "revenueTrend مرتَّبة تصاعديًا وتنتهي باليوم المرجعي",
+  dash.data.revenueTrend.every(
+    (point, index) => index === 0 || dash.data.revenueTrend[index - 1].date < point.date,
+  ) && dash.data.revenueTrend.at(-1).date === dash.data.asOf.slice(0, 10),
+);
+check(
+  "لا نقطة بالرسم البياني مؤرَّخة بعد اليوم المرجعي",
+  dash.data.revenueTrend.every((point) => point.date <= dash.data.asOf.slice(0, 10)),
+);
+
+check("departments لا تضم قسمًا بلا فواتير", dash.data.departments.every((department) => department.invoicesCount > 0));
+check(
+  "departments مرتَّبة تنازليًا حسب الإيراد",
+  dash.data.departments.every(
+    (department, index) => index === 0 || dash.data.departments[index - 1].revenue >= department.revenue,
+  ),
+);
+
+check("recentActivity لا يتجاوز الحد المطلوب", dash.data.recentActivity.length <= 8);
+check(
+  "recentActivity مرتَّب تنازليًا بالتاريخ",
+  dash.data.recentActivity.every(
+    (event, index) => index === 0 || dash.data.recentActivity[index - 1].date >= event.date,
+  ),
+);
+check(
+  "كل حدث نشاط حديث يحمل اسم مريض",
+  dash.data.recentActivity.every((event) => Boolean(event.patientName)),
+);
+
+check("recentPatients لا يتجاوز الحد المطلوب", dash.data.recentPatients.length <= 6);
+check(
+  "recentPatients مرتَّب تنازليًا بتاريخ التسجيل",
+  dash.data.recentPatients.every(
+    (patient, index) =>
+      index === 0 || dash.data.recentPatients[index - 1].registeredAt >= patient.registeredAt,
+  ),
 );
 
 const one = dispatchMock({ method: "GET", path: "/patients/1001", params: {}, body: null });

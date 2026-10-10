@@ -204,6 +204,9 @@ const ROUTES = {
   "GET /dashboard/summary": () => {
     const allInvoices = all("invoices");
     const itemRows = all("items");
+    const allPayments = all("payments");
+    const allRefunds = all("refunds");
+    const allPatients = all("patients");
 
     const today = REFERENCE_DATE.toISOString().slice(0, 10);
     const monthPrefix = today.slice(0, 7);
@@ -211,6 +214,10 @@ const ROUTES = {
     // دوال المجال تستبعد الملغاة بنفسها — لا نكرر الشرط في كل مجموع.
     const thisMonth = allInvoices.filter((row) => row.date.startsWith(monthPrefix));
     const invoiceRows = allInvoices.filter((row) => row.status !== "cancelled");
+
+    const todaysInvoices = allInvoices.filter((row) => row.date === today);
+    const todaysPayments = allPayments.filter((row) => row.date === today);
+    const todaysRefunds = allRefunds.filter((row) => row.date === today);
 
     return {
       data: {
@@ -224,8 +231,8 @@ const ROUTES = {
           invoicedThisMonth: totalInvoiced(thisMonth),
           // المحصَّل فعلًا = المدفوعات ناقص المرتجعات المعتمدة في نفس الشهر.
           collectedThisMonth: totalCollected({
-            payments: all("payments").filter((row) => row.date.startsWith(monthPrefix)),
-            refunds: all("refunds").filter((row) => row.date.startsWith(monthPrefix)),
+            payments: allPayments.filter((row) => row.date.startsWith(monthPrefix)),
+            refunds: allRefunds.filter((row) => row.date.startsWith(monthPrefix)),
           }),
           outstanding: totalOutstanding(allInvoices),
         },
@@ -249,9 +256,189 @@ const ROUTES = {
           /** إشعارات الدائن تمر بنفس مسار المراجعة — بند منفصل لا جزء من المرتجعات. */
           creditNotes: all("creditNotes").filter((row) => row.status === "pending").length,
         },
+
+        /**
+         * نبض العمليات اليومي. «المحصَّل اليوم» لا «المفوتر اليوم» تحديدًا:
+         * الفاتورة تُنشأ لحظة الخدمة لكن السداد يتوزّع على أيام تالية (تقسيط،
+         * تحويل بنكي متأخر)، فالمبلغ الذي دخل الخزينة فعليًا اليوم أصدق مؤشرًا
+         * على نشاط اليوم التشغيلي من قيمة فواتير رُفعَت اليوم وقد تُسدَّد لاحقًا.
+         */
+        today: {
+          collected: totalCollected({ payments: todaysPayments, refunds: todaysRefunds }),
+          invoicesIssued: todaysInvoices.filter((row) => row.status !== "cancelled").length,
+          patientsVisited: allPatients.filter((row) => row.lastVisitAt === today).length,
+          newPatients: allPatients.filter((row) => row.registeredAt === today).length,
+        },
+
+        /** سلسلة 14 يومًا للرسم البياني — مفوتر مقابل محصَّل، يومًا بيوم. */
+        revenueTrend: buildRevenueTrend(allInvoices, allPayments, allRefunds, REFERENCE_DATE, 14),
+
+        /** توزيع إيراد الشهر الحالي على الأقسام — الأقسام بلا نشاط لا تُعرض. */
+        departments: buildDepartmentSummary(thisMonth),
+
+        /** آخر الحركات المالية — دفعات ومرتجعات، الأحدث أولًا. */
+        recentActivity: buildRecentActivity(allPayments, allRefunds, allInvoices, 8),
+
+        /** آخر المرضى المسجَّلين — الأحدث أولًا. */
+        recentPatients: [...allPatients]
+          .sort((a, b) => String(b.registeredAt).localeCompare(String(a.registeredAt)))
+          .slice(0, 6),
       },
     };
   },
+
+  /* ========================= المحاسبة ========================= */
+
+  "GET /accounting/accounts": ({ params }) => query("accounts", params),
+  "POST /accounting/accounts": ({ body }) => {
+    const id = (db.accounts.reduce((max, r) => Math.max(max, r.id), 100) ?? 100) + 1;
+    const account = insert("accounts", {
+      ...body,
+      id,
+      balance: 0,
+      status: "active",
+    });
+    return { data: account };
+  },
+
+  "GET /accounting/journal": ({ params }) => query("journalEntries", params),
+  "POST /accounting/journal": ({ body }) => {
+    const id = (db.journalEntries.reduce((max, r) => Math.max(max, r.id), 100) ?? 100) + 1;
+    const entry = insert("journalEntries", {
+      ...body,
+      id,
+      entryNumber: `JV-2026-00${id}`,
+      date: body.date || new Date().toISOString().slice(0, 10),
+      status: body.status || "approved",
+    });
+    return { data: entry };
+  },
+
+  "GET /accounting/cash": ({ params }) => query("cashBoxes", params),
+  "GET /accounting/banks": ({ params }) => query("bankAccounts", params),
+  "GET /accounting/cost-centers": ({ params }) => query("costCenters", params),
+  "GET /accounting/periods": ({ params }) => query("accountingPeriods", params),
+
+  "GET /accounting/trial-balance": () => {
+    const allAccounts = all("accounts").filter((a) => a.level === 4 || a.level === 3 && !all("accounts").some((sub) => sub.parentId === a.id));
+    const rows = allAccounts.map((acc) => {
+      const isDebit = acc.nature === "debit";
+      const bal = Math.abs(acc.balance);
+      return {
+        id: acc.id,
+        code: acc.code,
+        name: acc.name,
+        type: acc.type,
+        openingDebit: isDebit ? bal * 0.8 : 0,
+        openingCredit: !isDebit ? bal * 0.8 : 0,
+        periodDebit: isDebit ? bal * 0.2 : 0,
+        periodCredit: !isDebit ? bal * 0.2 : 0,
+        endingDebit: isDebit ? bal : 0,
+        endingCredit: !isDebit ? bal : 0,
+      };
+    });
+    const totals = rows.reduce(
+      (acc, r) => ({
+        openingDebit: acc.openingDebit + r.openingDebit,
+        openingCredit: acc.openingCredit + r.openingCredit,
+        periodDebit: acc.periodDebit + r.periodDebit,
+        periodCredit: acc.periodCredit + r.periodCredit,
+        endingDebit: acc.endingDebit + r.endingDebit,
+        endingCredit: acc.endingCredit + r.endingCredit,
+      }),
+      { openingDebit: 0, openingCredit: 0, periodDebit: 0, periodCredit: 0, endingDebit: 0, endingCredit: 0 }
+    );
+    return { data: { rows, totals } };
+  },
+
+  /* ========================= المواعيد ========================= */
+
+  "GET /appointments": ({ params }) => query("appointments", params),
+  "GET /appointments/queue": ({ params }) => {
+    const today = REFERENCE_DATE.toISOString().slice(0, 10);
+    return query("appointments", {
+      ...params,
+      date: today,
+      status: params.status || "waiting,confirmed",
+    });
+  },
+  "POST /appointments": ({ body }) => {
+    const id = (db.appointments.reduce((max, r) => Math.max(max, r.id), 1000) ?? 1000) + 1;
+    const item = insert("appointments", {
+      ...body,
+      id,
+      appointmentNumber: `APT-2026${id}`,
+      status: body.status || "confirmed",
+    });
+    return { data: item };
+  },
+  "PUT /appointments/:id": ({ params, body }) => {
+    const updated = update("appointments", params.id, body);
+    if (!updated) throw notFound("الموعد غير موجود.");
+    return { data: updated };
+  },
+
+  /* ========================= المشتريات ========================= */
+
+  "GET /purchasing/requests": ({ params }) => query("purchaseRequests", params),
+  "GET /purchasing/orders": ({ params }) => query("purchaseOrders", params),
+  "GET /purchasing/invoices": ({ params }) => query("supplierInvoices", params),
+  "GET /purchasing/suppliers": ({ params }) => query("suppliers", params),
+
+  /* ========================= الصيدلية ========================= */
+
+  "GET /pharmacy/prescriptions": ({ params }) => query("prescriptions", params),
+  "POST /pharmacy/prescriptions/:id/dispense": ({ params }) => {
+    const rx = update("prescriptions", params.id, {
+      status: "dispensed",
+      dispensedAt: new Date().toISOString(),
+      dispensedBy: "صيدلي / مينا سمير",
+    });
+    if (!rx) throw notFound("الروشتة غير موجودة.");
+    return { data: rx };
+  },
+
+  /* ========================= المختبر والأشعة ========================= */
+
+  "GET /laboratory/requests": ({ params }) => query("labRequests", params),
+  "PUT /laboratory/requests/:id": ({ params, body }) => {
+    const updated = update("labRequests", params.id, body);
+    if (!updated) throw notFound("طلب التحليل غير موجود.");
+    return { data: updated };
+  },
+
+  "GET /radiology/requests": ({ params }) => query("radiologyRequests", params),
+  "PUT /radiology/requests/:id": ({ params, body }) => {
+    const updated = update("radiologyRequests", params.id, body);
+    if (!updated) throw notFound("طلب الأشعة غير موجود.");
+    return { data: updated };
+  },
+
+  /* ========================= المستخدمون وسجل التدقيق ========================= */
+
+  "GET /users": ({ params }) => query("users", params),
+  "POST /users": ({ body }) => {
+    const id = (db.users.reduce((max, r) => Math.max(max, r.id), 10) ?? 10) + 1;
+    const user = insert("users", {
+      ...body,
+      id,
+      status: "active",
+      lastLogin: "—",
+    });
+    return { data: user };
+  },
+  "GET /users/roles": () => ({ data: all("roles") }),
+  "GET /audit": ({ params }) => query("auditLogs", params),
+
+  /* ========================= الإعدادات ========================= */
+
+  "GET /settings/hospital": () => ({ data: db.hospitalInfo }),
+  "PUT /settings/hospital": ({ body }) => {
+    db.hospitalInfo = { ...db.hospitalInfo, ...body };
+    return { data: db.hospitalInfo };
+  },
+  "GET /settings/clinics": ({ params }) => query("clinics", params),
+  "GET /settings/taxes": ({ params }) => query("taxes", params),
 
   /* ========================= الجلسة ========================= */
 
@@ -265,6 +452,88 @@ const ROUTES = {
     },
   }),
 };
+
+/* --------------------------------------------------------------------------
+   مساعدات لوحة التحكم
+   -------------------------------------------------------------------------- */
+
+/** يبني سلسلة أيام متتالية بصيغة ISO تنتهي بـ `endDate`. */
+function lastNDays(endDate, count) {
+  return Array.from({ length: count }, (_unused, index) => {
+    const date = new Date(endDate);
+    date.setDate(date.getDate() - (count - 1 - index));
+    return date.toISOString().slice(0, 10);
+  });
+}
+
+/** سلسلة يومية: مفوتر الفواتير الصادرة مقابل ما حُصِّل فعليًا، لكل يوم على حدة. */
+function buildRevenueTrend(invoices, payments, refunds, endDate, days) {
+  return lastNDays(endDate, days).map((date) => ({
+    date,
+    invoiced: totalInvoiced(invoices.filter((row) => row.date === date)),
+    collected: totalCollected({
+      payments: payments.filter((row) => row.date === date),
+      refunds: refunds.filter((row) => row.date === date),
+    }),
+  }));
+}
+
+/** إيراد الشهر الحالي مُوزَّعًا على الأقسام — الأقسام بلا فواتير تُستبعد. */
+function buildDepartmentSummary(monthInvoices) {
+  const byDepartment = new Map();
+
+  for (const invoice of monthInvoices) {
+    if (invoice.status === "cancelled" || !invoice.departmentId) continue;
+
+    const entry = byDepartment.get(invoice.departmentId) ?? { invoices: [] };
+    entry.invoices.push(invoice);
+    byDepartment.set(invoice.departmentId, entry);
+  }
+
+  return [...byDepartment.entries()]
+    .map(([departmentId, entry]) => {
+      const department = find("departments", departmentId);
+      return {
+        departmentId,
+        name: department?.name ?? "—",
+        invoicesCount: entry.invoices.length,
+        revenue: totalInvoiced(entry.invoices),
+      };
+    })
+    .sort((a, b) => b.revenue - a.revenue);
+}
+
+/**
+ * آخر الحركات المالية — دفعات ومرتجعات مُدمَجة زمنيًا في سجل واحد.
+ * اسم المريض يُستخرَج عبر الفاتورة المرتبطة (الدفعة لا تحمله مباشرة)
+ * لتفادي الازدواج مع مجموعة المرضى — عقدة ربط واحدة لا اثنتان.
+ */
+function buildRecentActivity(payments, refunds, invoices, limit) {
+  const invoiceById = new Map(invoices.map((invoice) => [invoice.id, invoice]));
+
+  const events = [
+    ...payments.map((payment) => ({
+      type: "payment",
+      id: `payment-${payment.id}`,
+      date: payment.date,
+      amount: payment.amount,
+      invoiceNumber: invoiceById.get(payment.invoiceId)?.invoiceNumber,
+      patientName: invoiceById.get(payment.invoiceId)?.patientName,
+    })),
+    ...refunds
+      .filter((refund) => refund.status === "approved")
+      .map((refund) => ({
+        type: "refund",
+        id: `refund-${refund.id}`,
+        date: refund.date,
+        amount: refund.amount,
+        invoiceNumber: refund.invoiceNumber,
+        patientName: refund.patientName,
+      })),
+  ];
+
+  return events.sort((a, b) => String(b.date).localeCompare(String(a.date))).slice(0, limit);
+}
 
 /* --------------------------------------------------------------------------
    المطابقة والتوجيه

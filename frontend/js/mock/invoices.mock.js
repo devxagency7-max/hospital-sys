@@ -16,7 +16,7 @@
  * حقل مالي فيها صفر. أي مجموع مديونية أو إيراد يستبعدها.
  */
 
-import { createRandom, SERVICES, PAYMENT_METHODS, DOCTORS } from "./seed.js";
+import { createRandom, SERVICES, PAYMENT_METHODS, DOCTORS, REFERENCE_DATE } from "./seed.js";
 import { patients } from "./patients.mock.js";
 import * as money from "../core/money.js";
 import { calculateInvoiceTotals, settleInvoice } from "../domain/billing.js";
@@ -63,7 +63,16 @@ function generate() {
   for (let index = 0; index < 236; index += 1) {
     const id = 2001 + index;
     const patient = random.pick(billable);
-    const date = random.date(random.int(0, 420));
+    /*
+     * توزيع زمني واقعي لا عشوائي منتظم: نشاط مستشفى حقيقي أكثف في الأيام
+     * الأخيرة (عمليات جارية) وله ذيل طويل من فواتير أقدم مستقرة (مديونيات
+     * عمرها أشهر). عيّنة منتظمة على 420 يومًا كانت تُنتج صفر فواتير بالضبط
+     * في تاريخ اليوم المرجعي بمحض الصدفة — عيب واقعية في المولّد، لا حقيقة
+     * عن النظام؛ لوحة تحكم «اليوم» على بيانات كهذه تبدو معطّلة لا هادئة.
+     */
+    const date = random.chance(0.55)
+      ? random.date(random.int(0, 21)) // نشاط حديث — الثلاثة أسابيع الأخيرة
+      : random.date(random.int(22, 420)); // ذيل تاريخي — مديونيات ومعاملات مستقرة
 
     /* ---------------------------------------------------- البنود والإجماليات */
 
@@ -272,14 +281,25 @@ function generate() {
       .sort()
       .at(-1);
 
-    const addDays = (isoDate, days) => {
+    const today = REFERENCE_DATE.toISOString().slice(0, 10);
+
+    /*
+     * مُقيَّد بـ «اليوم» (REFERENCE_DATE) لا حرًّا: الدفعة الأخيرة قد تكون
+     * اليوم نفسه، فإضافة أيام للسرد بلا سقف تدفع إشعار الدائن ثم المرتجع إلى
+     * المستقبل — تواريخ لاحقة لـ«الآن» الذي يفترضه التطبيق بأكمله. سجل زمني
+     * بحدث مؤرَّخ بعد غد يبدو عطلاً واضحًا في أول قائمة «نشاط حديث» تعرضه،
+     * فالضمانة الأهم هنا ترتيب الأحداث (دُفعت ← صُحِّحت ← رُدَّت) لا تباعدها
+     * بأيام كاملة؛ نفس اليوم للجميع حين لا يتّسع الأفق قبل اليوم مقبول تمامًا.
+     */
+    const addDaysClamped = (isoDate, days) => {
       const next = new Date(`${isoDate}T00:00:00Z`);
       next.setUTCDate(next.getUTCDate() + days);
-      return next.toISOString().slice(0, 10);
+      const computed = next.toISOString().slice(0, 10);
+      return computed > today ? today : computed;
     };
 
-    const creditNoteDate = addDays(latestPaymentDate ?? example.date, 5);
-    const refundDate = addDays(creditNoteDate, 3);
+    const creditNoteDate = addDaysClamped(latestPaymentDate ?? example.date, 5);
+    const refundDate = addDaysClamped(creditNoteDate, 3);
 
     const exampleCreditNote = {
       id: creditNoteId++,
