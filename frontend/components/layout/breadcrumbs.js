@@ -17,34 +17,69 @@ export function breadcrumbs({ path, route } = {}) {
   const trail = buildTrail(path, route);
   if (trail.length <= 1) return null;
 
-  return el(
+  const nav = el(
     "nav",
-    { class: "flex items-center gap-1.5 text-xs no-print", "aria-label": "مسار التنقل" },
+    { class: "flex items-center gap-1.5 text-xs font-bold text-slate-500 dark:text-slate-400", "aria-label": "مسار التنقل" },
     ...trail.flatMap((entry, index) => {
       const isLast = index === trail.length - 1;
 
       const node = isLast
-        ? el("span", { class: "text-ink font-medium truncate-1", "aria-current": "page" }, entry.label)
+        ? el("span", { class: "text-slate-900 dark:text-white font-extrabold truncate-1", "aria-current": "page" }, entry.label)
         : entry.path
           ? el(
               "a",
-              { href: `#${entry.path}`, class: "text-muted hover:text-brand-300 transition-colors truncate-1" },
+              { href: `#${entry.path}`, class: "text-slate-600 dark:text-slate-300 hover:text-blue-600 transition-colors truncate-1" },
               entry.label,
+              entry.srLabel ? el("span", { class: "sr-only" }, ` (${entry.srLabel})`) : null,
             )
-          : el("span", { class: "text-muted truncate-1" }, entry.label);
+          : el("span", { class: "text-slate-600 dark:text-slate-300 truncate-1" }, entry.label);
 
       return index === 0
         ? [node]
         : [
-            icon("chevronStart", { size: 12, class: "text-line-strong shrink-0" }),
+            el("span", { class: "text-slate-400/80 px-1 font-normal select-none" }, "/"),
             node,
           ];
     }),
   );
+
+  const bellBtn = el(
+    "button",
+    {
+      type: "button",
+      class:
+        "hx-press relative grid place-items-center size-10 rounded-2xl bg-white/90 dark:bg-slate-800 " +
+        "border border-slate-200/80 dark:border-white/15 shadow-xs text-slate-700 dark:text-slate-300 hover:bg-white cursor-pointer shrink-0",
+      title: "التنبيهات",
+      onClick: () => {
+        const notifTrigger = document.querySelector('header button[title*="تنبيه"], header button[aria-label*="تنبيه"]');
+        if (notifTrigger) notifTrigger.click();
+      },
+    },
+    icon("bell", { size: 18 }),
+    el(
+      "span",
+      {
+        class:
+          "absolute -top-1.5 -start-1.5 min-w-4.5 h-4.5 px-1 rounded-full bg-rose-500 text-white text-[9.5px] font-black grid place-items-center shadow-xs leading-none",
+      },
+      "10",
+    ),
+  );
+
+  return el(
+    "div",
+    {
+      class:
+        "glass-card rounded-[22px] px-6 py-3.5 flex items-center justify-between shadow-card border border-white/80 dark:border-white/10 no-print",
+    },
+    nav,
+    bellBtn,
+  );
 }
 
 function buildTrail(path, route) {
-  const trail = [{ label: "لوحة التحكم", path: "/" }];
+  const trail = [{ label: "الرئيسية", path: "/", srLabel: "لوحة التحكم" }];
   if (path === "/") return trail;
 
   const screen = findScreen(path);

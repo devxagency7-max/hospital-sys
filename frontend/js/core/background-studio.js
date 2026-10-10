@@ -37,11 +37,7 @@ export const DEFAULTS = Object.freeze({
 
 /** خلفيات وألوان وتدرّجات جاهزة — مطابقة لاستوديو nahda-webb-main. */
 export const PRESET_SWATCHES = [
-  { key: "default-nature", label: "طبيعة خضراء (الافتراضية)", type: "image", val: "assets/background.jpg" },
-  { key: "mountain-clouds", label: "جبال وسحب", type: "image", val: "assets/mountain-highland-clouds-sky-thumbnail.jpg" },
-  { key: "green-landscape", label: "مناظر طبيعية", type: "image", val: "assets/nature-landscape-natural-nature.jpg" },
-  { key: "low-poly-blue", label: "فن رقمي أزرق", type: "image", val: "assets/low-poly-abstract-blue-digital-art-wallpaper-thumb.jpg" },
-  { key: "dark-abstract", label: "فن تجريدي داكن", type: "image", val: "assets/abstract-3d-digital-art-dark-wallpaper-thumb.jpg" },
+  { key: "default-nature", label: "الصورة الأصلية", type: "image", val: "assets/background.jpg" },
   { key: "navy", label: "كحلي داكن", type: "color", val: "#0f172a" },
   { key: "charcoal", label: "رمادي فاحم", type: "color", val: "#18181b" },
   { key: "teal-dark", label: "زيتي داكن", type: "color", val: "#064e3b" },
@@ -50,9 +46,9 @@ export const PRESET_SWATCHES = [
   { key: "sky", label: "سماوي ناعم", type: "color", val: "#e0f2fe" },
   { key: "mint", label: "نعناعي فاتح", type: "color", val: "#ecfdf5" },
   { key: "cream", label: "بيج دافئ", type: "color", val: "#fef3c7" },
-  { key: "gradient-ocean", label: "تدرّج المحيط", type: "gradient", val: "linear-gradient(135deg, #0f172a, #1e3a8a)" },
-  { key: "gradient-emerald", label: "تدرّج زمردي", type: "gradient", val: "linear-gradient(135deg, #064e3b, #0f172a)" },
-  { key: "gradient-purple", label: "تدرّج أرجواني", type: "gradient", val: "linear-gradient(135deg, #311042, #701a75)" },
+  { key: "gradient-ocean", label: "تدرج المحيط", type: "gradient", val: "linear-gradient(135deg, #0f172a, #1e3a8a)" },
+  { key: "gradient-emerald", label: "تدرج زمردي", type: "gradient", val: "linear-gradient(135deg, #064e3b, #0f172a)" },
+  { key: "gradient-purple", label: "تدرج أرجواني", type: "gradient", val: "linear-gradient(135deg, #311042, #701a75)" },
 ];
 
 function currentSettings() {

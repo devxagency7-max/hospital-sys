@@ -100,6 +100,15 @@ const PATHS = {
     ["path", { d: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" }],
     ["path", { d: "M7 10l5 5 5-5M12 15V3" }],
   ],
+  upload: [
+    ["path", { d: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" }],
+    ["path", { d: "M17 8l-5-5-5 5M12 3v12" }],
+  ],
+  image: [
+    ["rect", { x: 3, y: 3, width: 18, height: 18, rx: 2 }],
+    ["circle", { cx: 8.5, cy: 8.5, r: 1.5 }],
+    ["path", { d: "M21 15l-5-5L5 21" }],
+  ],
   print: [
     ["path", { d: "M6 9V2h12v7" }],
     ["rect", { x: 3, y: 9, width: 18, height: 8, rx: 2 }],
