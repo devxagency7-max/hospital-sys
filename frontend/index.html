@@ -9,12 +9,13 @@
 
     <title>Hospital ERP</title>
 
-    <!--
-      لا خط خارجي: الخط الأساسي "Cairo" مُرفَق محليًا ضمن الملف نفسه
-      (assets/fonts، @font-face في css/tailwind.src.css)، و"Dubai"/"Segoe UI"
-      احتياط محلي أيضًا. صفر طلب شبكة، صفر وميض تحميل خط — ضروري لشبكة
-      مستشفى قد تكون مغلقة على الإنترنت الخارجي تمامًا.
-    -->
+    <!-- الخطوط الرسمية المعتمدة لمؤسسة النهضة: Almarai و Alexandria مع Cairo المحلي الاحتياطي -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Alexandria:wght@400;500;600;700;800&family=Almarai:wght@400;700;800&family=Cairo:wght@400;700;800&display=swap"
+      rel="stylesheet"
+    />
 
     <!-- ملف مُولَّد عبر `npm run build`. لا تحرّره — المصدر css/tailwind.src.css -->
     <link rel="stylesheet" href="css/app.css" />

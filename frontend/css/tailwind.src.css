@@ -53,13 +53,8 @@
      -700       تغميق عند المرور لتعبئة -600 الصلبة — ثابتة للسبب نفسه
    -------------------------------------------------------------------------- */
 @theme {
-  /* --- الخطوط ---
-     Cairo مُرفَق محليًا (frontend/assets/fonts، @font-face أسفل الملف) —
-     لا رابط Google Fonts خارجي: شبكة المستشفى قد تكون مغلقة تمامًا عن
-     الإنترنت العام، وأي طلب خط خارجي يفشل بصمت هناك ويُسقط الخط لخط النظام
-     دون تفسير. Dubai وSegoe UI يبقيان احتياطًا محليًا أيضًا (مُرفَقان مع
-     ويندوز) فلا ينكسر شيء حتى لو تعطَّل تحميل Cairo لأي سبب. */
-  --font-sans: "Cairo", "Dubai", "Segoe UI", -apple-system, "Segoe UI Variable", system-ui, Tahoma,
+  /* --- الخطوط الرسمية: Cairo و Almarai و Alexandria مع Dubai و Segoe UI كاحتياطي --- */
+  --font-sans: "Cairo", "Almarai", "Alexandria", "Dubai", "Segoe UI", -apple-system, system-ui, Tahoma,
     Arial, sans-serif;
   --font-mono: "Cascadia Code", "Consolas", ui-monospace, "Segoe UI Mono", monospace;
 
@@ -80,7 +75,7 @@
   --color-brand-900: #182f6e;
   --color-brand-950: #101d45;
 
-  /* --- النصوص --- */
+  /* --- النصوص الافتراضية --- */
   --color-ink: #eef1f8; /* نص أساسي */
   --color-muted: #8e9bb3; /* نص ثانوي */
   --color-faint: #5c6882; /* نص خفيف / تلميحات */
@@ -100,15 +95,7 @@
   --color-rail-hover: #131c2e;
   --color-rail-text: #8b98b0;
   --color-rail-heading: #4c5873;
-  /* نص قوي/عنوان على سطح القضيب — بديل عن text-white المكتوب حرفيًا سابقًا
-     في sidebar.js، والذي افترض أن القضيب داكن دائمًا. بعد أن صار القضيب
-     يتبع السمة (زجاج فاتح في Light)، النص الأبيض الحرفي يختفي على خلفية
-     بيضاء — هذا التوكن هو ما يحل محله، ويُعرَّف أبيض في الداكن وشبه أسود
-     في الفاتح. */
   --color-rail-ink: #ffffff;
-  /* فاصل شبه شفاف بين قطاعات القضيب — كان حرفيًا border-white/[0.06] في
-     sidebar.js. توكن الآن فتختلف قيمته بين السمتين (القضيب نفسه داكن في
-     كلتا السمتين، لكن طبقة الزجاج فوقه تختلف شدّتها). */
   --color-rail-line: rgb(255 255 255 / 0.06);
 
   /* --- ألوان دلالية --- */
@@ -140,52 +127,37 @@
   --color-info-600: #2563eb;
   --color-info-700: #1d4ed8;
 
-  /* --- الاستدارة ---
-     استدارة كبيرة ومتسقة في كل مكان — هوية «Gen-Z enterprise premium»
-     المطلوبة تعتمد على زوايا سخية لا زوايا شبه حادة. --radius-pill لعناصر
-     تستحق شكل الكبسولة الكاملة (مدخل بحث، شرائح مؤشرات، صفوف تنقّل). */
-  --radius-card: 1.25rem;
-  --radius-control: 0.875rem;
+  /* --- الاستدارة — مطابقة لمؤسسة النهضة: 24px كروت، 14px أزرار، 12px حقول --- */
+  --radius-card: 24px;
+  --radius-control: 12px;
+  --radius-btn: 14px;
   --radius-pill: 999px;
 
-  /* --- الظلال ---
-     على خلفية داكنة لا يكفي ظل أسود وحده ليُقرأ كارتفاع — نضيف خطًا داخليًا
-     علويًا خافتًا جدًا (inset highlight) يحاكي انعكاس ضوء على حافة زجاجية،
-     فوق ظل أسود حقيقي للثقل. تقنية واحدة متكررة بثلاث شدّات.
-     القيم هنا افتراضية (= الداكنة)؛ `@layer base` أسفله يُعيد تعريفها داخل
-     `:root[data-theme="light"]` بشدّات أخف بكثير — ظل ثقيل بنفس كثافة الداكن
-     فوق سطح فاتح يبدو كبقعة وسخة لا ارتفاعًا أنيقًا. */
+  /* --- الظلال --- */
   --shadow-card: inset 0 1px 0 0 rgb(255 255 255 / 0.04), 0 1px 2px 0 rgb(0 0 0 / 0.3),
     0 12px 32px -12px rgb(0 0 0 / 0.45);
   --shadow-raised: inset 0 1px 0 0 rgb(255 255 255 / 0.06), 0 2px 6px 0 rgb(0 0 0 / 0.3),
     0 20px 48px -14px rgb(0 0 0 / 0.6);
   --shadow-overlay: inset 0 1px 0 0 rgb(255 255 255 / 0.06), 0 0 0 1px rgb(255 255 255 / 0.06),
     0 32px 80px -16px rgb(0 0 0 / 0.75);
-  /* توهّج طموح خافت — لعناصر قليلة مقصودة (زر أساسي عند التركيز، بطاقة مؤشر
-     نشطة)، لا لكل شيء. الإفراط فيه هو بالضبط ما طُلب تجنّبه. */
   --shadow-glow-brand: 0 0 0 1px rgb(29 78 216 / 0.35), 0 0 32px -6px rgb(29 78 216 / 0.4);
 
-  /* --- أسطح الزجاج (glassmorphism) ---
-     قيم افتراضية داكنة؛ `@layer base` يعيد تعريفها فاتحة أسفله. */
+  /* --- أسطح الزجاج (glassmorphism) --- */
   --color-glass: rgb(18 25 41 / 0.75);
   --color-glass-rail: rgb(6 9 17 / 0.82);
   --color-glass-card: rgb(18 25 41 / 0.72);
   --color-glass-border: rgb(255 255 255 / 0.09);
 
-  /* --- أبعاد اللياوت --- */
-  --spacing-sidebar: 17.25rem;
-  --spacing-sidebar-collapsed: 4.5rem;
-  --spacing-header: 3.75rem;
+  /* --- أبعاد اللياوت — مطابقة لمؤسسة النهضة: 290px شريط مفتوح، 84px مطوي، 64px هيدر --- */
+  --spacing-sidebar: 290px;
+  --spacing-sidebar-collapsed: 84px;
+  --spacing-header: 64px;
 
   /* --- مدد الحركة --- */
   --ease-premium: cubic-bezier(0.16, 1, 0.3, 1);
 
-  /* --- شدّة ضبابية الزجاج ---
-     متغيّر لا رقم مكتوب حرفيًا داخل .glass/.glass-rail: استوديو تخصيص
-     المظهر (js/core/background-studio.js) يُعيد كتابة هذه القيمة حيًّا عبر
-     style.setProperty عند تحريك شريحة «الضبابية» — فتتبعها كل الأسطح
-     الزجاجية في الواجهة فورًا بلا الحاجة لإعادة رسم أي مكوّن. */
-  --glass-blur: 20px;
+  /* --- شدّة ضبابية الزجاج --- */
+  --glass-blur: 24px;
   --glass-blur-rail: 24px;
 }
 
@@ -288,43 +260,64 @@
   }
 
   /*
-   * فاتح مؤسسي فاخر مطابق لمؤسسة النهضة: أسطح زجاجية بيضاء شبه شفافة (surface)
-   * مع ضبابية عالية تبرز الخلفية الطبيعية بسلاسة وفخامة.
+   * فاتح مؤسسي فاخر مطابق لمؤسسة النهضة (nahda-webb-main):
+   * أسطح زجاجية بيضاء فائقة الشفافية مع انعكاس طبيعي نقي 22% وغطاء شفاف دقيق.
    */
   :root[data-theme="light"] {
     --color-ink: #000000;
     --color-muted: #334155;
     --color-faint: #64748b;
 
+    /* تراتبية النصوص النقية المعتمدة في nahda-webb-main */
+    --text-primary: #000000;
+    --text-body: #09090b;
+    --text-secondary: #334155;
+    --text-muted: #64748b;
+    --text-inverse: #ffffff;
+
     /* قماش شفاف لكي تظهر طبقة الخلفية الطبيعية بوضوح تام */
     --color-canvas: transparent;
-    --color-surface: rgba(255, 255, 255, 0.88);
-    --color-subtle: rgba(255, 255, 255, 0.55);
-    --color-line: rgba(226, 232, 240, 0.8);
-    --color-line-strong: rgba(203, 213, 225, 0.9);
+    --color-surface: rgba(255, 255, 255, 0.85);
+    --color-surface-translucent: rgba(255, 255, 255, 0.50);
+    --color-subtle: rgba(241, 245, 249, 0.95);
+    --color-line: rgba(255, 255, 255, 0.45);
+    --color-line-strong: rgba(255, 255, 255, 0.70);
+    --border-color: rgba(255, 255, 255, 0.45);
+    --border-color-strong: rgba(255, 255, 255, 0.70);
+    --border-focus: #1d4ed8;
 
-    /* القضيب الجانبي زجاج أبيض شفاف فخم مطابق للمرجع البصري لمؤسسة النهضة */
-    --color-rail: rgba(255, 255, 255, 0.40);
-    --color-rail-hover: rgba(255, 255, 255, 0.70);
-    --color-rail-text: #1e293b;
-    --color-rail-heading: #64748b;
-    --color-rail-ink: #0f172a;
-    --color-rail-line: rgba(255, 255, 255, 0.85);
+    /* القضيب الجانبي زجاج أبيض شفاف فخم مطابق لمؤسسة النهضة */
+    --color-rail: rgba(255, 255, 255, 0.35);
+    --color-rail-hover: rgba(255, 255, 255, 0.55);
+    --color-rail-text: #000000;
+    --color-rail-heading: #334155;
+    --color-rail-ink: #000000;
+    --color-rail-line: rgba(255, 255, 255, 0.50);
+
+    /* الألوان الأساسية */
+    --color-primary: #1d4ed8;
+    --color-primary-hover: #1e40af;
+    --color-primary-light: rgba(29, 78, 216, 0.15);
+    --color-primary-border: rgba(29, 78, 216, 0.40);
 
     --color-brand-50: #eff6ff;
     --color-brand-100: #dbeafe;
     --color-brand-200: #bfdbfe;
     --color-brand-300: #1d4ed8;
 
+    --color-success: #047857;
+    --color-success-bg: rgba(209, 250, 229, 0.8);
     --color-success-50: #ecfdf5;
     --color-success-100: #d1fae5;
     --color-success-200: #a7f3d0;
-    --color-success-300: #059669;
+    --color-success-300: #047857;
 
+    --color-warning: #b45309;
+    --color-warning-bg: rgba(254, 243, 199, 0.8);
     --color-warning-50: #fffbeb;
     --color-warning-100: #fef3c7;
     --color-warning-200: #fde68a;
-    --color-warning-300: #d97706;
+    --color-warning-300: #b45309;
 
     --color-danger-50: #fff1f2;
     --color-danger-100: #ffe4e6;
@@ -336,19 +329,27 @@
     --color-info-200: #bae6fd;
     --color-info-300: #0284c7;
 
-    --color-glass: rgba(255, 255, 255, 0.82);
-    --color-glass-rail: rgba(255, 255, 255, 0.40);
-    --color-glass-card: rgba(255, 255, 255, 0.82);
-    --color-glass-border: rgba(255, 255, 255, 0.85);
+    /* معايير زجاج مؤسسة النهضة فائق الشفافية والصفاء */
+    --glass-bg: rgba(255, 255, 255, 0.22);
+    --glass-bg-hover: rgba(255, 255, 255, 0.38);
+    --glass-bg-subtle: rgba(255, 255, 255, 0.16);
+    --glass-bg-gradient: linear-gradient(135deg, rgba(255, 255, 255, 0.38) 0%, rgba(255, 255, 255, 0.16) 100%);
+    --color-glass: rgba(255, 255, 255, 0.35);
+    --color-glass-rail: rgba(255, 255, 255, 0.35);
+    --color-glass-card: rgba(255, 255, 255, 0.35);
+    --color-glass-border: rgba(255, 255, 255, 0.50);
 
-    /* ظلال ناعمة متعددة الطبقات مع انعكاس ضوئي علوي شفاف (inset highlight) */
-    --shadow-card: 0 4px 20px -2px rgba(15, 23, 42, 0.05), inset 0 1px 1px 0 rgba(255, 255, 255, 0.95);
+    /* ظلال زجاج مؤسسة النهضة الدقيقة */
+    --glass-shadow: 0 14px 44px 0 rgba(15, 23, 42, 0.18), inset 0 1px 1px 0 rgba(255, 255, 255, 0.75);
+    --glass-shadow-hover: 0 22px 52px 0 rgba(15, 23, 42, 0.26), inset 0 1px 2px 0 rgba(255, 255, 255, 0.95);
+    --shadow-card: 0 14px 44px 0 rgba(15, 23, 42, 0.18), inset 0 1px 1px 0 rgba(255, 255, 255, 0.75);
     --shadow-raised: 0 10px 30px -4px rgba(15, 23, 42, 0.08), inset 0 1px 2px 0 rgba(255, 255, 255, 1);
     --shadow-overlay: 0 24px 60px -12px rgba(15, 23, 42, 0.18), inset 0 1px 2px 0 rgba(255, 255, 255, 1);
 
-    /* خلفية المرجع البصري وغطاء ناعم محايد بنسبة 88% يطابق لقطة الشاشة الأصلية */
+    /* خلفية وغطاء شفاف 22% مطابق تماماً لـ nahda-webb-main */
     --bg-layer-image: url("../assets/background.jpg");
-    --bg-overlay-color: rgba(234, 239, 245, 0.88);
+    --bg-overlay: rgba(248, 250, 252, 0.22);
+    --bg-overlay-color: rgba(248, 250, 252, 0.22);
   }
 
   :root[data-theme="dark"] {
@@ -384,44 +385,57 @@
     font-feature-settings: "tnum";
   }
 
+  /* تراتبية العناوين الرسمية لمؤسسة النهضة — خط عريض داكن 800 */
   h1,
   h2,
   h3,
-  h4 {
+  h4,
+  h5,
+  h6 {
     color: var(--color-ink);
-    font-weight: 600;
+    font-weight: 800;
     line-height: 1.35;
     letter-spacing: -0.01em;
   }
 
+  button,
+  input,
+  select,
+  textarea {
+    font-family: inherit;
+    font-size: inherit;
+  }
+
   /* حلقة تركيز واحدة متسقة لكل العناصر التفاعلية. */
   :focus-visible {
-    outline: 2px solid var(--color-brand-400);
+    outline: 2px solid var(--color-brand-600);
     outline-offset: 2px;
-    border-radius: 3px;
+    border-radius: 6px;
   }
 
   [hidden] {
     display: none !important;
   }
 
-  /* شريط تمرير أنحف لا يسرق مساحة من الجداول الكثيفة. */
+  /* شريط تمرير فائق النعومة مطابق لمؤسسة النهضة */
   * {
     scrollbar-width: thin;
-    scrollbar-color: var(--color-line-strong) transparent;
+    scrollbar-color: rgba(0, 0, 0, 0.35) transparent;
   }
   *::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
+    width: 6px;
+    height: 6px;
+  }
+  *::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
   }
   *::-webkit-scrollbar-thumb {
-    background-color: var(--color-line-strong);
-    border: 3px solid transparent;
+    background: rgba(0, 0, 0, 0.35);
     border-radius: 999px;
-    background-clip: content-box;
+    backdrop-filter: blur(8px);
   }
   *::-webkit-scrollbar-thumb:hover {
-    background-color: var(--color-faint);
+    background: rgba(0, 0, 0, 0.6);
   }
 }
 
@@ -506,33 +520,40 @@
    `backdrop-filter` القياسية فقط وترك Lightning CSS يُولِّد `-webkit-`
    تلقائيًا (دوره الصحيح أصلاً) — عندها يُبقي كلتا الخاصيتين في المخرج.
    -------------------------------------------------------------------------- */
-/* زجاج الكروت والأسطح الزجاجية الرئيسية — مطابقة بصرية لمؤسسة النهضة */
+/* زجاج الكروت والأسطح الزجاجية الرئيسية — مطابقة حرفية لمؤسسة النهضة */
 .glass {
-  background-color: var(--color-glass);
-  backdrop-filter: blur(var(--glass-blur, 18px)) saturate(160%);
-  border-color: var(--color-line);
+  background-color: var(--color-glass, rgba(255, 255, 255, 0.35));
+  background-image: var(--glass-bg-gradient, linear-gradient(135deg, rgba(255, 255, 255, 0.38) 0%, rgba(255, 255, 255, 0.16) 100%));
+  backdrop-filter: blur(var(--glass-blur, 24px)) saturate(125%) brightness(105%) contrast(102%);
+  border: 1px solid var(--color-glass-border, rgba(255, 255, 255, 0.50));
+  box-shadow: var(--shadow-card);
+  border-radius: var(--card-radius, 24px);
 }
 
 .glass-rail {
-  background-color: var(--color-glass-rail);
-  backdrop-filter: blur(var(--glass-blur-rail, 24px)) saturate(180%);
-  border: 1px solid var(--color-rail-line);
-  box-shadow: 0 10px 35px -5px rgba(15, 23, 42, 0.07), inset 0 1px 1px 0 rgba(255, 255, 255, 0.8);
+  background-color: var(--color-glass-rail, rgba(255, 255, 255, 0.35));
+  background-image: var(--glass-bg-gradient, linear-gradient(135deg, rgba(255, 255, 255, 0.38) 0%, rgba(255, 255, 255, 0.16) 100%));
+  backdrop-filter: blur(var(--glass-blur-rail, 24px)) saturate(125%) brightness(105%) contrast(102%);
+  border-left: 1px solid var(--color-glass-border, rgba(255, 255, 255, 0.50));
+  box-shadow: var(--shadow-card);
 }
 
 :root[data-theme="dark"] .glass-rail {
+  background-color: var(--color-glass-rail, rgba(15, 23, 42, 0.60));
+  background-image: linear-gradient(135deg, rgba(15, 23, 42, 0.75) 0%, rgba(15, 23, 42, 0.45) 100%);
   box-shadow: 0 10px 35px -5px rgba(0, 0, 0, 0.4), inset 0 1px 1px 0 rgba(255, 255, 255, 0.08);
+  border-left: 1px solid rgba(255, 255, 255, 0.12);
 }
 
-/* الشريط الجانبي — العرض والانتقال بالحالتين المفتوحة والمطوية */
+/* الشريط الجانبي — العرض والانتقال بالحالتين المفتوحة والمطوية (290px و 84px) */
 aside[data-collapsed="false"],
 .sidebar-expanded {
-  width: var(--spacing-sidebar, 17.25rem) !important;
+  width: var(--spacing-sidebar, 290px) !important;
 }
 
 aside[data-collapsed="true"],
 .sidebar-collapsed {
-  width: var(--spacing-sidebar-collapsed, 4.5rem) !important;
+  width: var(--spacing-sidebar-collapsed, 84px) !important;
 }
 
 aside[data-collapsed="true"] .rail-expanded-only {
@@ -544,26 +565,64 @@ aside[data-collapsed="false"] .rail-collapsed-only {
 }
 
 .glass-card {
-  background-color: var(--color-glass-card, var(--color-surface));
-  backdrop-filter: blur(var(--glass-blur, 16px)) saturate(160%);
-  border: 1px solid var(--color-glass-border, var(--color-line));
+  background-color: var(--color-glass-card, rgba(255, 255, 255, 0.35));
+  background-image: var(--glass-bg-gradient, linear-gradient(135deg, rgba(255, 255, 255, 0.38) 0%, rgba(255, 255, 255, 0.16) 100%));
+  backdrop-filter: blur(var(--glass-blur, 24px)) saturate(125%) brightness(105%) contrast(102%);
+  border: 1px solid var(--color-glass-border, rgba(255, 255, 255, 0.50));
   box-shadow: var(--shadow-card);
+  border-radius: var(--card-radius, 24px);
+  transition: box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1), transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card:hover {
+  box-shadow: var(--glass-shadow-hover, 0 22px 52px 0 rgba(15, 23, 42, 0.26), inset 0 1px 2px 0 rgba(255, 255, 255, 0.95));
+}
+
+/* --- حقول الإدخال والنماذج — مطابقة لمؤسسة النهضة --- */
+:root[data-theme="light"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+:root[data-theme="light"] select,
+:root[data-theme="light"] textarea {
+  border-radius: var(--radius-control, 12px);
+  border: 1.5px solid rgba(203, 213, 225, 0.85);
+  background: rgba(255, 255, 255, 0.88);
+  color: #0f172a;
+  backdrop-filter: blur(8px);
+}
+
+:root[data-theme="light"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):focus,
+:root[data-theme="light"] select:focus,
+:root[data-theme="light"] textarea:focus {
+  border-color: #2563eb;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+  outline: none;
+}
+
+/* --- الجداول — مطابقة لمؤسسة النهضة --- */
+:root[data-theme="light"] table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+:root[data-theme="light"] table th {
+  background: rgba(241, 245, 249, 0.95);
+  font-weight: 800;
+  color: #334155;
+  border-bottom: 1.5px solid #cbd5e1;
+}
+
+:root[data-theme="light"] table td {
+  border-bottom: 1px solid rgba(226, 232, 240, 0.75);
+  color: #1e293b;
+  background: rgba(255, 255, 255, 0.4);
+}
+
+:root[data-theme="light"] table tbody tr:hover td {
+  background: rgba(248, 250, 252, 0.9);
 }
 
 /* --------------------------------------------------------------------------
    طبقة الخلفية (استوديو تخصيص المظهر)
-
-   عنصر واحد ثابت (#bg-layer، يُركَّب مرة واحدة في index.html) خلف كل شيء —
-   صورة/لون/تدرّج يختاره المستخدم من /settings/appearance، بفلتر CSS حيّ
-   (ضبابية/سطوع/تباين/تشبّع) فوقه، وغطاء شبه شفاف يضمن بقاء النص والأسطح
-   الزجاجية مقروءة بصرف النظر عن تباين الخلفية المختارة. لا "@utility" عام
-   هنا — هذا عنصر وحيد لا نمط مُكرَّر، فمُعرِّف #bg-layer مباشرة أوضح وأبسط
-   من فئة Tailwind تُستخدم مرة واحدة فقط.
-
-   القيم الافتراضية (--bg-layer-image أعلاه) والفلتر هنا جميعها متغيّرات
-   CSS يكتب فوقها js/core/background-studio.js حيًّا عبر
-   document.documentElement.style.setProperty عند كل تغيير في الاستوديو —
-   فلا حاجة لإعادة رسم أي عنصر آخر في الواجهة عند تعديل الخلفية.
    -------------------------------------------------------------------------- */
 #bg-layer {
   position: fixed;
@@ -573,8 +632,9 @@ aside[data-collapsed="false"] .rail-collapsed-only {
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  filter: blur(var(--bg-blur, 20px)) brightness(var(--bg-brightness, 100%))
-    contrast(var(--bg-contrast, 100%)) saturate(var(--bg-saturate, 100%));
+  background-attachment: fixed;
+  filter: blur(var(--bg-blur, 20px)) brightness(var(--bg-brightness, 89%))
+    contrast(var(--bg-contrast, 98%)) saturate(var(--bg-saturate, 140%));
   transform: scale(1.03);
   transition: filter 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   pointer-events: none;
