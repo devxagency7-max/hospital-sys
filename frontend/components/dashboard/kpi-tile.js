@@ -1,43 +1,61 @@
 /**
- * بطاقة مؤشر لوحة التحكم — النمط الطبي التنفيذي الفاخر (Medical Executive Glass).
+ * بطاقة مؤشر لوحة التحكم — مطابقة تامة لنمط كروت مؤسسة النهضة
  *
- * كروت زجاجية نقية بيضاء عالية التباين، أرقام عريضة فخمة، أيقونات متدرجة فاخرة
- * وإلغاء ألوان الباستيل الباهتة بالكامل.
+ * كروت زجاجية نقية مريحة للعين، إطار زجاجي ناعم، أرقام واضحة ملونة بحسب الحالة،
+ * وحاويات أيقونات شفافة هادئة (Translucent Tinted Glass).
  */
 
 import { el, cx } from "../../js/core/dom.js";
 import { icon } from "../common/icon.js";
-import { badge } from "../common/badge.js";
 import { tweenNumber } from "../../js/core/animate.js";
 import { registerCleanup } from "../../js/core/lifecycle.js";
 
 /*
- * تدرجات لونية فاخرة لحاويات الأيقونات — هوية طبية عصرية عالية التباين
+ * التدرجات والألوان المعتمدة للبطاقات — مطابقة حرفية لمرجع التصميم (TONES)
  */
-const ICON_GRADIENTS = {
-  brand: "bg-gradient-to-br from-blue-600 to-indigo-700 text-white shadow-md shadow-blue-500/25",
-  success: "bg-gradient-to-br from-emerald-500 to-teal-700 text-white shadow-md shadow-emerald-500/25",
-  warning: "bg-gradient-to-br from-amber-500 to-amber-600 text-white shadow-md shadow-amber-500/25",
-  danger: "bg-gradient-to-br from-rose-500 to-rose-700 text-white shadow-md shadow-rose-500/25",
-  info: "bg-gradient-to-br from-cyan-500 to-blue-600 text-white shadow-md shadow-cyan-500/25",
-  neutral: "bg-gradient-to-br from-slate-600 to-slate-800 text-white shadow-md shadow-slate-600/20",
+const TONES = {
+  amber: {
+    bgIcon: "bg-amber-500/15 text-[#b45309] dark:text-amber-400 dark:bg-amber-500/20",
+    textVal: "text-[#b45309] dark:text-amber-400",
+    border: "border-amber-500/35 dark:border-amber-500/40",
+  },
+  blue: {
+    bgIcon: "bg-blue-600/15 text-[#2563eb] dark:text-blue-400 dark:bg-blue-600/20",
+    textVal: "text-[#2563eb] dark:text-blue-400",
+    border: "border-blue-600/35 dark:border-blue-600/40",
+  },
+  green: {
+    bgIcon: "bg-emerald-500/15 text-[#047857] dark:text-emerald-400 dark:bg-emerald-500/20",
+    textVal: "text-[#047857] dark:text-emerald-400",
+    border: "border-emerald-600/35 dark:border-emerald-600/40",
+  },
+  red: {
+    bgIcon: "bg-rose-500/15 text-[#be123c] dark:text-rose-400 dark:bg-rose-500/20",
+    textVal: "text-[#be123c] dark:text-rose-400",
+    border: "border-rose-600/35 dark:border-rose-600/40",
+  },
+  neutral: {
+    bgIcon: "bg-slate-500/15 text-[#475569] dark:text-slate-300 dark:bg-slate-500/20",
+    textVal: "text-[#0f172a] dark:text-white",
+    border: "border-slate-300/50 dark:border-white/10",
+  },
 };
 
-const TREND_TONES = {
-  up: "success",
-  down: "danger",
-  flat: "neutral",
-};
+// توافق مع المسميات الأخرى
+TONES.warning = TONES.amber;
+TONES.brand = TONES.blue;
+TONES.info = TONES.blue;
+TONES.success = TONES.green;
+TONES.danger = TONES.red;
 
 /**
  * @param {object} options
  * @param {string} options.label
- * @param {number} options.value          الرقم الخام (قبل التنسيق) — يُحرَّك إليه
- * @param {(n:number) => string} [options.format]  ينسّق الرقم عند كل إطار
+ * @param {number} options.value
+ * @param {(n:number) => string} [options.format]
  * @param {string} [options.hint]
  * @param {string} [options.icon]
- * @param {"brand"|"success"|"warning"|"danger"|"info"|"neutral"} [options.tone="brand"]
- * @param {{ direction:"up"|"down"|"flat", label:string }} [options.trend]
+ * @param {string} [options.tone="neutral"]
  * @param {string} [options.href]
  * @param {boolean} [options.loading]
  * @param {number} [options.animateDelayMs=0]
@@ -48,59 +66,67 @@ export function kpiTile({
   format = (n) => String(Math.round(n)),
   hint,
   icon: iconName,
-  tone = "brand",
-  trend,
+  tone = "neutral",
   href,
   loading = false,
   animateDelayMs = 0,
 } = {}) {
-  const iconStyle = ICON_GRADIENTS[tone] ?? ICON_GRADIENTS.brand;
+  const toneCfg = TONES[tone] ?? TONES.neutral;
 
-  // رقم كبير، عريض، عالي التباين
+  // رقم كبير، عريض، ملون بلون التون مع الحفاظ على p.num للفحوصات
   const valueNode = el(
     "p",
-    { class: "text-2xl sm:text-[26px] font-black text-slate-900 dark:text-white num tracking-tight leading-none mt-1" },
+    {
+      class: cx(
+        "num text-xl sm:text-[24px] font-black tabular leading-none tracking-tight",
+        toneCfg.textVal,
+      ),
+    },
     "—",
   );
 
   const classes = cx(
-    "hx-press group relative block glass-card rounded-2xl",
-    "p-4 shadow-card transition-all duration-300 hover:-translate-y-1 hover:shadow-raised",
+    "hx-press group relative flex items-center justify-between gap-3.5 glass-card dash-stat-card",
+    "p-3.5 sm:px-4.5 sm:py-3.5 rounded-[22px] border transition-all duration-300 hover:-translate-y-0.5 hover:shadow-raised",
+    toneCfg.border,
     href && "cursor-pointer",
   );
 
   const inner = [
+    // الجانب الأيمن (العنوان والرقم)
     el(
       "div",
-      { class: "flex items-center justify-between gap-2" },
-      el("p", { class: "text-xs font-bold text-slate-500 dark:text-slate-400 truncate-1 tracking-wide" }, label),
-      iconName
-        ? el(
-            "span",
-            {
-              class: cx(
-                "shrink-0 grid place-items-center size-9 rounded-xl transition-transform duration-300 group-hover:scale-110",
-                iconStyle,
-              ),
-            },
-            icon(iconName, { size: 17 }),
-          )
-        : null,
+      { class: "flex flex-col text-right min-w-0 flex-1" },
+      el(
+        "p",
+        {
+          class: "tracking-wide text-xs sm:text-[13px] font-bold text-slate-500 dark:text-slate-400 truncate-1 mb-1.5",
+        },
+        label,
+      ),
+      loading
+        ? el("div", { class: "hx-skeleton h-6 w-20" })
+        : el("div", { class: "flex items-center gap-1.5" }, valueNode),
     ),
-    loading
-      ? el("div", { class: "hx-skeleton h-8 w-24 mt-2" })
-      : el("div", { class: "mt-2" }, valueNode),
-    hint || trend
+
+    // الجانب الأيسر (الأيقونة ذات الخلفية الزجاجية الخفيفة)
+    iconName
       ? el(
-          "div",
-          { class: "flex items-center gap-2 mt-2.5 pt-2 border-t border-black/[0.04] dark:border-white/[0.06]" },
-          trend ? badge(trend.label, { tone: TREND_TONES[trend.direction] ?? "neutral", size: "sm" }) : null,
-          hint ? el("span", { class: "text-[11px] font-medium text-slate-400 dark:text-slate-500 truncate-1" }, hint) : null,
+          "span",
+          {
+            class: cx(
+              "shrink-0 grid place-items-center size-10 sm:size-10.5 rounded-[13px] transition-transform duration-300 group-hover:scale-105",
+              toneCfg.bgIcon,
+            ),
+          },
+          icon(iconName, { size: 19 }),
         )
       : null,
   ];
 
-  const node = href ? el("a", { href, class: classes }, ...inner) : el("div", { class: classes }, ...inner);
+  const node = href
+    ? el("a", { href, class: classes, title: hint || "" }, ...inner)
+    : el("div", { class: classes, title: hint || "" }, ...inner);
 
   if (!loading) {
     const timer = setTimeout(() => {
@@ -121,16 +147,12 @@ export function kpiTile({
   return node;
 }
 
-/** شبكة بطاقات مؤشرات — تتكيف ديناميكيًا حسب عدد البطاقات. */
+/** شبكة بطاقات مؤشرات — 4 أعمدة مطابقة لـ .dash-stats-grid */
 export function kpiGrid(...tiles) {
   const flat = tiles.flat().filter(Boolean);
-  const colsClass =
-    flat.length >= 6
-      ? "grid gap-3.5 grid-cols-2 sm:grid-cols-3 xl:grid-cols-6"
-      : "grid gap-3.5 grid-cols-1 sm:grid-cols-2 xl:grid-cols-4";
   return el(
     "div",
-    { class: colsClass },
+    { class: "grid gap-3.5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 mb-3.5 dash-stats-grid" },
     ...flat,
   );
 }

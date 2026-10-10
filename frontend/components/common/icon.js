@@ -17,6 +17,14 @@ const PATHS = {
     ["rect", { x: 14, y: 12, width: 7, height: 9, rx: 1 }],
     ["rect", { x: 3, y: 16, width: 7, height: 5, rx: 1 }],
   ],
+  inbox: [
+    ["polyline", { points: "22 12 16 12 14 15 10 15 8 12 2 12" }],
+    ["path", { d: "M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" }],
+  ],
+  cross: [
+    ["circle", { cx: 12, cy: 12, r: 10 }],
+    ["path", { d: "M15 9l-6 6M9 9l6 6" }],
+  ],
   patients: [
     ["path", { d: "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" }],
     ["circle", { cx: 9, cy: 7, r: 4 }],

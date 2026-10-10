@@ -577,6 +577,31 @@ aside[data-collapsed="false"] .rail-collapsed-only {
   box-shadow: var(--glass-shadow-hover, 0 22px 52px 0 rgba(15, 23, 42, 0.26), inset 0 1px 2px 0 rgba(255, 255, 255, 0.95));
 }
 
+/* شبكة كروت المؤشرات — 4 أعمدة مطابقة لمرجع التصميم */
+.dash-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+@media (max-width: 1024px) {
+  .dash-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .dash-stats-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.dash-stat-card {
+  padding: 14px 18px;
+  border-radius: 22px;
+}
+
 /* --- حقول الإدخال والنماذج --- */
 :root[data-theme="light"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
 :root[data-theme="light"] select,
