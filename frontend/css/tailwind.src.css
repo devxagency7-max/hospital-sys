@@ -375,6 +375,13 @@
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
+    zoom: 1.08;
+  }
+
+  @media (max-width: 640px) {
+    body {
+      zoom: 1;
+    }
   }
 
   /* أرقام لاتينية بعرض ثابت — ضرورية لمحاذاة الأعمدة المالية في الجداول. */
