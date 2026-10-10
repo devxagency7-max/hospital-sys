@@ -276,6 +276,30 @@ const ROUTES = {
         /** توزيع إيراد الشهر الحالي على الأقسام — الأقسام بلا نشاط لا تُعرض. */
         departments: buildDepartmentSummary(thisMonth),
 
+        /**
+         * الكادر الطبي الفعلي من سجل المستخدمين (/users) — الأدوار الإكلينيكية
+         * المباشرة فقط (طبيب، صيدلي، فني مختبر، فني أشعة)، لا الإدارة أو
+         * المحاسبة أو الاستقبال أو المخازن، فهذه أدوار دعم لا رعاية مباشرة.
+         */
+        workforce: {
+          medicalStaff: all("users").filter(
+            (row) =>
+              ["doctor", "pharmacist", "lab_technician", "radiologist"].includes(row.role) &&
+              row.status === "active",
+          ).length,
+          total: all("users").filter((row) => row.status === "active").length,
+        },
+
+        /**
+         * العيادات المسجَّلة فعليًا في سجل العيادات (/settings/clinics) — لا
+         * طول مصفوفة departments أعلاه، فتلك توزيع إيراد الشهر الحالي على
+         * الأقسام (مقياس مختلف تمامًا، وعدد عناصرها يتغيّر مع نشاط الفواتير).
+         */
+        clinics: {
+          total: all("clinics").length,
+          active: all("clinics").filter((row) => row.status === "active").length,
+        },
+
         /** آخر الحركات المالية — دفعات ومرتجعات، الأحدث أولًا. */
         recentActivity: buildRecentActivity(allPayments, allRefunds, allInvoices, 8),
 

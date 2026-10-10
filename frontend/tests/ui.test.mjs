@@ -77,11 +77,19 @@ await page.locator("aside nav a", { hasText: "قائمة المرضى" }).click(
 await page.waitForTimeout(700);
 check("الانتقال من الشريط يعمل", page.url().includes("/patients"));
 check("مسار التنقل ظاهر", await page.locator('nav[aria-label="مسار التنقل"]').isVisible());
-check(
-  "صفحة «مخطَّطة» صريحة لا 404",
-  await page.getByText("هذه الشاشة لم تُنفَّذ بعد").isVisible(),
-);
-check("تذكر رقم المرحلة", await page.getByText(/المرحلة 1/).first().isVisible());
+
+/*
+ * فحص «صفحة مخطَّطة صريحة لا 404» حُذف من هنا: كان يتحقق أن «قائمة المرضى»
+ * تعرض وسم «هذه الشاشة لم تُنفَّذ بعد» + رقم المرحلة، لأنها كانت فعليًا غير
+ * منفَّذة وقت كتابة الفحص. أصبحت الآن منفَّذة بالكامل (راجع قسم «جدول
+ * المرضى» أدناه) — وفعليًا كل شاشة في js/config/navigation.js أصبح لها
+ * مسار حقيقي في routes.js (راجع buildRoutes: مصفوفة planned الناتجة
+ * فارغة الآن لعدم وجود أي شاشة غير مسجَّلة). آلية الرجوع الصادق نفسها
+ * (planned.page.js) ما زالت قائمة في الكود لأي شاشة تُضاف للتنقل دون
+ * مسار مطابق لاحقًا — وتُراقَب بديلًا عبر تقرير tests/routes.test.mjs
+ * («روابط الشريط: N (0 غير مسجَّل)»)، لا عبر نقر مباشر هنا على شاشة لم
+ * تعد موجودة أصلًا.
+ */
 
 /* ───────────────────────── تبويبات نظام التصميم ───────────────────────── */
 section("تبويبات نظام التصميم");
@@ -363,16 +371,31 @@ await go("/");
 await page.waitForSelector("#page h1");
 await page.waitForTimeout(1300); // استقرار عدّاد المؤشرات (900ms) + هامش
 
-check("العنوان لوحة التحكم", (await page.locator("#page h1").textContent()) === "لوحة التحكم");
+// العنوان أصبح تحية شخصية باسم المستخدم الحالي (session.user.name في permissions.js)
+// لا نصًا ثابتًا — راجع welcomeHeroCard في dashboard.page.js.
+check("العنوان لوحة التحكم", (await page.locator("#page h1").textContent()) === "مساء الخير، عبدالله محمد");
 
 /*
  * فحص ظهور كل تسمية على حدة لا `.count()` على نمط واحد: `getByText` يُطابق
  * أي عنصر يحتوي نصّه (مع نصوص أبنائه) على النمط، فتُحتسَب كل العناصر
- * الأصل في السلسلة أيضًا — أربع تسميات ورقية حقيقية أنتجت عدّات أعلى من 4
+ * الأصل في السلسلة أيضًا — ست تسميات ورقية حقيقية أنتجت عدّات أعلى من 6
  * بسبب هذا السلوك، لا لأن شيئًا تكرَّر فعليًا في الصفحة.
  */
-for (const label of ["محصَّل اليوم", "فواتير اليوم", "مرضى اليوم", "الأرصدة المستحقة"]) {
-  check(`بطاقة «${label}» ظاهرة`, await page.locator("#page").getByText(label, { exact: true }).isVisible());
+// `tracking-wide` حصريًا على سطر التسمية داخل kpi-tile.js — لا نستخدم
+// getByText العام هنا لأن بعض التسميات (كـ"بانتظار الاعتماد") تتكرر في
+// أقسام أخرى من الصفحة (لوحات تفصيلية، شرائح) فيفشل الفحص بـ strict mode.
+for (const label of [
+  "بانتظار الاعتماد",
+  "إجمالي المرضى",
+  "حالات مقبولة / منتهية",
+  "الأرصدة المستحقة",
+  "فريق العمل الطبي",
+  "العيادات المعتمدة",
+]) {
+  check(
+    `بطاقة «${label}» ظاهرة`,
+    await page.locator("#page p.tracking-wide").filter({ hasText: label }).first().isVisible(),
+  );
 }
 
 // لا نص خام مُسرَّب — فحص عام يكشف أي قيمة undefined/NaN نسيت صياغتها بأداة التنسيق.
@@ -406,7 +429,7 @@ section("لوحة التحكم — شريط البحث الرئيسي");
 
 check("عنوان قسم البحث ظاهر", await page.getByText("البحث والاستعلام عن المرضى").isVisible());
 
-await page.getByRole("button", { name: "الهاتف", exact: true }).click();
+await page.getByRole("button", { name: "رقم الهاتف", exact: true }).click();
 await page.waitForTimeout(150);
 check(
   "تبديل شريحة النطاق يُغيّر النص التوضيحي للحقل",
@@ -551,14 +574,20 @@ check(
 
 section("لوحة التحكم — طيّ الشريط الجانبي");
 
+/*
+ * sidebar.js الجديد (المرجع البصري) يُبقي زرّي «طيّ»/«توسيع» كليهما في DOM
+ * دائمًا، ويُظهر أحدهما فقط عبر group-data-[collapsed]:hidden — لا يستبدل
+ * أحدهما بالآخر. فـ`.first()` بلا `:visible` كان يطابق دومًا زرّ «طيّ» (الأول
+ * في DOM) حتى بعد أن يصبح هو نفسه مخفيًا، فيتعطّل النقر الثاني (إعادة الفتح).
+ */
 const sidebarBefore = await page.locator("aside").first().boundingBox();
-await page.locator('button[title="طيّ القائمة الجانبية"], button[title="توسيع القائمة الجانبية"]').first().click();
+await page.locator('button[title="طيّ القائمة الجانبية"]:visible, button[title="توسيع القائمة الجانبية"]:visible').first().click();
 await page.waitForTimeout(400);
 const sidebarAfter = await page.locator("aside").first().boundingBox();
 check("طيّ الشريط يُغيّر عرضه فعليًا", sidebarBefore.width !== sidebarAfter.width, `${sidebarBefore.width} → ${sidebarAfter.width}`);
 
 // نعيده كما كان حتى لا يؤثر على فحوص لاحقة تعتمد شريطًا مفتوحًا.
-await page.locator('button[title="طيّ القائمة الجانبية"], button[title="توسيع القائمة الجانبية"]').first().click();
+await page.locator('button[title="طيّ القائمة الجانبية"]:visible, button[title="توسيع القائمة الجانبية"]:visible').first().click();
 await page.waitForTimeout(400);
 
 section("نظام السمات (داكن/فاتح/النظام)");
@@ -646,13 +675,14 @@ const blurVarAfterReload = await page.evaluate(() =>
 );
 check("إعدادات الخلفية تبقى محفوظة بعد إعادة التحميل", blurVarAfterReload === "30px", blurVarAfterReload);
 
-// زر إعادة الضبط يُعيد كل القيم للافتراضي الموثَّق في DEFAULTS.
+// زر إعادة الضبط يُعيد كل القيم للافتراضي الموثَّق في DEFAULTS
+// (background-studio.js: blur=24 — مطابقة لشدّة .glass/.glass-rail الافتراضية).
 await page.getByRole("button", { name: "إعادة ضبط المصنع" }).click();
 await page.waitForTimeout(300);
 const blurVarAfterReset = await page.evaluate(() =>
   getComputedStyle(document.documentElement).getPropertyValue("--glass-blur").trim(),
 );
-check("إعادة ضبط المصنع تُعيد الضبابية للقيمة الافتراضية (20px)", blurVarAfterReset === "20px", blurVarAfterReset);
+check("إعادة ضبط المصنع تُعيد الضبابية للقيمة الافتراضية (24px)", blurVarAfterReset === "24px", blurVarAfterReset);
 
 await page.evaluate(() => localStorage.removeItem("hospital-erp:backgroundStudio"));
 await go("/");

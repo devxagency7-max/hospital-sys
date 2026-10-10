@@ -383,11 +383,13 @@ function pendingApprovalsCollapsible(summary) {
    ============================================================================ */
 
 function kpiRow(summary) {
+  // إجمالي المعاملات المعلّقة فعليًا — تسويات مخزنية + مرتجعات + إشعارات
+  // دائن قيد المراجعة. لا رقمًا إضافيًا مكتوبًا يدويًا فوق هذا المجموع؛
+  // كل بند منها حقيقي من GET /dashboard/summary (راجع approvals في mock-adapter.js).
   const pendingTotal =
     (summary.approvals.stockAdjustments || 0) +
     (summary.approvals.refunds || 0) +
-    (summary.approvals.creditNotes || 0) +
-    17;
+    (summary.approvals.creditNotes || 0);
 
   return kpiGrid(
     kpiTile({
@@ -431,20 +433,25 @@ function kpiRow(summary) {
     }),
     kpiTile({
       label: "فريق العمل الطبي",
-      value: 48,
+      // الأدوار الإكلينيكية فقط من سجل المستخدمين الحقيقي — راجع تعليق
+      // workforce في mock-adapter.js لتعريف "الطبي" بالضبط (لا تمريض بيانات
+      // وهمية غير موجودة أصلًا، ولا موظفو إدارة/محاسبة/استقبال/مخازن).
+      value: summary.workforce.medicalStaff,
       format: (n) => fmt.integer(n),
       icon: "users",
       tone: "info",
-      hint: "أطباء وتمريض وإداريون",
+      hint: "أطباء وصيادلة وفنيو مختبر وأشعة",
       animateDelayMs: 240,
     }),
     kpiTile({
       label: "العيادات المعتمدة",
-      value: summary.departments.length || 18,
+      // عدّ فعلي من سجل العيادات (/settings/clinics)، لا طول مصفوفة
+      // departments (تلك توزيع إيراد الشهر على الأقسام، مقياس مختلف تمامًا).
+      value: summary.clinics.active,
       format: (n) => fmt.integer(n),
       icon: "building",
       tone: "neutral",
-      hint: "أقسام تخصصية نشطة",
+      hint: "عيادات مسجَّلة ونشطة فعليًا",
       animateDelayMs: 300,
     }),
   );
