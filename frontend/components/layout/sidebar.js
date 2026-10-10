@@ -1,9 +1,11 @@
 /**
  * الشريط الجانبي.
  *
- * يُبنى من js/config/navigation.js ويُرشَّح بالصلاحيات: المجموعة التي لا يملك
- * المستخدم أي عنصر فيها لا تظهر أصلاً. موظف الاستقبال لا يرى «المحاسبة» حتى
- * مطويّة — القائمة المليئة بعناصر ممنوعة تُربك ولا تفيد.
+ * مطابق 1:1 للنمط البصري لمشروع مؤسسة النهضة في حالتيه:
+ * 1. الحالة المفتوحة (Expanded) مع الشعار، العناوين، الأيقونات بالطرف الأيمن،
+ *    العناصر النشطة ببطاقات بيضاء بنقطة زرقاء، شعار DevX، وزر الخروج الأحمر وبطاقة المستخدم.
+ * 2. الحالة المطوية (Collapsed) مع زر التوسيع العلوي، عمود الأيقونات المتمركزة،
+ *    أيقونة الخروج الحمراء، وصورة المستخدم بالأسفل، مع الحواف المنحنية الفاخرة rounded-tl/bl-[36px].
  */
 
 import { el, cx, render } from "../../js/core/dom.js";
@@ -21,24 +23,9 @@ const expanded = new Set();
 
 export function sidebar() {
   const navHost = el("nav", {
-    class: "flex-1 overflow-y-auto px-2.5 py-3 space-y-0.5",
+    class: "flex-1 overflow-y-auto px-2.5 py-3 space-y-1",
     "aria-label": "القائمة الرئيسية",
   });
-
-  const collapseIconHost = el("span", { class: "grid place-items-center size-[18px] shrink-0" });
-
-  const collapseToggle = el(
-    "button",
-    {
-      type: "button",
-      class:
-        "hx-press flex items-center gap-2.5 w-full px-3 py-2 rounded-2xl " +
-        "text-xs font-bold text-rail-heading hover:bg-white/60 dark:hover:bg-white/10 hover:text-rail-text transition-colors cursor-pointer",
-      onClick: toggleCollapsed,
-    },
-    collapseIconHost,
-    el("span", { class: "group-data-[collapsed=true]/rail:hidden" }, "طيّ القائمة الجانبية"),
-  );
 
   const footerHost = el("div", { class: "shrink-0" });
 
@@ -48,14 +35,14 @@ export function sidebar() {
       // `group/rail` يسمح لعناصر داخلية بالاستجابة لحالة الطي عبر data-collapsed.
       class: cx(
         "group/rail glass-rail text-rail-text flex flex-col shrink-0 no-print",
-        "my-2.5 ms-2.5 me-2 h-[calc(100vh-1.25rem)] rounded-[28px] overflow-hidden",
-        "w-(--spacing-sidebar) transition-[width] duration-300 ease-(--ease-premium)",
+        "h-screen rounded-tl-[36px] rounded-bl-[36px] rounded-r-none overflow-hidden",
+        "border-l border-white/80 dark:border-white/10 shadow-2xl",
+        "sidebar-expanded transition-[width] duration-300 ease-(--ease-premium)",
       ),
       dataset: { collapsed: "false" },
     },
     brand(),
     navHost,
-    el("div", { class: "shrink-0 px-2 pb-1" }, collapseToggle),
     footerHost,
   );
 
@@ -69,18 +56,11 @@ export function sidebar() {
     const collapsed = appState.get().sidebarCollapsed;
 
     element.dataset.collapsed = String(collapsed);
-    element.classList.toggle("w-(--spacing-sidebar)", !collapsed);
-    element.classList.toggle("w-(--spacing-sidebar-collapsed)", collapsed);
-
-    // مقلوب لا مُدار يدويًا: أيقونة واحدة لكل حالة، كنمط تبديل أيقونة المجموعات أدناه.
-    render(collapseIconHost, icon(collapsed ? "chevronEnd" : "chevronStart", { size: 14 }));
-    // اسمان مختلفان تمامًا عن زر فتح الدرج في الهيدر على الموبايل (header.js) —
-    // نفس التسمية لعنصرين مختلفين تربك قارئ الشاشة وتكسر محدِّدات الاختبار.
-    collapseToggle.title = collapsed ? "توسيع القائمة الجانبية" : "طيّ القائمة الجانبية";
+    element.classList.toggle("sidebar-expanded", !collapsed);
+    element.classList.toggle("sidebar-collapsed", collapsed);
 
     const groups = navigation
       .filter((entry) =>
-        // مجموعة بلا أي عنصر مسموح لا تُعرض.
         entry.children ? canAny(entry.children.map((child) => child.permission)) : can(entry.permission),
       )
       .map((entry) => (entry.children ? renderGroup(entry, active, collapsed) : renderLink(entry, active, collapsed)));
@@ -92,23 +72,48 @@ export function sidebar() {
   function renderLink(entry, active, collapsed) {
     const isActive = active === entry.path;
 
+    if (collapsed) {
+      return el(
+        "a",
+        {
+          href: `#${entry.path}`,
+          class: cx(
+            "hx-press grid place-items-center size-10 rounded-2xl mx-auto my-0.5 transition-all cursor-pointer",
+            isActive
+              ? "bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm border border-slate-200/60 dark:border-white/15 font-black"
+              : "text-slate-800 dark:text-slate-200 hover:bg-white/70 dark:hover:bg-white/10 hover:text-blue-600 font-bold",
+          ),
+          title: entry.label,
+          "aria-current": isActive ? "page" : undefined,
+        },
+        icon(entry.icon, { size: 19 }),
+      );
+    }
+
     return el(
       "a",
       {
         href: `#${entry.path}`,
         class: cx(
-          "hx-press relative flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-[13.5px]",
-          "transition-all duration-200 mx-2",
+          "hx-press flex items-center justify-between gap-2.5 px-3 py-2 rounded-2xl text-[13px] transition-all cursor-pointer mx-1",
           isActive
-            ? "bg-gradient-to-r from-blue-600 to-indigo-700 text-white font-extrabold shadow-md shadow-blue-500/25 border border-blue-400/30"
-            : "text-slate-700 dark:text-slate-200 font-bold hover:bg-white/70 dark:hover:bg-white/10 hover:text-blue-600 dark:hover:text-blue-400 border border-transparent",
-          collapsed && "justify-center px-0 mx-1",
+            ? "bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 font-extrabold shadow-sm border border-slate-200/60 dark:border-white/10"
+            : "text-slate-800 dark:text-slate-200 font-bold hover:bg-white/60 dark:hover:bg-white/10 hover:text-blue-600 border border-transparent",
         ),
-        title: collapsed ? entry.label : undefined,
         "aria-current": isActive ? "page" : undefined,
       },
-      icon(entry.icon, { size: 19, class: isActive ? "text-white" : "text-slate-600 dark:text-slate-300" }),
-      collapsed ? null : el("span", { class: "truncate-1" }, entry.label),
+      el(
+        "div",
+        { class: "flex items-center gap-2.5 min-w-0 flex-1" },
+        icon(entry.icon, {
+          size: 18,
+          class: isActive ? "text-blue-600 dark:text-blue-400" : "text-slate-800 dark:text-slate-200",
+        }),
+        el("span", { class: "truncate-1 text-start" }, entry.label),
+      ),
+      isActive
+        ? el("span", { class: "size-2 rounded-full bg-blue-600 dark:bg-blue-400 shrink-0 ms-1" })
+        : null,
     );
   }
 
@@ -120,25 +125,44 @@ export function sidebar() {
     if (hasActiveChild) expanded.add(entry.key);
     const isOpen = expanded.has(entry.key) && !collapsed;
 
+    if (collapsed) {
+      const toggle = el(
+        "button",
+        {
+          type: "button",
+          class: cx(
+            "hx-press grid place-items-center size-10 rounded-2xl mx-auto my-0.5 transition-all cursor-pointer",
+            hasActiveChild
+              ? "bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm border border-slate-200/60 dark:border-white/15"
+              : "text-slate-800 dark:text-slate-200 hover:bg-white/70 dark:hover:bg-white/10 hover:text-blue-600",
+          ),
+          title: entry.label,
+          "aria-expanded": "false",
+          onClick: () => {
+            setCollapsed(false);
+            expanded.add(entry.key);
+            paint();
+          },
+        },
+        icon(entry.icon, { size: 19 }),
+      );
+
+      return el("div", { class: "space-y-0.5" }, toggle);
+    }
+
     const toggle = el(
       "button",
       {
         type: "button",
         class: cx(
-          "hx-press w-full flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-2xl text-[13.5px] font-bold transition-all cursor-pointer mx-2",
+          "hx-press w-full flex items-center justify-between gap-2.5 px-3 py-2 rounded-2xl text-[13px] transition-all cursor-pointer mx-1",
           hasActiveChild && !isOpen
-            ? "bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/40 shadow-xs font-black"
-            : "text-slate-700 dark:text-slate-200 hover:bg-white/70 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white border border-transparent",
-          collapsed && "justify-center px-0 mx-1",
+            ? "bg-blue-50/70 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200/80 dark:border-blue-800/40 font-black shadow-xs"
+            : "text-slate-800 dark:text-slate-200 hover:bg-white/60 dark:hover:bg-white/10 hover:text-slate-900 font-bold border border-transparent",
         ),
-        title: collapsed ? entry.label : undefined,
         "aria-expanded": String(isOpen),
         onClick: () => {
-          if (collapsed) {
-            // في الحالة المطويّة لا مكان للقائمة الفرعية: نفتح الشريط أولاً.
-            setCollapsed(false);
-            expanded.add(entry.key);
-          } else if (expanded.has(entry.key)) {
+          if (expanded.has(entry.key)) {
             expanded.delete(entry.key);
           } else {
             expanded.add(entry.key);
@@ -146,21 +170,20 @@ export function sidebar() {
           paint();
         },
       },
-      icon(entry.icon, { size: 19, class: hasActiveChild ? "text-blue-600 dark:text-blue-400" : "text-slate-600 dark:text-slate-300" }),
-      collapsed
-        ? null
-        : el(
-            "span",
-            { class: "flex-1 text-start truncate-1" },
-            entry.label,
-          ),
-      collapsed
-        ? null
-        : el(
-            "span",
-            { class: cx("shrink-0 transition-transform duration-200", isOpen && "rotate-180") },
-            icon("chevronDown", { size: 14, class: "opacity-60" }),
-          ),
+      el(
+        "div",
+        { class: "flex items-center gap-2.5 min-w-0 flex-1" },
+        icon(entry.icon, {
+          size: 18,
+          class: hasActiveChild ? "text-blue-600 dark:text-blue-400" : "text-slate-800 dark:text-slate-200",
+        }),
+        el("span", { class: "text-start truncate-1" }, entry.label),
+      ),
+      el(
+        "span",
+        { class: cx("shrink-0 transition-transform duration-200 text-slate-500", isOpen && "rotate-180") },
+        icon("chevronDown", { size: 13 }),
+      ),
     );
 
     return el(
@@ -171,8 +194,7 @@ export function sidebar() {
         ? el(
             "div",
             {
-              class:
-                "hx-page-in mt-1 mb-1.5 ms-4 ps-3 border-s-2 border-slate-200/80 dark:border-white/15 space-y-1 overflow-hidden",
+              class: "hx-page-in my-0.5 space-y-0.5 overflow-hidden ps-2 pe-1",
             },
             ...children.map((child) => {
               const isActive = child.path === active;
@@ -182,25 +204,33 @@ export function sidebar() {
                 {
                   href: `#${child.path}`,
                   class: cx(
-                    "hx-press flex items-center justify-between gap-2 px-3.5 py-2 rounded-xl text-[13px] transition-all",
+                    "hx-press flex items-center justify-between gap-2 px-3 py-2 rounded-2xl text-[12.5px] transition-all",
                     isActive
-                      ? "bg-gradient-to-r from-blue-600 to-indigo-700 text-white font-extrabold shadow-sm shadow-blue-500/20 border border-blue-400/30"
-                      : "text-slate-600 dark:text-slate-300 font-semibold hover:bg-white/70 dark:hover:bg-white/10 hover:text-blue-600 dark:hover:text-blue-400 border border-transparent",
+                      ? "bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 font-extrabold shadow-sm border border-slate-100 dark:border-white/10"
+                      : "text-slate-700 dark:text-slate-300 font-bold hover:bg-white/50 dark:hover:bg-white/10 hover:text-blue-600 border border-transparent",
                   ),
                   "aria-current": isActive ? "page" : undefined,
                 },
-                el("span", { class: "truncate-1" }, child.label),
-                // وسم المرحلة يوضّح أن الشاشة مخطَّطة لا معطّلة.
-                !isActive && child.phase > APP.phase
-                  ? el(
-                      "span",
-                      {
-                        class: "shrink-0 text-[10px] px-1.5 py-0.5 rounded-full bg-slate-200/70 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold tabular",
-                        title: `مخطَّطة في المرحلة ${child.phase}`,
-                      },
-                      `P${child.phase}`,
-                    )
-                  : null,
+                el(
+                  "span",
+                  {
+                    class: cx("truncate-1", isActive ? "font-extrabold text-blue-600 dark:text-blue-400" : "font-bold"),
+                  },
+                  child.label,
+                ),
+                isActive
+                  ? el("span", { class: "size-2 rounded-full bg-blue-600 dark:bg-blue-400 shrink-0 ms-1" })
+                  : child.phase > APP.phase
+                    ? el(
+                        "span",
+                        {
+                          class:
+                            "shrink-0 text-[10px] px-1.5 py-0.5 rounded-full bg-slate-200/70 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold tabular",
+                          title: `مخطَّطة في المرحلة ${child.phase}`,
+                        },
+                        `P${child.phase}`,
+                      )
+                    : null,
               );
             }),
           )
@@ -235,21 +265,38 @@ export function toggleCollapsed() {
 /* -------------------------------------------------------------------------- */
 
 function brand() {
-  return el(
+  // زر الطيّ (يظهر عندما يكون الشريط مفتوحًا)
+  const collapseBtn = el(
+    "button",
+    {
+      type: "button",
+      class:
+        "hx-press grid place-items-center size-8.5 rounded-2xl shrink-0 " +
+        "border border-slate-200/80 dark:border-white/15 bg-white/90 dark:bg-slate-800 hover:bg-white " +
+        "text-slate-700 dark:text-slate-200 shadow-xs transition-all cursor-pointer",
+      title: "طيّ القائمة الجانبية",
+      onClick: toggleCollapsed,
+    },
+    icon("chevronEnd", { size: 14 }),
+  );
+
+  // رأس الشريط عندما يكون مفتوحًا (Expanded)
+  const expandedBrand = el(
     "div",
     {
       class:
-        "flex items-center justify-between min-h-[76px] px-3.5 py-3 shrink-0 border-b border-black/[0.04] dark:border-white/[0.08]",
+        "flex items-center justify-between min-h-[78px] px-3.5 py-3 shrink-0 " +
+        "border-b border-black/[0.05] dark:border-white/[0.08] rail-expanded-only",
     },
     el(
       "div",
-      { class: "flex items-center gap-2.5 min-w-0" },
+      { class: "flex items-center gap-2.5 min-w-0 flex-1" },
       el(
         "span",
         {
           class:
             "relative grid place-items-center size-12 rounded-2xl shrink-0 " +
-            "bg-white dark:bg-slate-800 shadow-xs border border-white/80 dark:border-white/20 p-1.5 overflow-hidden",
+            "bg-white dark:bg-slate-800 shadow-xs border border-white/90 dark:border-white/20 p-1.5 overflow-hidden",
         },
         el("img", {
           src: "assets/logo.png",
@@ -262,93 +309,134 @@ function brand() {
       ),
       el(
         "div",
-        { class: "min-w-0 group-data-[collapsed=true]/rail:hidden" },
-        el("p", { class: "text-[14px] font-black text-slate-900 dark:text-white truncate-1 tracking-tight" }, APP.organization),
-        el("p", { class: "text-[11px] font-medium text-slate-500 dark:text-slate-400 truncate-1" }, "منظومة الإدارة الطبية المتكاملة"),
+        { class: "min-w-0 flex-1 space-y-0.5" },
+        el("p", { class: "text-[13px] font-black text-slate-900 dark:text-white truncate-1 tracking-tight" }, APP.organization),
+        el("p", { class: "text-[11px] font-bold text-slate-600 dark:text-slate-300 truncate-1" }, "منظومة الإدارة الطبية"),
+        el("p", { class: "text-[10px] font-semibold text-slate-400 dark:text-slate-500 truncate-1" }, "ترخيص طبي رقم 1079"),
       ),
+    ),
+    collapseBtn,
+  );
+
+  // زر التوسيع (يظهر عندما يكون الشريط مطويًا)
+  const expandBtn = el(
+    "button",
+    {
+      type: "button",
+      class:
+        "hx-press grid place-items-center size-9 rounded-2xl shrink-0 " +
+        "border border-slate-200/80 dark:border-white/15 bg-white/90 dark:bg-slate-800 hover:bg-white " +
+        "text-slate-700 dark:text-slate-200 shadow-xs transition-all cursor-pointer mx-auto",
+      title: "توسيع القائمة الجانبية",
+      onClick: toggleCollapsed,
+    },
+    icon("chevronStart", { size: 14 }),
+  );
+
+  // رأس الشريط عندما يكون مطويًا (Collapsed)
+  const collapsedBrand = el(
+    "div",
+    {
+      class:
+        "flex items-center justify-center min-h-[78px] py-3 shrink-0 " +
+        "border-b border-black/[0.05] dark:border-white/[0.08] rail-collapsed-only",
+    },
+    expandBtn,
+  );
+
+  return el("div", { class: "shrink-0" }, expandedBrand, collapsedBrand);
+}
+
+/*
+ * بطاقة المستخدم وتسجيل الخروج في أسفل الشريط الجانبي — مطابق 1:1 للمرجع البصري.
+ */
+function footer(collapsed) {
+  const user = currentUser();
+  const role = currentRole();
+
+  if (collapsed) {
+    return el(
+      "div",
+      { class: "shrink-0 border-t border-black/[0.05] dark:border-white/[0.08] px-2 py-3 space-y-2.5" },
+      el(
+        "button",
+        {
+          type: "button",
+          class:
+            "hx-press grid place-items-center size-10 rounded-2xl mx-auto text-red-500 hover:bg-red-50/60 dark:hover:bg-red-950/30 transition-colors cursor-pointer",
+          title: "تسجيل الخروج",
+          "aria-label": "تسجيل الخروج من الشريط الجانبي",
+          onClick: () => toast.info("تسجيل الخروج يتطلب نظام مصادقة — غير منفَّذ بعد."),
+        },
+        icon("logout", { size: 18, class: "text-red-500" }),
+      ),
+      el(
+        "div",
+        {
+          class: "flex items-center justify-center pt-1 border-t border-black/[0.04] dark:border-white/[0.08]",
+          title: `${user.name} — ${role.label}`,
+        },
+        el(
+          "span",
+          {
+            class:
+              "grid place-items-center size-10 rounded-full font-bold text-xs " +
+              "bg-gradient-to-br from-blue-600 to-indigo-700 text-white border-2 border-white dark:border-slate-700 shadow-xs",
+          },
+          initials(user.name),
+        ),
+      ),
+    );
+  }
+
+  return el(
+    "div",
+    { class: "shrink-0 border-t border-black/[0.05] dark:border-white/[0.08] px-3.5 py-3 space-y-2.5" },
+    el(
+      "div",
+      { class: "flex items-center justify-center py-1 mb-0.5" },
+      el("img", {
+        src: "assets/devx_logo.jpg",
+        alt: "DevX",
+        class: "h-5 rounded-md object-contain shadow-xs border border-white/60",
+      }),
     ),
     el(
       "button",
       {
         type: "button",
         class:
-          "hx-press grid place-items-center size-7.5 rounded-full shrink-0 border border-slate-200/80 dark:border-white/15 " +
-          "bg-white/90 dark:bg-slate-800 hover:bg-white text-slate-600 dark:text-slate-300 shadow-sm transition-all group-data-[collapsed=true]/rail:hidden cursor-pointer",
-        title: "طيّ القائمة الجانبية",
-        onClick: toggleCollapsed,
-      },
-      icon("chevronStart", { size: 14 }),
-    ),
-  );
-}
-
-/*
- * بطاقة المستخدم وتسجيل الخروج في أسفل القضيب — حسب المرجع البصري.
- */
-function footer(collapsed) {
-  const user = currentUser();
-  const role = currentRole();
-
-  return el(
-    "div",
-    { class: "shrink-0 border-t border-black/[0.04] dark:border-white/[0.08] px-3 py-2.5 space-y-2.5" },
-    collapsed
-      ? null
-      : el(
-          "div",
-          { class: "flex items-center justify-center py-1 px-2 mb-0.5" },
-          el("img", { src: "assets/devx_logo.jpg", alt: "DevX", class: "h-5 rounded-md object-contain shadow-xs border border-white/60" }),
-        ),
-    el(
-      "button",
-      {
-        type: "button",
-        class: cx(
-          "hx-press w-full flex items-center justify-center gap-2 py-1 text-xs font-bold cursor-pointer transition-colors",
-          "text-red-500 hover:text-red-600 dark:text-red-400",
-          collapsed && "justify-center px-0",
-        ),
-        title: collapsed ? "تسجيل الخروج" : undefined,
+          "hx-press w-full flex items-center justify-center gap-2 py-1.5 rounded-xl text-xs font-bold cursor-pointer transition-colors " +
+          "text-red-500 hover:text-red-600 hover:bg-red-50/50 dark:hover:bg-red-950/20",
         "aria-label": "تسجيل الخروج من الشريط الجانبي",
-        onClick: () =>
-          toast.info("تسجيل الخروج يتطلب نظام مصادقة — غير منفَّذ بعد."),
+        onClick: () => toast.info("تسجيل الخروج يتطلب نظام مصادقة — غير منفَّذ بعد."),
       },
       icon("logout", { size: 15, class: "text-red-500" }),
-      collapsed ? null : el("span", {}, "تسجيل الخروج"),
+      el("span", {}, "تسجيل الخروج"),
     ),
     el(
       "div",
       {
-        class: cx(
-          "flex items-center gap-2.5 p-2 rounded-2xl bg-white/80 dark:bg-white/5 border border-white/90 dark:border-white/10 shadow-xs",
-          collapsed && "justify-center p-1 bg-transparent border-transparent",
-        ),
-        title: collapsed ? user.name : undefined,
+        class:
+          "flex items-center gap-3 p-2.5 rounded-[22px] bg-white/90 dark:bg-slate-800/90 " +
+          "border border-white/90 dark:border-white/15 shadow-xs",
+        title: `${user.name} — ${role.label}`,
       },
       el(
         "span",
         {
           class:
-            "grid place-items-center size-9 rounded-full shrink-0 text-xs font-bold " +
-            "bg-gradient-to-br from-brand-500 to-brand-700 text-white shadow-xs",
+            "grid place-items-center size-9.5 rounded-full shrink-0 text-xs font-bold " +
+            "bg-gradient-to-br from-blue-600 to-indigo-700 text-white shadow-xs border border-white dark:border-slate-700",
         },
         initials(user.name),
       ),
-      collapsed
-        ? null
-        : el(
-            "div",
-            { class: "min-w-0" },
-            el("p", { class: "text-xs font-black text-slate-900 dark:text-white truncate-1" }, user.name),
-            el("p", { class: "text-[10px] font-bold text-slate-500 dark:text-slate-400 truncate-1" }, role.label),
-          ),
+      el(
+        "div",
+        { class: "min-w-0 flex-1 space-y-0.5" },
+        el("p", { class: "text-[13px] font-black text-slate-900 dark:text-white truncate-1" }, user.name),
+        el("p", { class: "text-[11px] font-semibold text-slate-500 dark:text-slate-400 truncate-1" }, role.label),
+      ),
     ),
-    collapsed
-      ? null
-      : el(
-          "p",
-          { class: "text-[9px] text-center text-slate-400 tabular" },
-          `الإصدار ${APP.version} — مستشفى النيل التخصصي`,
-        ),
   );
 }

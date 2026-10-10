@@ -524,6 +524,25 @@
   box-shadow: 0 10px 35px -5px rgba(0, 0, 0, 0.4), inset 0 1px 1px 0 rgba(255, 255, 255, 0.08);
 }
 
+/* الشريط الجانبي — العرض والانتقال بالحالتين المفتوحة والمطوية */
+aside[data-collapsed="false"],
+.sidebar-expanded {
+  width: var(--spacing-sidebar, 17.25rem) !important;
+}
+
+aside[data-collapsed="true"],
+.sidebar-collapsed {
+  width: var(--spacing-sidebar-collapsed, 4.5rem) !important;
+}
+
+aside[data-collapsed="true"] .rail-expanded-only {
+  display: none !important;
+}
+
+aside[data-collapsed="false"] .rail-collapsed-only {
+  display: none !important;
+}
+
 .glass-card {
   background-color: var(--color-glass-card, var(--color-surface));
   backdrop-filter: blur(var(--glass-blur, 16px)) saturate(160%);
