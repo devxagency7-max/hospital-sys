@@ -265,12 +265,13 @@ function customColorSwatch(onPick) {
    قسم المؤثرات الحية (الضبابية، السطوع، التباين، التشبّع)
    ============================================================================ */
 
+// تسميات مطابقة حرفيًا لـ bg-studio.html في مؤسسة النهضة.
 const SLIDERS = [
   { key: "blur", label: "درجة الضبابية (Blur)", min: 0, max: 30, unit: "px" },
-  { key: "brightness", label: "السطوع (Brightness)", min: 40, max: 160, unit: "%" },
-  { key: "contrast", label: "التباين (Contrast)", min: 50, max: 160, unit: "%" },
-  { key: "saturate", label: "تشبّع الألوان (Saturation)", min: 0, max: 220, unit: "%" },
-  { key: "overlay", label: "شفافية غطاء الصفحة (Overlay)", min: 0, max: 80, unit: "%" },
+  { key: "brightness", label: "الإضاءة والسطوع (Brightness)", min: 40, max: 160, unit: "%" },
+  { key: "contrast", label: "درجة التباين (Contrast)", min: 50, max: 160, unit: "%" },
+  { key: "saturate", label: "درجة تشبع الألوان (Saturation)", min: 0, max: 220, unit: "%" },
+  { key: "overlay", label: "شفافية غطاء الصفحة (Overlay Opacity)", min: 0, max: 80, unit: "%" },
 ];
 
 function slidersSection() {

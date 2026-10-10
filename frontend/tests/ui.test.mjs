@@ -676,13 +676,13 @@ const blurVarAfterReload = await page.evaluate(() =>
 check("إعدادات الخلفية تبقى محفوظة بعد إعادة التحميل", blurVarAfterReload === "30px", blurVarAfterReload);
 
 // زر إعادة الضبط يُعيد كل القيم للافتراضي الموثَّق في DEFAULTS
-// (background-studio.js: blur=24 — مطابقة لشدّة .glass/.glass-rail الافتراضية).
+// (background-studio.js: blur=25 — منسوخ حرفيًا من اللقطة المرجعية لمؤسسة النهضة).
 await page.getByRole("button", { name: "إعادة ضبط المصنع" }).click();
 await page.waitForTimeout(300);
 const blurVarAfterReset = await page.evaluate(() =>
   getComputedStyle(document.documentElement).getPropertyValue("--glass-blur").trim(),
 );
-check("إعادة ضبط المصنع تُعيد الضبابية للقيمة الافتراضية (24px)", blurVarAfterReset === "24px", blurVarAfterReset);
+check("إعادة ضبط المصنع تُعيد الضبابية للقيمة الافتراضية (25px)", blurVarAfterReset === "25px", blurVarAfterReset);
 
 await page.evaluate(() => localStorage.removeItem("hospital-erp:backgroundStudio"));
 await go("/");
