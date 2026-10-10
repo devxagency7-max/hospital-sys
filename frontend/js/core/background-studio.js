@@ -16,24 +16,29 @@ import { appState, writePreference, readPreference } from "./store.js";
 import { toast } from "../../components/feedback/toast.js";
 
 /*
- * الافتراضي تدرّج رمادي-أزرق هادئ غير مشبَّع — لا تدرّجًا صريحًا بلون العلامة.
- * النمط البصري يستخدم صورة طبيعية مموَّهة بالضبابية والسطوع
- * فيُعطي إحساسًا محايدًا هادئًا خلف الزجاج، لا خلفية "ملوَّنة بوضوح".
- * نفس شدّة الضبابية الافتراضية المستخدمة في .glass/.glass-rail — راجع --glass-blur.
+ * الافتراضي منسوخ حرفيًا من defaultBgSettings في state/store.js لمؤسسة
+ * النهضة + الشريحة النشطة فعليًا في لقطة الشاشة المرجعية (أوف وايت #f8fafc
+ * بدل الصورة الافتراضية هناك) — القيم بالضبط: blur 25px, brightness 81%,
+ * contrast 98%, saturate 140%, overlay 22%.
  */
 export const DEFAULTS = Object.freeze({
   /** "image" | "color" | "gradient" */
-  type: "image",
-  val: "assets/background.jpg",
-  blur: 24,
-  brightness: 102,
+  type: "color",
+  val: "#f8fafc",
+  blur: 25,
+  brightness: 81,
   contrast: 98,
-  saturate: 110,
+  saturate: 140,
   /** شفافية غطاء الصفحة. */
-  overlay: 86,
+  overlay: 22,
 });
 
-/** خلفيات وألوان وتدرّجات جاهزة. */
+/**
+ * خلفيات وألوان وتدرّجات جاهزة — منسوخة حرفيًا بنفس الترتيب والقيم من
+ * color-palette-grid في bg-studio.html لمؤسسة النهضة (13 شريحة: صورة +
+ * 4 ألوان داكنة + 4 فواتح + 3 تدرجات + لون مخصص — الأخير مُعرَّف بشكل
+ * مستقل في appearance.page.js لا هنا).
+ */
 export const PRESET_SWATCHES = [
   { key: "default-nature", label: "الصورة الأصلية", type: "image", val: "assets/background.jpg" },
   { key: "navy", label: "كحلي داكن", type: "color", val: "#0f172a" },

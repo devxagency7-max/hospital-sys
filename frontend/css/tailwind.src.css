@@ -598,9 +598,18 @@ aside[data-collapsed="false"] .rail-collapsed-only {
   }
 }
 
+/*
+ * مطابقة حرفية لـ dashboard.css في مؤسسة النهضة: padding 10px مضغوط،
+ * flex-start لا center (الأيقونة تلتصق بأعلى الكارت لا تتوسّط رأسيًا)،
+ * radius موروث من .glass-card (24px افتراضيًا) لا قيمة مستقلة هنا.
+ */
 .dash-stat-card {
-  padding: 14px 18px;
-  border-radius: 22px;
+  padding: 10px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  position: relative;
+  overflow: hidden;
 }
 
 /* --- حقول الإدخال والنماذج --- */

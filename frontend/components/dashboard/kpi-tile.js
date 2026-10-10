@@ -11,33 +11,40 @@ import { tweenNumber } from "../../js/core/animate.js";
 import { registerCleanup } from "../../js/core/lifecycle.js";
 
 /*
- * التدرجات والألوان المعتمدة للبطاقات — مطابقة حرفية لمرجع التصميم (TONES)
+ * التدرجات والألوان المعتمدة للبطاقات — منسوخة حرفيًا (نفس قيم rgba/hex)
+ * من TONES في dashboard.component.js لمؤسسة النهضة:
+ *   amber:   icon rgba(217,119,6,.15)=amber-600/15   text #b45309=amber-700   border rgba(217,119,6,.3)=amber-600/30
+ *   blue:    icon rgba(37,99,235,.15)=blue-600/15     text #2563eb=blue-600    border rgba(37,99,235,.3)=blue-600/30
+ *   green:   icon rgba(16,185,129,.15)=emerald-500/15 text #047857=emerald-700 border rgba(16,185,129,.3)=emerald-500/30
+ *   red:     icon rgba(225,29,72,.15)=rose-600/15     text #be123c=rose-700   border rgba(225,29,72,.3)=rose-600/30
+ *   neutral: icon rgba(100,116,139,.15)=slate-500/15  text #475569=slate-600  border: '' — بلا حدّ، الكارت يبقى
+ *            على حدّ .glass-card الزجاجي الافتراضي (rgba(255,255,255,.5)) كما في المرجع بالضبط.
  */
 const TONES = {
   amber: {
-    bgIcon: "bg-amber-500/15 text-[#b45309] dark:text-amber-400 dark:bg-amber-500/20",
+    bgIcon: "bg-amber-600/15 text-[#b45309] dark:text-amber-400 dark:bg-amber-500/20",
     textVal: "text-[#b45309] dark:text-amber-400",
-    border: "border-amber-500/35 dark:border-amber-500/40",
+    border: "border-amber-600/30 dark:border-amber-500/40",
   },
   blue: {
     bgIcon: "bg-blue-600/15 text-[#2563eb] dark:text-blue-400 dark:bg-blue-600/20",
     textVal: "text-[#2563eb] dark:text-blue-400",
-    border: "border-blue-600/35 dark:border-blue-600/40",
+    border: "border-blue-600/30 dark:border-blue-600/40",
   },
   green: {
     bgIcon: "bg-emerald-500/15 text-[#047857] dark:text-emerald-400 dark:bg-emerald-500/20",
     textVal: "text-[#047857] dark:text-emerald-400",
-    border: "border-emerald-600/35 dark:border-emerald-600/40",
+    border: "border-emerald-500/30 dark:border-emerald-600/40",
   },
   red: {
-    bgIcon: "bg-rose-500/15 text-[#be123c] dark:text-rose-400 dark:bg-rose-500/20",
+    bgIcon: "bg-rose-600/15 text-[#be123c] dark:text-rose-400 dark:bg-rose-500/20",
     textVal: "text-[#be123c] dark:text-rose-400",
-    border: "border-rose-600/35 dark:border-rose-600/40",
+    border: "border-rose-600/30 dark:border-rose-500/40",
   },
   neutral: {
     bgIcon: "bg-slate-500/15 text-[#475569] dark:text-slate-300 dark:bg-slate-500/20",
     textVal: "text-[#0f172a] dark:text-white",
-    border: "border-slate-300/50 dark:border-white/10",
+    border: "",
   },
 };
 
@@ -73,55 +80,54 @@ export function kpiTile({
 } = {}) {
   const toneCfg = TONES[tone] ?? TONES.neutral;
 
-  // رقم كبير، عريض، ملون بلون التون مع الحفاظ على p.num للفحوصات
+  // رقم 19px/800 بالضبط مطابق لـ .dash-stat-card__val في المرجع — لا حجمًا
+  // متجاوبًا أكبر عند الشاشات الواسعة، المرجع ثابت القياس دائمًا.
   const valueNode = el(
     "p",
     {
-      class: cx(
-        "num text-xl sm:text-[24px] font-black tabular leading-none tracking-tight",
-        toneCfg.textVal,
-      ),
+      class: cx("num text-[19px] font-extrabold tabular leading-[1.1]", toneCfg.textVal),
     },
     "—",
   );
 
+  // بلا border فئة ثابتة: neutral بلا حدّ أصلًا (راجع تعليق TONES)، فإضافة
+  // "border" هنا كانت ستفرض حدًّا شفافًا بلون افتراضي حتى لو toneCfg.border
+  // فارغة. نضيف "border" فقط مع toneCfg.border نفسها.
   const classes = cx(
-    "hx-press group relative flex items-center justify-between gap-3.5 glass-card dash-stat-card",
-    "p-3.5 sm:px-4.5 sm:py-3.5 rounded-[22px] border transition-all duration-300 hover:-translate-y-0.5 hover:shadow-raised",
-    toneCfg.border,
+    "hx-press group relative glass-card dash-stat-card transition-shadow duration-300",
+    toneCfg.border && cx("border", toneCfg.border),
     href && "cursor-pointer",
   );
 
+  // ترتيب الأبناء كالمرجع بالضبط: الأيقونة أولًا ثم المحتوى — في RTL هذا
+  // يضع الأيقونة على يمين الكارت والنص على يساره (dash-kpis.html الأصلي).
   const inner = [
-    // الجانب الأيمن (العنوان والرقم)
-    el(
-      "div",
-      { class: "flex flex-col text-right min-w-0 flex-1" },
-      el(
-        "p",
-        {
-          class: "tracking-wide text-xs sm:text-[13px] font-bold text-slate-500 dark:text-slate-400 truncate-1 mb-1.5",
-        },
-        label,
-      ),
-      loading
-        ? el("div", { class: "hx-skeleton h-6 w-20" })
-        : el("div", { class: "flex items-center gap-1.5" }, valueNode),
-    ),
-
-    // الجانب الأيسر (الأيقونة ذات الخلفية الزجاجية الخفيفة)
     iconName
       ? el(
           "span",
           {
             class: cx(
-              "shrink-0 grid place-items-center size-11 sm:size-12 rounded-[15px] transition-transform duration-300 group-hover:scale-105",
+              "shrink-0 grid place-items-center size-11 rounded-[14px] shadow-[0_4px_12px_rgba(29,78,216,0.18)] backdrop-blur-[8px] transition-transform duration-300 group-hover:scale-105",
               toneCfg.bgIcon,
             ),
           },
-          icon(iconName, { size: 22 }),
+          icon(iconName, { size: 20, strokeWidth: 2.2 }),
         )
       : null,
+
+    el(
+      "div",
+      { class: "flex flex-col w-full min-w-0" },
+      el(
+        "span",
+        {
+          class:
+            "dash-stat-card__title text-xs font-bold text-slate-500 dark:text-slate-400 truncate-1 mb-1",
+        },
+        label,
+      ),
+      loading ? el("div", { class: "hx-skeleton h-5 w-16" }) : valueNode,
+    ),
   ];
 
   const node = href
@@ -147,12 +153,12 @@ export function kpiTile({
   return node;
 }
 
-/** شبكة بطاقات مؤشرات — 4 أعمدة مطابقة لـ .dash-stats-grid */
+/**
+ * شبكة بطاقات مؤشرات — .dash-stats-grid وحدها تضبط العرض/الفجوة/نقاط الكسر
+ * (4 أعمدة ← 2 عند 1024px ← 1 عند 640px، مطابقة لـ dashboard.css في المرجع)؛
+ * لا كلاسات Tailwind شبكية مكرّرة فوقها قد تتعارك معها في الـ cascade.
+ */
 export function kpiGrid(...tiles) {
   const flat = tiles.flat().filter(Boolean);
-  return el(
-    "div",
-    { class: "grid gap-3.5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 mb-3.5 dash-stats-grid" },
-    ...flat,
-  );
+  return el("div", { class: "dash-stats-grid" }, ...flat);
 }

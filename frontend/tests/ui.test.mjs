@@ -381,7 +381,7 @@ check("العنوان لوحة التحكم", (await page.locator("#page h1").te
  * الأصل في السلسلة أيضًا — ست تسميات ورقية حقيقية أنتجت عدّات أعلى من 6
  * بسبب هذا السلوك، لا لأن شيئًا تكرَّر فعليًا في الصفحة.
  */
-// `tracking-wide` حصريًا على سطر التسمية داخل kpi-tile.js — لا نستخدم
+// dash-stat-card__title حصريًا على سطر التسمية داخل kpi-tile.js — لا نستخدم
 // getByText العام هنا لأن بعض التسميات (كـ"بانتظار الاعتماد") تتكرر في
 // أقسام أخرى من الصفحة (لوحات تفصيلية، شرائح) فيفشل الفحص بـ strict mode.
 for (const label of [
@@ -394,7 +394,7 @@ for (const label of [
 ]) {
   check(
     `بطاقة «${label}» ظاهرة`,
-    await page.locator("#page p.tracking-wide").filter({ hasText: label }).first().isVisible(),
+    await page.locator("#page .dash-stat-card__title").filter({ hasText: label }).first().isVisible(),
   );
 }
 
