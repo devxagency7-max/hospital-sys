@@ -108,7 +108,7 @@ function buildPage(summary, alerts) {
 }
 
 /* ============================================================================
-   بطاقة الترحيب العلوية — مطابقة للمرجع البصري (nahda-webb-main)
+   بطاقة الترحيب العلوية
    ============================================================================ */
 
 function welcomeHeroCard(summary, alerts) {
@@ -297,26 +297,26 @@ function pendingApprovalsCollapsible(summary) {
 
   const sampleCases = [
     {
-      name: "جمال عثمان ابراهيم شعبان",
-      nationalId: "27512272200419",
-      fileCode: "CASE-43356",
-      clinic: "بحث وتدقيق الحالة — سمسطا",
-      status: "قيد المراجعة",
+      name: "أحمد محمود السيد",
+      nationalId: "28809151201124",
+      fileCode: "P-1001",
+      clinic: "العيادات الخارجية — باطنة وتخصصي",
+      status: "قيد المتابعة",
       tone: "info",
     },
     {
-      name: "محمد محمود عبد الرحمن",
-      nationalId: "30504012400488",
-      fileCode: "CASE-44079",
-      clinic: "الباطنة — كشف تخصصي",
+      name: "سارة علي حسن",
+      nationalId: "29503120102456",
+      fileCode: "P-1002",
+      clinic: "الجراحة العامة — استشارة قبل التدخل",
       status: "بانتظار الاعتماد",
       tone: "warning",
     },
     {
-      name: "سعاد عبد الفتاح إبراهيم",
-      nationalId: "29806121400234",
-      fileCode: "CASE-44080",
-      clinic: "الجراحة — تقرير إشعار دائن",
+      name: "محمود إبراهيم خليل",
+      nationalId: "28206201403312",
+      fileCode: "P-1003",
+      clinic: "القلب والأوعية — تقرير فحص ومتابعة",
       status: "بانتظار الاعتماد",
       tone: "warning",
     },

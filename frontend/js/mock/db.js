@@ -241,7 +241,12 @@ export function query(collection, params = {}) {
 
 /** يُعيد سجلاً واحدًا بالمعرّف، أو undefined. */
 export function find(collection, id) {
-  const row = db[collection]?.find((item) => String(item.id) === String(id));
+  const row = db[collection]?.find(
+    (item) =>
+      String(item.id) === String(id) ||
+      String(item.patientCode ?? "") === String(id) ||
+      String(item.code ?? "") === String(id),
+  );
   return row ? project(collection, row) : undefined;
 }
 

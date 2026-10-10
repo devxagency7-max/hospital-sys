@@ -59,10 +59,9 @@
   --font-mono: "Cascadia Code", "Consolas", ui-monospace, "Segoe UI Mono", monospace;
 
   /* --- اللون الأساسي (هوية المستشفى) ---
-     أزرق #1d4ed8 — مطابقة حرفية للمرجع البصري (nahda-webb-main)، لا تيل كما
-     في مرحلة سابقة. -600/-700 مُقفَلان على القيمتين الحرفيتين من المرجع
-     (--color-primary / --color-primary-hover هناك) فلا ينحرفان عن المرجع
-     بصريًا في أكثر عنصرين ظهورًا: الأزرار الأساسية والعنصر النشط بالتنقّل. */
+     أزرق #1d4ed8. -600/-700 مُقفَلان على القيمتين
+     (--color-primary / --color-primary-hover)
+     للأزرار الأساسية والعنصر النشط بالتنقّل. */
   --color-brand-50: #0e1c30;
   --color-brand-100: #12243c;
   --color-brand-200: #1f3a5c;
@@ -127,7 +126,7 @@
   --color-info-600: #2563eb;
   --color-info-700: #1d4ed8;
 
-  /* --- الاستدارة — مطابقة لمؤسسة النهضة: 24px كروت، 14px أزرار، 12px حقول --- */
+  /* --- الاستدارة: 24px كروت، 14px أزرار، 12px حقول --- */
   --radius-card: 24px;
   --radius-control: 12px;
   --radius-btn: 14px;
@@ -148,7 +147,7 @@
   --color-glass-card: rgb(18 25 41 / 0.72);
   --color-glass-border: rgb(255 255 255 / 0.09);
 
-  /* --- أبعاد اللياوت — مطابقة لمؤسسة النهضة: 290px شريط مفتوح، 84px مطوي، 64px هيدر --- */
+  /* --- أبعاد اللياوت: 290px شريط مفتوح، 84px مطوي، 64px هيدر --- */
   --spacing-sidebar: 290px;
   --spacing-sidebar-collapsed: 84px;
   --spacing-header: 64px;
@@ -260,15 +259,15 @@
   }
 
   /*
-   * فاتح مؤسسي فاخر مطابق لمؤسسة النهضة (nahda-webb-main):
-   * أسطح زجاجية بيضاء فائقة الشفافية مع انعكاس طبيعي نقي 22% وغطاء شفاف دقيق.
+   * مظهر فاتح مؤسسي فاخر (Glassmorphism):
+   * أسطح زجاجية بيضاء فائقة الشفافية مع انعكاس طبيعي نقي وغطاء شفاف دقيق.
    */
   :root[data-theme="light"] {
     --color-ink: #000000;
     --color-muted: #334155;
     --color-faint: #64748b;
 
-    /* تراتبية النصوص النقية المعتمدة في nahda-webb-main */
+    /* تراتبية النصوص النقية المعتمدة */
     --text-primary: #000000;
     --text-body: #09090b;
     --text-secondary: #334155;
@@ -286,7 +285,7 @@
     --border-color-strong: rgba(255, 255, 255, 0.70);
     --border-focus: #1d4ed8;
 
-    /* القضيب الجانبي زجاج أبيض شفاف فخم مطابق لمؤسسة النهضة */
+    /* القضيب الجانبي زجاج أبيض شفاف فخم */
     --color-rail: rgba(255, 255, 255, 0.35);
     --color-rail-hover: rgba(255, 255, 255, 0.55);
     --color-rail-text: #000000;
@@ -329,7 +328,7 @@
     --color-info-200: #bae6fd;
     --color-info-300: #0284c7;
 
-    /* معايير زجاج مؤسسة النهضة فائق الشفافية والصفاء */
+    /* معايير الزجاج فائق الشفافية والصفاء */
     --glass-bg: rgba(255, 255, 255, 0.22);
     --glass-bg-hover: rgba(255, 255, 255, 0.38);
     --glass-bg-subtle: rgba(255, 255, 255, 0.16);
@@ -339,14 +338,14 @@
     --color-glass-card: rgba(255, 255, 255, 0.35);
     --color-glass-border: rgba(255, 255, 255, 0.50);
 
-    /* ظلال زجاج مؤسسة النهضة الدقيقة */
+    /* ظلال الزجاج الدقيقة */
     --glass-shadow: 0 14px 44px 0 rgba(15, 23, 42, 0.18), inset 0 1px 1px 0 rgba(255, 255, 255, 0.75);
     --glass-shadow-hover: 0 22px 52px 0 rgba(15, 23, 42, 0.26), inset 0 1px 2px 0 rgba(255, 255, 255, 0.95);
     --shadow-card: 0 14px 44px 0 rgba(15, 23, 42, 0.18), inset 0 1px 1px 0 rgba(255, 255, 255, 0.75);
     --shadow-raised: 0 10px 30px -4px rgba(15, 23, 42, 0.08), inset 0 1px 2px 0 rgba(255, 255, 255, 1);
     --shadow-overlay: 0 24px 60px -12px rgba(15, 23, 42, 0.18), inset 0 1px 2px 0 rgba(255, 255, 255, 1);
 
-    /* خلفية وغطاء شفاف 22% مطابق تماماً لـ nahda-webb-main */
+    /* خلفية وغطاء شفاف 22% */
     --bg-layer-image: url("../assets/background.jpg");
     --bg-overlay: rgba(248, 250, 252, 0.22);
     --bg-overlay-color: rgba(248, 250, 252, 0.22);
@@ -385,7 +384,7 @@
     font-feature-settings: "tnum";
   }
 
-  /* تراتبية العناوين الرسمية لمؤسسة النهضة — خط عريض داكن 800 */
+  /* تراتبية العناوين الرسمية — خط عريض داكن 800 */
   h1,
   h2,
   h3,
@@ -417,7 +416,7 @@
     display: none !important;
   }
 
-  /* شريط تمرير فائق النعومة مطابق لمؤسسة النهضة */
+  /* شريط تمرير فائق النعومة */
   * {
     scrollbar-width: thin;
     scrollbar-color: rgba(0, 0, 0, 0.35) transparent;
@@ -520,7 +519,7 @@
    `backdrop-filter` القياسية فقط وترك Lightning CSS يُولِّد `-webkit-`
    تلقائيًا (دوره الصحيح أصلاً) — عندها يُبقي كلتا الخاصيتين في المخرج.
    -------------------------------------------------------------------------- */
-/* زجاج الكروت والأسطح الزجاجية الرئيسية — مطابقة حرفية لمؤسسة النهضة */
+/* زجاج الكروت والأسطح الزجاجية الرئيسية */
 .glass {
   background-color: var(--color-glass, rgba(255, 255, 255, 0.35));
   background-image: var(--glass-bg-gradient, linear-gradient(135deg, rgba(255, 255, 255, 0.38) 0%, rgba(255, 255, 255, 0.16) 100%));
@@ -578,7 +577,7 @@ aside[data-collapsed="false"] .rail-collapsed-only {
   box-shadow: var(--glass-shadow-hover, 0 22px 52px 0 rgba(15, 23, 42, 0.26), inset 0 1px 2px 0 rgba(255, 255, 255, 0.95));
 }
 
-/* --- حقول الإدخال والنماذج — مطابقة لمؤسسة النهضة --- */
+/* --- حقول الإدخال والنماذج --- */
 :root[data-theme="light"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
 :root[data-theme="light"] select,
 :root[data-theme="light"] textarea {
@@ -598,7 +597,7 @@ aside[data-collapsed="false"] .rail-collapsed-only {
   outline: none;
 }
 
-/* --- الجداول — مطابقة لمؤسسة النهضة --- */
+/* --- الجداول --- */
 :root[data-theme="light"] table {
   border-collapse: separate;
   border-spacing: 0;
