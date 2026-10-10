@@ -359,6 +359,7 @@
   }
 
   html {
+    font-size: 16.5px;
     -webkit-text-size-adjust: 100%;
     scroll-behavior: smooth;
   }
@@ -370,7 +371,7 @@
     background-color: transparent;
     color: var(--color-ink);
     font-family: var(--font-sans);
-    font-size: 0.875rem;
+    font-size: 0.9375rem;
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;

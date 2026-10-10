@@ -291,7 +291,7 @@ export const iconNames = Object.keys(PATHS);
  * @param {string} [options.title] نص بديل — مرّره فقط إن كانت الأيقونة وحدها
  *                                 تحمل المعنى؛ وإلا تُخفى عن قارئ الشاشة.
  */
-export function icon(name, { size = 18, class: className, strokeWidth = 1.75, title } = {}) {
+export function icon(name, { size = 20, class: className, strokeWidth = 2.1, title } = {}) {
   const definition = PATHS[name];
 
   if (!definition) {

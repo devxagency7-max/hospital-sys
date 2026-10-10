@@ -77,7 +77,7 @@ export function sidebar() {
         {
           href: `#${entry.path}`,
           class: cx(
-            "hx-press grid place-items-center size-10 rounded-2xl mx-auto my-0.5 transition-all cursor-pointer",
+            "hx-press grid place-items-center size-11 rounded-2xl mx-auto my-1 transition-all cursor-pointer",
             isActive
               ? "bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm border border-slate-200/60 dark:border-white/15 font-black"
               : "text-slate-800 dark:text-slate-200 hover:bg-white/70 dark:hover:bg-white/10 hover:text-blue-600 font-bold",
@@ -85,7 +85,7 @@ export function sidebar() {
           title: entry.label,
           "aria-current": isActive ? "page" : undefined,
         },
-        icon(entry.icon, { size: 19 }),
+        icon(entry.icon, { size: 22 }),
       );
     }
 
@@ -94,7 +94,7 @@ export function sidebar() {
       {
         href: `#${entry.path}`,
         class: cx(
-          "hx-press flex items-center justify-between gap-2.5 px-3 py-2 rounded-2xl text-[13px] transition-all cursor-pointer mx-1",
+          "hx-press flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-2xl text-[14px] transition-all cursor-pointer mx-1",
           isActive
             ? "bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 font-extrabold shadow-sm border border-slate-200/60 dark:border-white/10"
             : "text-slate-800 dark:text-slate-200 font-bold hover:bg-white/60 dark:hover:bg-white/10 hover:text-blue-600 border border-transparent",
@@ -103,15 +103,15 @@ export function sidebar() {
       },
       el(
         "div",
-        { class: "flex items-center gap-2.5 min-w-0 flex-1" },
+        { class: "flex items-center gap-3 min-w-0 flex-1" },
         icon(entry.icon, {
-          size: 18,
+          size: 21,
           class: isActive ? "text-blue-600 dark:text-blue-400" : "text-slate-800 dark:text-slate-200",
         }),
         el("span", { class: "truncate-1 text-start" }, entry.label),
       ),
       isActive
-        ? el("span", { class: "size-2 rounded-full bg-blue-600 dark:bg-blue-400 shrink-0 ms-1" })
+        ? el("span", { class: "size-2.5 rounded-full bg-blue-600 dark:bg-blue-400 shrink-0 ms-1" })
         : null,
     );
   }
@@ -130,7 +130,7 @@ export function sidebar() {
         {
           type: "button",
           class: cx(
-            "hx-press grid place-items-center size-10 rounded-2xl mx-auto my-0.5 transition-all cursor-pointer",
+            "hx-press grid place-items-center size-11 rounded-2xl mx-auto my-1 transition-all cursor-pointer",
             hasActiveChild
               ? "bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm border border-slate-200/60 dark:border-white/15"
               : "text-slate-800 dark:text-slate-200 hover:bg-white/70 dark:hover:bg-white/10 hover:text-blue-600",
@@ -143,7 +143,7 @@ export function sidebar() {
             paint();
           },
         },
-        icon(entry.icon, { size: 19 }),
+        icon(entry.icon, { size: 22 }),
       );
 
       return el("div", { class: "space-y-0.5" }, toggle);
@@ -154,7 +154,7 @@ export function sidebar() {
       {
         type: "button",
         class: cx(
-          "hx-press w-full flex items-center justify-between gap-2.5 px-3 py-2 rounded-2xl text-[13px] transition-all cursor-pointer mx-1",
+          "hx-press w-full flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-2xl text-[14px] transition-all cursor-pointer mx-1",
           hasActiveChild && !isOpen
             ? "bg-blue-50/70 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200/80 dark:border-blue-800/40 font-black shadow-xs"
             : "text-slate-800 dark:text-slate-200 hover:bg-white/60 dark:hover:bg-white/10 hover:text-slate-900 font-bold border border-transparent",
@@ -171,9 +171,9 @@ export function sidebar() {
       },
       el(
         "div",
-        { class: "flex items-center gap-2.5 min-w-0 flex-1" },
+        { class: "flex items-center gap-3 min-w-0 flex-1" },
         icon(entry.icon, {
-          size: 18,
+          size: 21,
           class: hasActiveChild ? "text-blue-600 dark:text-blue-400" : "text-slate-800 dark:text-slate-200",
         }),
         el("span", { class: "text-start truncate-1" }, entry.label),
@@ -181,7 +181,7 @@ export function sidebar() {
       el(
         "span",
         { class: cx("shrink-0 transition-transform duration-200 text-slate-500", isOpen && "rotate-180") },
-        icon("chevronDown", { size: 13 }),
+        icon("chevronDown", { size: 15 }),
       ),
     );
 

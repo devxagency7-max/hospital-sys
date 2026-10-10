@@ -115,11 +115,11 @@ export function kpiTile({
           "span",
           {
             class: cx(
-              "shrink-0 grid place-items-center size-10 sm:size-10.5 rounded-[13px] transition-transform duration-300 group-hover:scale-105",
+              "shrink-0 grid place-items-center size-11 sm:size-12 rounded-[15px] transition-transform duration-300 group-hover:scale-105",
               toneCfg.bgIcon,
             ),
           },
-          icon(iconName, { size: 19 }),
+          icon(iconName, { size: 22 }),
         )
       : null,
   ];
