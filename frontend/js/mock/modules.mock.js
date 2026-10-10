@@ -170,7 +170,7 @@ export const cashBoxes = [
    4. الحسابات البنكية (Bank Accounts)
    ============================================================================ */
 export const bankAccounts = [
-  { id: 1, bankName: "البنك الأهلي المصري", accountName: "مستشفى النيل التخصصي - جاري", accountNumber: "1098234871234", iban: "EG3800020001098234871234001", currency: "EGP", balance: 1150000, status: "active" },
+  { id: 1, bankName: "البنك الأهلي المصري", accountName: "مستشفى أمان الحياة - جاري", accountNumber: "1098234871234", iban: "EG3800020001098234871234001", currency: "EGP", balance: 1150000, status: "active" },
   { id: 2, bankName: "بنك مصر", accountName: "حساب غرف العمليات والمستلزمات", accountNumber: "2044819203112", iban: "EG1200030002044819203112001", currency: "EGP", balance: 650000, status: "active" },
   { id: 3, bankName: "البنك التجاري الدولي (CIB)", accountName: "حساب التبرعات والودائع", accountNumber: "3188204910394", iban: "EG5500100003188204910394001", currency: "EGP", balance: 820000, status: "active" },
 ];
@@ -411,15 +411,15 @@ export const auditLogs = [
    14. إعدادات المستشفى والعيادات والضرائب
    ============================================================================ */
 export const hospitalInfo = {
-  name: "مستشفى النيل التخصصي",
-  nameEn: "Al Nile Specialized Hospital",
+  name: "مستشفى أمان الحياة",
+  nameEn: "Aman Al Hayat Hospital",
   taxNumber: "892-341-980",
   commercialRegister: "982341",
   licenseNumber: "MOH-2024-819",
   phone: "02-2798-4000",
   emergencyPhone: "16890",
-  email: "info@alnile-hospital.com",
-  website: "https://alnile-hospital.com",
+  email: "info@amanalhayat-hospital.com",
+  website: "https://amanalhayat-hospital.com",
   address: "شارع التحرير، الدقي، الجيزة، جمهورية مصر العربية",
   governorate: "الجيزة",
   currency: "ج.م (EGP)",

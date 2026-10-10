@@ -1,6 +1,6 @@
 /**
  * تقرير وملف وبحث الحالة الطبية الشامل (Medical Case Dossier & Clinical Report)
- * مستشفى النيل التخصصي — منظومة الإدارة الطبية والرعاية الذكية
+ * مستشفى أمان الحياة — منظومة الإدارة الطبية والرعاية الذكية
  *
  * وثيقة طبية رسمية ثلاثية الصفحات (3 صفحات A4) مجهزة للطباعة والحفظ كملف PDF
  * مربوطة بالكامل بطبقة البيانات التجريبية الحقيقية للمستشفى (js/api).
@@ -224,7 +224,7 @@ export default async function caseReportPage() {
 }
 
 /* ============================================================================
-   ترويسة وتذييل المستند الرسمي — مستشفى النيل التخصصي
+   ترويسة وتذييل المستند الرسمي — مستشفى أمان الحياة
    ============================================================================ */
 
 function renderHeader(patient) {
@@ -238,7 +238,7 @@ function renderHeader(patient) {
       el(
         "div",
         { class: "text-right space-y-0.5" },
-        el("h1", { class: "text-xl font-black text-slate-900 tracking-tight leading-snug" }, "مستشفى النيل التخصصي"),
+        el("h1", { class: "text-xl font-black text-slate-900 tracking-tight leading-snug" }, "مستشفى أمان الحياة"),
         el("p", { class: "text-[11px] font-bold text-slate-700" }, "منظومة الإدارة الطبية والرعاية الذكية — قطاع السجلات الطبية وشؤون المرضى"),
         el("p", { class: "text-[10px] font-semibold text-slate-500" }, "ترخيص طبي رقم 1079 — قطاع المؤسسات العلاجية والتراخيص الطبية"),
       ),
@@ -254,7 +254,7 @@ function renderHeader(patient) {
           },
           el("img", {
             src: "assets/logo.png",
-            alt: "شعار مستشفى النيل التخصصي",
+            alt: "شعار مستشفى أمان الحياة",
             class: "size-full object-contain",
             onError: (e) => {
               e.target.style.display = "none";
@@ -286,7 +286,7 @@ function renderFooter(pageNumber, totalPages = 3) {
         "pt-2.5 mt-auto border-t border-slate-300 flex items-center justify-between text-[11px] font-bold text-slate-600",
     },
     // اسم المستشفى والقطاع الطبي
-    el("div", {}, "مستشفى النيل التخصصي — قطاع الرعاية الطبية وشؤون المرضى"),
+    el("div", {}, "مستشفى أمان الحياة — قطاع الرعاية الطبية وشؤون المرضى"),
     // رقم الصفحة والتاريخ
     el("div", { class: "tabular font-semibold" }, `صفحة ${pageNumber} من ${totalPages} — 10/10/2026 — 12:00 م`),
     // الشعار التقني (DevX فقط)

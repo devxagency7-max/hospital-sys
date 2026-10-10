@@ -15,7 +15,7 @@ export function printableReportSheet({
   subtitle = "",
   period = "الفترة الحالية — 2026",
   date = "06/10/2026 — 10:24 م",
-  orgName = APP.organization || "مستشفى النيل التخصصي",
+  orgName = APP.organization || "مستشفى أمان الحياة",
   orgSubtitle = "منظومة الإدارة الطبية والرعاية الذكية — ترخيص وزارة الصحة",
   slogan = "لست وحدك نحن معك",
   kpis = [],

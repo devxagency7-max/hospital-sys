@@ -45,7 +45,7 @@ export default async function accountsTreePage() {
   // ترويسة الصفحة
   const header = pageHeader({
     title: "شجرة الحسابات العامة",
-    description: "الدليل المحاسبي الموحد لمستشفى النيل التخصصي وفق المعايير المحاسبية المعتمدة.",
+    description: "الدليل المحاسبي الموحد لمستشفى أمان الحياة وفق المعايير المحاسبية المعتمدة.",
     actions: [
       button({
         label: "توسيع الكل",

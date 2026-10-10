@@ -8,7 +8,7 @@
 export const APP = {
   name: "Hospital ERP",
   /** اسم المستشفى — يظهر في الهيدر وترويسة كل تقرير مطبوع. */
-  organization: "مستشفى النيل التخصصي",
+  organization: "مستشفى أمان الحياة",
   version: "0.1.0",
   /** مرحلة التنفيذ الحالية حسب docs/08-IMPLEMENTATION-PLAN.md. */
   phase: 1,
