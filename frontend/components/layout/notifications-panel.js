@@ -28,8 +28,8 @@ export function notificationsPanel() {
 
   const badge = el("span", {
     class:
-      "absolute -top-0.5 -end-0.5 min-w-[1.05rem] h-[1.05rem] px-1 rounded-full " +
-      "bg-danger-600 text-white text-[10px] font-bold grid place-items-center num " +
+      "absolute -top-1 -end-1 min-w-[0.95rem] h-[0.95rem] px-0.5 rounded-full " +
+      "bg-danger-600 text-white text-[9px] font-bold grid place-items-center num " +
       "ring-2 ring-rail hidden",
   });
 
@@ -38,7 +38,7 @@ export function notificationsPanel() {
     { class: "relative" },
     iconButton("bell", {
       label: "الإشعارات",
-      size: "icon",
+      size: "icon-sm",
       onClick: toggle,
     }),
     badge,

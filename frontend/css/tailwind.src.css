@@ -147,10 +147,10 @@
   --color-glass-card: rgb(18 25 41 / 0.72);
   --color-glass-border: rgb(255 255 255 / 0.09);
 
-  /* --- أبعاد اللياوت: 290px شريط مفتوح، 84px مطوي، 64px هيدر --- */
+  /* --- أبعاد اللياوت: 290px شريط مفتوح، 84px مطوي، 50px هيدر --- */
   --spacing-sidebar: 290px;
   --spacing-sidebar-collapsed: 84px;
-  --spacing-header: 64px;
+  --spacing-header: 50px;
 
   /* --- مدد الحركة --- */
   --ease-premium: cubic-bezier(0.16, 1, 0.3, 1);

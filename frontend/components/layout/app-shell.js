@@ -47,6 +47,7 @@ export function appShell() {
   const desktopHost = el("div", { class: "hidden lg:flex flex-col h-full shrink-0" }, navPanel);
 
   const topBar = header({ onOpenMobileNav: openMobileNav });
+  const topBarHost = el("div", { class: "px-4 pt-3 sm:px-5 shrink-0 z-20 min-h-0" }, topBar);
 
   const element = el(
     "div",
@@ -57,7 +58,7 @@ export function appShell() {
     el(
       "div",
       { class: "flex-1 flex flex-col min-w-0" },
-      topBar,
+      topBarHost,
       // التمرير يحدث هنا لا على body — فيبقى الهيدر والشريط ثابتين.
       el("main", { class: "flex-1 overflow-y-auto", id: "main" }, breadcrumbHost, outlet),
     ),

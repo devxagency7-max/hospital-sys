@@ -46,28 +46,21 @@ export function header({ onOpenMobileNav } = {}) {
       // glass في tailwind.src.css) — قبل الإصلاح لم يكن الهيدر يُنشئ سياق
       // تكديس أصلاً فلم يظهر التعارض.
       class:
-        "glass relative z-20 shrink-0 h-(--spacing-header) border-b border-line " +
-        "flex items-center gap-2 px-3 no-print",
+        "glass-card rounded-[22px] relative z-20 shrink-0 h-(--spacing-header) border border-white/80 dark:border-white/10 shadow-card " +
+        "flex items-center gap-1.5 px-3 sm:px-4 no-print",
     },
     progress,
 
     /* --- يمين (البداية في RTL) --- */
     iconButton("menu", {
       label: "طي القائمة",
-      size: "icon",
-      // max-lg:hidden لا hidden+lg:inline-flex: كلا الزرّين يحمل inline-flex
-      // أصلاً من BASE في button.js، فقاعدة .hidden غير المشروطة وقاعدة
-      // .inline-flex غير المشروطة تتصارعان بنفس الخصوصية خارج أي media query
-      // — ترتيبهما في مخرجات Tailwind يحسم الفائز بصرف النظر عن ترتيب الأصناف
-      // في HTML، وقد ظهر فعليًا: الزرّان معًا ظاهران على الموبايل. التأهيل
-      // بـmax-lg يبقي display:none داخل media query فلا يتصادم مع القاعدة
-      // غير المشروطة لـinline-flex.
+      size: "icon-sm",
       class: "max-lg:hidden",
       onClick: toggleCollapsed,
     }),
     iconButton("menu", {
       label: "فتح القائمة",
-      size: "icon",
+      size: "icon-sm",
       class: "lg:hidden",
       onClick: () => onOpenMobileNav?.(),
     }),
@@ -81,7 +74,7 @@ export function header({ onOpenMobileNav } = {}) {
     roleSwitcher(),
     iconButton("image", {
       label: "استوديو تخصيص الخلفية والمظهر",
-      size: "icon",
+      size: "icon-sm",
       title: "استوديو تخصيص الخلفية والمظهر",
       onClick: () => navigate("/settings/appearance"),
     }),
@@ -102,7 +95,7 @@ export function header({ onOpenMobileNav } = {}) {
       {
         type: "button",
         class:
-          "hx-press flex items-center gap-2.5 ps-2.5 pe-1 py-1 border-s border-line rounded-[var(--radius-control)] " +
+          "hx-press flex items-center gap-2 ps-2 pe-1 py-0.5 border-s border-line rounded-[var(--radius-control)] " +
           "hover:bg-subtle transition-colors",
         "aria-haspopup": "true",
         "aria-expanded": "false",
@@ -111,20 +104,20 @@ export function header({ onOpenMobileNav } = {}) {
       el(
         "div",
         { class: "text-end hidden sm:block" },
-        el("p", { class: "text-xs font-medium text-ink leading-tight" }, user.name),
-        el("p", { class: "text-[11px] text-faint leading-tight" }, role.label),
+        el("p", { class: "text-[11px] font-medium text-ink leading-tight" }, user.name),
+        el("p", { class: "text-[10px] text-faint leading-tight" }, role.label),
       ),
       el(
         "span",
         {
           class:
-            "grid place-items-center size-8 rounded-full shrink-0 text-xs font-semibold " +
+            "grid place-items-center size-7 rounded-full shrink-0 text-[10px] font-semibold " +
             "bg-gradient-to-br from-brand-400 to-brand-700 text-white",
           title: user.name,
         },
         initials(user.name),
       ),
-      icon("chevronDown", { size: 13, class: "hidden sm:block text-faint" }),
+      icon("chevronDown", { size: 11, class: "hidden sm:block text-faint" }),
     );
 
     render(userMenuHost, avatarButton);
@@ -308,16 +301,16 @@ function searchTrigger() {
     {
       type: "button",
       class:
-        "hx-press hidden md:flex items-center gap-2.5 h-9 px-3 w-64 lg:w-80 rounded-[var(--radius-control)] " +
-        "bg-subtle border border-line text-start text-sm text-faint hover:border-line-strong hover:text-muted " +
+        "hx-press hidden md:flex items-center gap-2 h-8 px-2.5 w-56 lg:w-72 rounded-[var(--radius-control)] " +
+        "bg-subtle/80 border border-line text-start text-xs text-faint hover:border-line-strong hover:text-muted " +
         "transition-colors",
       onClick: () => openCommandPalette(),
     },
-    icon("search", { size: 15 }),
+    icon("search", { size: 14 }),
     el("span", { class: "flex-1 truncate-1" }, "بحث عن مريض، فاتورة، أو شاشة…"),
     el(
       "kbd",
-      { class: "hidden lg:inline-block text-[10px] border border-line-strong rounded px-1.5 py-0.5 num" },
+      { class: "hidden lg:inline-block text-[9px] border border-line-strong rounded px-1.5 py-0.5 num" },
       "Ctrl K",
     ),
   );
@@ -338,11 +331,11 @@ function dataLayerBadge() {
     "span",
     {
       class:
-        "hidden md:inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full " +
-        "bg-warning-50 border border-warning-200 text-warning-300 text-[11px] font-medium",
+        "hidden md:inline-flex items-center gap-1.5 h-6 px-2 rounded-full " +
+        "bg-warning-50 border border-warning-200 text-warning-300 text-[10px] font-medium",
       title: "الواجهة تعمل على بيانات تجريبية. راجع js/core/config.js للربط بباك-إند حقيقي.",
     },
-    icon("info", { size: 13 }),
+    icon("info", { size: 11 }),
     el("span", {}, "بيانات تجريبية"),
   );
 }
@@ -358,8 +351,8 @@ function roleSwitcher() {
     {
       type: "button",
       class:
-        "inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full border border-line-strong " +
-        "text-[11px] text-muted hover:text-ink hover:border-faint transition-colors",
+        "inline-flex items-center gap-1.5 h-6 px-2 rounded-full border border-line-strong " +
+        "text-[10px] text-muted hover:text-ink hover:border-faint transition-colors",
       title: "تبديل الدور لاختبار الصلاحيات (أداة تطوير)",
       onClick: () => {
         if (panel) {
@@ -420,9 +413,9 @@ function roleSwitcher() {
         }, 0);
       },
     },
-    icon("user", { size: 13 }),
+    icon("user", { size: 11 }),
     el("span", { dataset: { roleLabel: "" } }, currentRole().label),
-    icon("chevronDown", { size: 12 }),
+    icon("chevronDown", { size: 11 }),
   );
 
   function paintLabel() {
