@@ -262,8 +262,8 @@ export function openDrawer({
  *  كل إجراء مُدمِّر يمر من هنا (docs/07-FRONTEND-RULES.md + 09-DEFINITION-OF-DONE.md).
  *
  *    if (!(await confirmAction({ ... }))) return;
- *    await archivePatient(id);
- *    toast.success("تم أرشفة المريض");
+ *    await archiveCustomer(id);
+ *    toast.success("تم أرشفة العميل");
  * ═══════════════════════════════════════════════════════════════════════════
  *
  * @param {object} options

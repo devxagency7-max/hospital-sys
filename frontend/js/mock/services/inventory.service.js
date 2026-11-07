@@ -791,6 +791,56 @@ export function itemMovementHistory({ itemId, warehouseId, dateFrom, dateTo }) {
   };
 }
 
+/**
+ * تنبيهات المخزون — تُغذّي لوحة الإشعارات ولوحة التحكم.
+ *
+ * نفس المصدر للعرضين: لوحة تُظهر «3 أصناف نافدة» وشاشة تُظهر 5 تعني أن
+ * أحدهما يحسب بطريقته. الحقول مُسمّاة بما تتوقعه لوحة الإشعارات بالضبط.
+ */
+export function getAlerts() {
+  const balances = all("stockBalances");
+  const exposure = expiryExposure(all("batches"), {
+    asOf: TODAY,
+    nearExpiryDays: db.systemPreferences.nearExpiryWarningDays,
+  });
+
+  const stockRow = (row) => ({
+    itemId: row.itemId,
+    name: row.itemName,
+    itemName: row.itemName,
+    code: row.itemCode,
+    warehouseName: row.warehouseName,
+    quantity: row.onHand,
+    minimumQuantity: row.minLevel,
+    unit: row.unit,
+  });
+
+  const batchRow = (row) => ({
+    itemId: row.itemId,
+    name: row.itemName,
+    itemName: row.itemName,
+    batchNumber: row.batchNumber,
+    warehouseName: row.warehouseName,
+    expiryDate: row.expiryDate,
+    quantity: row.quantity,
+    value: row.value,
+  });
+
+  return {
+    outOfStock: balances.filter((row) => row.status === "out_of_stock").map(stockRow),
+    lowStock: balances.filter((row) => row.status === "low_stock").map(stockRow),
+    expired: exposure.expired.map(batchRow),
+    nearExpiry: exposure.nearExpiry.map(batchRow),
+    totals: {
+      outOfStock: balances.filter((row) => row.status === "out_of_stock").length,
+      lowStock: balances.filter((row) => row.status === "low_stock").length,
+      expired: exposure.expired.length,
+      nearExpiry: exposure.nearExpiry.length,
+      expiryExposure: exposure.totalExposure,
+    },
+  };
+}
+
 /* ==========================================================================
    5) الجرد الفعلي
    ========================================================================== */

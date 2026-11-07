@@ -5,8 +5,8 @@
  *  قاعدة ملزِمة: `toast.success` تُستدعى فقط بعد نجاح العملية فعلًا — أي بعد
  *  أن يُعيد الـ API استجابة ناجحة، لا قبلها ولا بالتوازي معها.
  *
- *    ✗  savePatient(); toast.success("تم الحفظ");
- *    ✓  await savePatient(); toast.success("تم حفظ بيانات المريض");
+ *    ✗  saveInvoice(); toast.success("تم الحفظ");
+ *    ✓  await saveInvoice(); toast.success("تم حفظ الفاتورة");
  *
  *  «ممنوع استخدام رسائل نجاح وهمية لعمليات لا تحدث فعلًا»
  *  — docs/07-FRONTEND-RULES.md

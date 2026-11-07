@@ -307,7 +307,7 @@ function searchTrigger() {
       onClick: () => openCommandPalette(),
     },
     icon("search", { size: 14 }),
-    el("span", { class: "flex-1 truncate-1" }, "بحث عن مريض، فاتورة، أو شاشة…"),
+    el("span", { class: "flex-1 truncate-1" }, "بحث عن عميل، صنف، قيد، أو شاشة…"),
     el(
       "kbd",
       { class: "hidden lg:inline-block text-[9px] border border-line-strong rounded px-1.5 py-0.5 num" },

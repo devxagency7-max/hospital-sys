@@ -2,7 +2,7 @@
  * لوحة الإشعارات.
  *
  * ليست إشعارات مُختلَقة — عرض آخر لتنبيهات المخزون الحقيقية نفسها التي
- * تغذّي لوحة التحكم (`GET /inventory/alerts`، المُنفَّذة فعلًا). لا خاصية
+ * تغذّي لوحة التحكم (`GET /inv/alerts`). لا خاصية
  * «تمييز كمقروء» هنا: ذلك يحتاج تخزينًا من جهة الخادم غير موجود في هذه
  * المرحلة، وتقليد التخزين محليًا يوهم بحالة لا تُحفَظ فعلًا بين الجلسات —
  * بالضبط ما تمنعه docs/07-FRONTEND-RULES.md من «نجاح وهمي».
@@ -109,10 +109,10 @@ export function notificationsPanel() {
     }
 
     const groups = [
-      { key: "outOfStock", title: "أصناف نافدة", tone: "danger", kind: "stock", path: "/inventory/items?status=out_of_stock" },
-      { key: "lowStock", title: "رصيد منخفض", tone: "warning", kind: "stock", path: "/inventory/items?status=low_stock" },
-      { key: "expired", title: "تشغيلات منتهية", tone: "danger", kind: "expiry", path: "/inventory/expiry?status=expired" },
-      { key: "nearExpiry", title: "قاربت الانتهاء", tone: "warning", kind: "expiry", path: "/inventory/expiry?status=near_expiry" },
+      { key: "outOfStock", title: "أصناف نافدة", tone: "danger", kind: "stock", path: "/inv/balances?status=out_of_stock" },
+      { key: "lowStock", title: "رصيد منخفض", tone: "warning", kind: "stock", path: "/inv/balances?status=low_stock" },
+      { key: "expired", title: "تشغيلات منتهية", tone: "danger", kind: "expiry", path: "/inv/expiry?status=expired" },
+      { key: "nearExpiry", title: "قاربت الانتهاء", tone: "warning", kind: "expiry", path: "/inv/expiry?status=near_expiry" },
     ]
       .map((group) => ({ ...group, rows: state.data[group.key] ?? [] }))
       .filter((group) => group.rows.length > 0);

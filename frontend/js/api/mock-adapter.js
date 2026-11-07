@@ -363,6 +363,7 @@ const ROUTES = {
     data: inventory.compareCostingMethods(params),
   }),
   "GET /inv/low-stock": () => ({ data: inventory.lowStockReport() }),
+  "GET /inv/alerts": () => ({ data: inventory.getAlerts() }),
 
   /* --- الجرد الفعلي --- */
   "GET /inv/counts": ({ params }) => query("stockCounts", params),

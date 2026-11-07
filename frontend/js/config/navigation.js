@@ -4,8 +4,11 @@
  * مصدر الحقيقة الوحيد للشريط الجانبي ومسار التنقل (breadcrumbs) وعنوان الشاشة.
  * إضافة شاشة = مدخل هنا + مسار في js/config/routes.js، ولا شيء ثالث.
  *
- * `phase` هي المرحلة من docs/08-IMPLEMENTATION-PLAN.md التي تُنفَّذ فيها الشاشة.
- * الشاشات غير المنفَّذة بعد تُعرض كصفحة «مخطَّطة» صريحة لا كرابط مكسور.
+ * البنية تتبع الموديولات الأربعة للنظام: المحاسبة العامة، المحاسبة المالية،
+ * الموارد البشرية، المخازن — ثم التقارير والإدارة والإعدادات.
+ *
+ * الترتيب داخل كل موديول يتبع تدفق العمل لا الأبجدية: التعريفات أولًا
+ * (الدليل، الأصناف)، ثم المعاملات، ثم التقارير والإغلاق.
  */
 
 export const navigation = [
@@ -15,176 +18,149 @@ export const navigation = [
     icon: "dashboard",
     path: "/",
     permission: "dashboard.view",
-    phase: 1,
   },
 
+  /* ======================================================================
+     1. المحاسبة العامة
+     ====================================================================== */
   {
-    key: "patients",
-    label: "المرضى",
-    icon: "patients",
-    permission: "patients.view",
-    children: [
-      { label: "قائمة المرضى", path: "/patients", permission: "patients.view", phase: 1 },
-      { label: "إضافة مريض", path: "/patients/new", permission: "patients.create", phase: 1 },
-      { label: "حسابات المرضى", path: "/patients/accounts", permission: "patients.account.view", phase: 1 },
-      { label: "مستندات المرضى", path: "/patients/documents", permission: "patients.view", phase: 1 },
-    ],
-  },
-
-  {
-    key: "appointments",
-    label: "المواعيد والعيادات",
-    icon: "calendar",
-    permission: "appointments.view",
-    children: [
-      { label: "تقويم المواعيد", path: "/appointments/calendar", permission: "appointments.view", phase: 1 },
-      { label: "قائمة المواعيد", path: "/appointments", permission: "appointments.view", phase: 1 },
-      { label: "حجز موعد", path: "/appointments/new", permission: "appointments.create", phase: 1 },
-      { label: "جدول الأطباء", path: "/appointments/doctors", permission: "appointments.view", phase: 1 },
-      { label: "جدول العيادات", path: "/appointments/clinics", permission: "appointments.view", phase: 1 },
-      { label: "قائمة الانتظار", path: "/appointments/queue", permission: "appointments.view", phase: 1 },
-    ],
-  },
-
-  {
-    key: "billing",
-    label: "الفواتير",
-    icon: "billing",
-    permission: "billing.view",
-    children: [
-      { label: "الفواتير", path: "/billing/invoices", permission: "billing.view", phase: 1 },
-      { label: "إنشاء فاتورة", path: "/billing/invoices/new", permission: "billing.invoice.create", phase: 1 },
-      { label: "المدفوعات", path: "/billing/payments", permission: "billing.view", phase: 1 },
-      { label: "المرتجعات", path: "/billing/refunds", permission: "billing.refund.create", phase: 1 },
-      { label: "الخصومات", path: "/billing/discounts", permission: "billing.discount.approve", phase: 1 },
-      { label: "الأرصدة المستحقة", path: "/billing/outstanding", permission: "billing.view", phase: 1 },
-      { label: "كشف حساب مريض", path: "/billing/statements", permission: "billing.view", phase: 1 },
-      { label: "الفاتورة الإلكترونية", path: "/billing/eta", permission: "billing.view", phase: 1 },
-    ],
-  },
-
-  {
-    key: "accounting",
-    label: "المحاسبة",
+    key: "gl",
+    label: "المحاسبة العامة",
     icon: "accounting",
-    permission: "accounting.view",
+    permission: "gl.view",
     children: [
-      { label: "شجرة الحسابات", path: "/accounting/accounts", permission: "accounting.view", phase: 2 },
-      { label: "قيود اليومية", path: "/accounting/journal", permission: "accounting.view", phase: 2 },
-      { label: "الصناديق النقدية", path: "/accounting/cash", permission: "accounting.view", phase: 2 },
-      { label: "الحسابات البنكية", path: "/accounting/banks", permission: "accounting.view", phase: 2 },
-      { label: "العملاء (مدينون)", path: "/accounting/receivables", permission: "accounting.view", phase: 2 },
-      { label: "الموردون (دائنون)", path: "/accounting/payables", permission: "accounting.view", phase: 2 },
-      { label: "مراكز التكلفة", path: "/accounting/cost-centers", permission: "accounting.view", phase: 2 },
-      { label: "الفترات المحاسبية", path: "/accounting/periods", permission: "accounting.period.close", phase: 2 },
-      { label: "ميزان المراجعة", path: "/accounting/trial-balance", permission: "accounting.view", phase: 2 },
-      { label: "القوائم المالية", path: "/accounting/statements", permission: "accounting.view", phase: 2 },
+      { label: "دليل الحسابات", path: "/gl/accounts", permission: "gl.view" },
+      { label: "قيود اليومية", path: "/gl/journal", permission: "gl.view" },
+      { label: "إنشاء قيد يومية", path: "/gl/journal/new", permission: "gl.journal.create" },
+      { label: "دفتر الأستاذ العام", path: "/gl/ledger", permission: "gl.ledger.view" },
+      { label: "ميزان المراجعة", path: "/gl/trial-balance", permission: "gl.trialbalance.view" },
+      { label: "مراكز التكلفة", path: "/gl/cost-centers", permission: "gl.view" },
+      { label: "الفترات المحاسبية", path: "/gl/periods", permission: "gl.period.manage" },
+      { label: "إغلاق السنة المالية", path: "/gl/year-end", permission: "gl.year.close" },
     ],
   },
 
+  /* ======================================================================
+     2. المحاسبة المالية
+     ====================================================================== */
   {
-    key: "inventory",
+    key: "fin",
+    label: "المحاسبة المالية",
+    icon: "billing",
+    permission: "fin.view",
+    children: [
+      { label: "العملاء", path: "/fin/customers", permission: "fin.view" },
+      { label: "فواتير العملاء", path: "/fin/customer-invoices", permission: "fin.view" },
+      { label: "إصدار فاتورة", path: "/fin/customer-invoices/new", permission: "fin.customer.invoice" },
+      { label: "التحصيلات", path: "/fin/receipts", permission: "fin.view" },
+      { label: "إشعارات الدائن", path: "/fin/credit-notes", permission: "fin.view" },
+      { label: "تقادم ذمم العملاء", path: "/fin/receivables-aging", permission: "fin.view" },
+
+      { label: "الموردون", path: "/fin/suppliers", permission: "fin.view" },
+      { label: "فواتير الموردين", path: "/fin/supplier-invoices", permission: "fin.view" },
+      { label: "مدفوعات الموردين", path: "/fin/supplier-payments", permission: "fin.view" },
+      { label: "تقادم ذمم الموردين", path: "/fin/payables-aging", permission: "fin.view" },
+
+      { label: "الخزائن النقدية", path: "/fin/cash-boxes", permission: "fin.view" },
+      { label: "الحركات النقدية", path: "/fin/cash-movements", permission: "fin.view" },
+      { label: "التحويلات بين الحسابات", path: "/fin/transfers", permission: "fin.cashbox.transact" },
+      { label: "الحسابات البنكية", path: "/fin/banks", permission: "fin.view" },
+      { label: "المطابقة البنكية", path: "/fin/bank-reconciliation", permission: "fin.bank.reconcile" },
+
+      { label: "الأصول الثابتة", path: "/fin/assets", permission: "fin.asset.manage" },
+      { label: "الإهلاك الدوري", path: "/fin/depreciation", permission: "fin.asset.depreciate" },
+
+      { label: "الضرائب والإقرارات", path: "/fin/taxes", permission: "fin.tax.manage" },
+      { label: "القوائم المالية", path: "/fin/statements", permission: "fin.statements.view" },
+      { label: "مطابقة الحسابات الرقابية", path: "/fin/reconciliation", permission: "fin.view" },
+    ],
+  },
+
+  /* ======================================================================
+     3. الموارد البشرية
+     ====================================================================== */
+  {
+    key: "hr",
+    label: "الموارد البشرية",
+    icon: "users",
+    permission: "hr.view",
+    children: [
+      { label: "الموظفون", path: "/hr/employees", permission: "hr.view" },
+      { label: "إضافة موظف", path: "/hr/employees/new", permission: "hr.employee.manage" },
+      { label: "الهيكل التنظيمي", path: "/hr/org-chart", permission: "hr.view" },
+      { label: "الوظائف والدرجات", path: "/hr/positions", permission: "hr.org.manage" },
+      { label: "الورديات", path: "/hr/shifts", permission: "hr.org.manage" },
+
+      { label: "الحضور والانصراف", path: "/hr/attendance", permission: "hr.attendance.view" },
+      { label: "طلبات الإجازات", path: "/hr/leaves", permission: "hr.view" },
+      { label: "أرصدة الإجازات", path: "/hr/leave-balances", permission: "hr.view" },
+
+      { label: "سلف الموظفين", path: "/hr/advances", permission: "hr.advance.manage" },
+      { label: "مسيّرات الرواتب", path: "/hr/payroll", permission: "hr.payroll.view" },
+      { label: "قسائم الرواتب", path: "/hr/payslips", permission: "hr.payroll.view" },
+      { label: "إعدادات الرواتب", path: "/hr/payroll-settings", permission: "hr.payroll.process" },
+    ],
+  },
+
+  /* ======================================================================
+     4. المخازن
+     ====================================================================== */
+  {
+    key: "inv",
     label: "المخازن",
     icon: "inventory",
-    permission: "inventory.view",
+    permission: "inv.view",
     children: [
-      { label: "الأصناف", path: "/inventory/items", permission: "inventory.view", phase: 3 },
-      { label: "التصنيفات", path: "/inventory/categories", permission: "inventory.item.manage", phase: 3 },
-      { label: "وحدات القياس", path: "/inventory/units", permission: "inventory.item.manage", phase: 3 },
-      { label: "المخازن", path: "/inventory/warehouses", permission: "inventory.view", phase: 3 },
-      { label: "أرصدة المخزون", path: "/inventory/balances", permission: "inventory.view", phase: 3 },
-      { label: "حركات المخزون", path: "/inventory/movements", permission: "inventory.view", phase: 3 },
-      { label: "تحويل مخزني", path: "/inventory/transfers", permission: "inventory.movement.create", phase: 3 },
-      { label: "تسوية مخزنية", path: "/inventory/adjustments", permission: "inventory.movement.create", phase: 3 },
-      { label: "التشغيلات", path: "/inventory/batches", permission: "inventory.view", phase: 3 },
-      { label: "تتبع الصلاحية", path: "/inventory/expiry", permission: "inventory.view", phase: 3 },
-      { label: "تقييم المخزون", path: "/inventory/valuation", permission: "inventory.view", phase: 3 },
+      { label: "الأصناف", path: "/inv/items", permission: "inv.view" },
+      { label: "التصنيفات", path: "/inv/categories", permission: "inv.item.manage" },
+      { label: "وحدات القياس", path: "/inv/units", permission: "inv.item.manage" },
+      { label: "المخازن", path: "/inv/warehouses", permission: "inv.view" },
+
+      { label: "أرصدة المخزون", path: "/inv/balances", permission: "inv.view" },
+      { label: "حركات المخزون", path: "/inv/movements", permission: "inv.view" },
+      { label: "إذن إضافة", path: "/inv/receipts", permission: "inv.receipt.create" },
+      { label: "إذن صرف", path: "/inv/issues", permission: "inv.issue.create" },
+      { label: "تحويل مخزني", path: "/inv/transfers", permission: "inv.transfer.create" },
+      { label: "التسويات المخزنية", path: "/inv/adjustments", permission: "inv.view" },
+
+      { label: "التشغيلات", path: "/inv/batches", permission: "inv.view" },
+      { label: "تتبّع الصلاحية", path: "/inv/expiry", permission: "inv.view" },
+      { label: "تقييم المخزون", path: "/inv/valuation", permission: "inv.valuation.view" },
+      { label: "الجرد الفعلي", path: "/inv/counts", permission: "inv.count.manage" },
     ],
   },
 
-  {
-    key: "purchasing",
-    label: "المشتريات",
-    icon: "purchasing",
-    permission: "purchasing.view",
-    children: [
-      { label: "طلبات الشراء", path: "/purchasing/requests", permission: "purchasing.view", phase: 3 },
-      { label: "أوامر الشراء", path: "/purchasing/orders", permission: "purchasing.view", phase: 3 },
-      { label: "استلام الأصناف", path: "/purchasing/receiving", permission: "purchasing.receive", phase: 3 },
-      { label: "فواتير الموردين", path: "/purchasing/invoices", permission: "purchasing.view", phase: 3 },
-      { label: "مرتجعات الموردين", path: "/purchasing/returns", permission: "purchasing.view", phase: 3 },
-      { label: "الموردون", path: "/purchasing/suppliers", permission: "purchasing.view", phase: 3 },
-      { label: "حسابات الموردين", path: "/purchasing/supplier-accounts", permission: "purchasing.view", phase: 3 },
-    ],
-  },
-
-  {
-    key: "pharmacy",
-    label: "الصيدلية",
-    icon: "pharmacy",
-    permission: "pharmacy.view",
-    children: [
-      { label: "الروشتات", path: "/pharmacy/prescriptions", permission: "pharmacy.view", phase: 3 },
-      { label: "صرف الأدوية", path: "/pharmacy/dispensing", permission: "pharmacy.dispense", phase: 3 },
-      { label: "مخزون الصيدلية", path: "/pharmacy/stock", permission: "pharmacy.view", phase: 3 },
-      { label: "تشغيلات الأدوية", path: "/pharmacy/batches", permission: "pharmacy.view", phase: 3 },
-      { label: "صلاحية الأدوية", path: "/pharmacy/expiry", permission: "pharmacy.view", phase: 3 },
-      { label: "حركات الصيدلية", path: "/pharmacy/transactions", permission: "pharmacy.view", phase: 3 },
-    ],
-  },
-
-  {
-    key: "laboratory",
-    label: "المختبر",
-    icon: "laboratory",
-    permission: "laboratory.view",
-    children: [
-      { label: "طلبات التحاليل", path: "/laboratory/requests", permission: "laboratory.view", phase: 4 },
-      { label: "سحب العيّنات", path: "/laboratory/samples", permission: "laboratory.sample.collect", phase: 4 },
-      { label: "نتائج معلّقة", path: "/laboratory/pending", permission: "laboratory.view", phase: 4 },
-      { label: "النتائج", path: "/laboratory/results", permission: "laboratory.view", phase: 4 },
-    ],
-  },
-
-  {
-    key: "radiology",
-    label: "الأشعة",
-    icon: "radiology",
-    permission: "radiology.view",
-    children: [
-      { label: "طلبات الأشعة", path: "/radiology/requests", permission: "radiology.view", phase: 4 },
-      { label: "جدولة الفحوصات", path: "/radiology/scheduling", permission: "radiology.view", phase: 4 },
-      { label: "تقارير الأشعة", path: "/radiology/reports", permission: "radiology.view", phase: 4 },
-      { label: "المرفقات", path: "/radiology/attachments", permission: "radiology.view", phase: 4 },
-    ],
-  },
-
+  /* ======================================================================
+     التقارير
+     ====================================================================== */
   {
     key: "reports",
     label: "التقارير",
     icon: "reports",
     permission: "reports.view",
     children: [
-      { label: "مركز التقارير", path: "/reports", permission: "reports.view", phase: 5 },
-      { label: "تقارير المرضى", path: "/reports/patients", permission: "reports.view", phase: 5 },
-      { label: "التقارير المالية", path: "/reports/financial", permission: "reports.financial.view", phase: 5 },
-      { label: "تقارير المخزون", path: "/reports/inventory", permission: "reports.view", phase: 5 },
-      { label: "تقارير المشتريات", path: "/reports/purchasing", permission: "reports.view", phase: 5 },
-      { label: "تقارير الإيرادات", path: "/reports/revenue", permission: "reports.financial.view", phase: 5 },
-      { label: "تقارير المديونيات", path: "/reports/receivables", permission: "reports.financial.view", phase: 5 },
-      { label: "مركز التصدير", path: "/reports/exports", permission: "reports.export", phase: 5 },
+      { label: "مركز التقارير", path: "/reports", permission: "reports.view" },
+      { label: "التقارير المالية", path: "/reports/financial", permission: "reports.financial.view" },
+      { label: "تقارير الذمم", path: "/reports/receivables", permission: "reports.financial.view" },
+      { label: "تقارير الموارد البشرية", path: "/reports/hr", permission: "reports.hr.view" },
+      { label: "تقارير المخازن", path: "/reports/inventory", permission: "reports.inventory.view" },
+      { label: "تقارير مراكز التكلفة", path: "/reports/cost-centers", permission: "reports.financial.view" },
+      { label: "مركز التصدير", path: "/reports/exports", permission: "reports.export" },
     ],
   },
 
+  /* ======================================================================
+     الإدارة والنظام
+     ====================================================================== */
   {
-    key: "users",
+    key: "admin",
     label: "المستخدمون والصلاحيات",
-    icon: "users",
-    permission: "users.view",
+    icon: "shield",
+    permission: "admin.users.view",
     children: [
-      { label: "المستخدمون", path: "/users", permission: "users.view", phase: 6 },
-      { label: "الأدوار", path: "/users/roles", permission: "roles.manage", phase: 6 },
-      { label: "الصلاحيات", path: "/users/permissions", permission: "roles.manage", phase: 6 },
+      { label: "المستخدمون", path: "/admin/users", permission: "admin.users.view" },
+      { label: "الأدوار", path: "/admin/roles", permission: "admin.roles.manage" },
+      { label: "كتالوج الصلاحيات", path: "/admin/permissions", permission: "admin.roles.manage" },
     ],
   },
 
@@ -192,26 +168,22 @@ export const navigation = [
     key: "audit",
     label: "سجل التدقيق",
     icon: "audit",
-    path: "/audit",
-    permission: "audit.view",
-    phase: 6,
+    path: "/admin/audit",
+    permission: "admin.audit.view",
   },
 
   {
     key: "settings",
     label: "إعدادات النظام",
     icon: "settings",
-    permission: "settings.view",
+    permission: "admin.settings.view",
     children: [
-      { label: "استوديو التحكم بالخلفية", path: "/settings/appearance", permission: "settings.manage", phase: 1 },
-      { label: "بيانات المستشفى", path: "/settings/hospital", permission: "settings.view", phase: 6 },
-      { label: "الأقسام", path: "/settings/departments", permission: "settings.manage", phase: 6 },
-      { label: "العيادات", path: "/settings/clinics", permission: "settings.manage", phase: 6 },
-      { label: "الخدمات والأسعار", path: "/settings/services", permission: "settings.manage", phase: 6 },
-      { label: "الضرائب", path: "/settings/taxes", permission: "settings.manage", phase: 6 },
-      { label: "طرق الدفع", path: "/settings/payment-methods", permission: "settings.manage", phase: 6 },
-      { label: "تفضيلات النظام", path: "/settings/preferences", permission: "settings.manage", phase: 6 },
-      { label: "تفضيلات الإشعارات", path: "/settings/notifications", permission: "settings.view", phase: 6 },
+      { label: "بيانات المنشأة", path: "/settings/company", permission: "admin.settings.view" },
+      { label: "الربط المحاسبي", path: "/settings/posting-map", permission: "admin.settings.manage" },
+      { label: "الفروع", path: "/settings/branches", permission: "admin.settings.view" },
+      { label: "تفضيلات النظام", path: "/settings/preferences", permission: "admin.settings.manage" },
+      { label: "تفضيلات الإشعارات", path: "/settings/notifications", permission: "admin.settings.view" },
+      { label: "تخصيص المظهر", path: "/settings/appearance", permission: "admin.settings.view" },
     ],
   },
 ];
@@ -226,7 +198,6 @@ export function flatScreens() {
         path: entry.path,
         label: entry.label,
         permission: entry.permission,
-        phase: entry.phase,
         module: entry.key,
         moduleLabel: entry.label,
       });

@@ -92,7 +92,7 @@ function buildTrail(path, route) {
     return trail;
   }
 
-  /* --- مسار ديناميكي (/patients/1001) --- */
+  /* --- مسار ديناميكي (/fin/customers/1001) --- */
   // نصعد إلى أقرب مسار أب مسجَّل حتى يبقى المسار صحيحًا للتفاصيل.
   const segments = path.split("/").filter(Boolean);
 
@@ -142,7 +142,7 @@ export function pageHeader({ title, description, actions, meta } = {}) {
 
 /**
  * ترويسة طباعة — تظهر في المطبوعات فقط.
- * docs/05-REPORTING-SPECIFICATION.md يشترط اسم المستشفى ومن أصدر التقرير
+ * docs/05-REPORTING-SPECIFICATION.md يشترط اسم المنشأة ومن أصدر التقرير
  * وتاريخه في ترويسة كل تقرير.
  */
 export function printHeader({ organization, title, subtitle, generatedBy, generatedAt }) {

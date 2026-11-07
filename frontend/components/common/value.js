@@ -47,7 +47,7 @@ export function ltr(value, { mono = false, tabular = false, class: className, ti
 }
 
 /**
- * مرجع تجاري: كود مريض، رقم فاتورة، كود صنف، رقم تشغيلة، رقم إيصال.
+ * مرجع تجاري: كود عميل، رقم فاتورة، كود صنف، رقم تشغيلة، رقم إيصال.
  * أرقامه بعرض ثابت حتى تصطف المعرّفات عموديًا في الجداول.
  */
 export function ref(value, options = {}) {

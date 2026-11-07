@@ -980,3 +980,66 @@ aside[data-collapsed="false"] .rail-collapsed-only {
     page-break-inside: avoid !important;
   }
 }
+
+/* ============================================================================
+   معاينة الطباعة داخل نافذة منبثقة
+
+   خلفية النافذة تحمل `no-print` عن قصد: نافذة مفتوحة فوق شاشة لا تُطبع، بل
+   تُطبع الشاشة التي خلفها. لكن **معاينة الطباعة** هي العكس تمامًا — المطلوب
+   طباعة ما في النافذة وحده.
+
+   `:has()` يُميّز الحالتين بلا سمة إضافية ولا جافاسكربت: الخلفية التي تحتوي
+   ورقة طباعة تُطبع، وكل ما عداها يُخفى. بدون هذا كان المستخدم يرى معاينة
+   سليمة ويطبع الشاشة التي خلفها.
+   ============================================================================ */
+
+@media print {
+  body:has(.print-sheet-host) #page,
+  body:has(.print-sheet-host) #header,
+  body:has(.print-sheet-host) aside,
+  body:has(.print-sheet-host) #bg-layer {
+    display: none !important;
+  }
+
+  /* الخلفية تتحول إلى حاوية عادية تتدفق في الصفحة. */
+  .hx-backdrop:has(.print-sheet-host) {
+    display: block !important;
+    position: static !important;
+    inset: auto !important;
+    z-index: auto !important;
+    padding: 0 !important;
+    background: none !important;
+    backdrop-filter: none !important;
+    animation: none !important;
+  }
+
+  /* لوحة النافذة تفقد قيود الحجم والظل فلا تُقص الورقة. */
+  .hx-backdrop:has(.print-sheet-host) > * {
+    display: block !important;
+    max-width: none !important;
+    max-height: none !important;
+    width: auto !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    border: none !important;
+    background: #ffffff !important;
+    animation: none !important;
+  }
+
+  /* رأس النافذة وتذييلها (أزرار الطباعة والإغلاق) ليسا جزءًا من المستند. */
+  .hx-backdrop:has(.print-sheet-host) > * > header,
+  .hx-backdrop:has(.print-sheet-host) > * > footer {
+    display: none !important;
+  }
+
+  .hx-backdrop:has(.print-sheet-host) > * > div {
+    overflow: visible !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+  }
+
+  .print-sheet-host {
+    overflow: visible !important;
+    background: #ffffff !important;
+  }
+}

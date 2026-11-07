@@ -1,125 +1,107 @@
 /**
  * شريط البحث الرئيسي في لوحة التحكم.
  *
- * مكوّن زجاجي فاخر مخصَّص — حسب المرجع البصري الجديد — لا نسخة مصغّرة من
- * لوحة الأوامر (command-palette.js). يبحث حصرًا في المرضى عبر الحقل الموحَّد
- * الحقيقي الوحيد الذي يدعمه patients.api.js (الاسم/الكود/الهاتف/الرقم القومي/
- * المحافظة معًا)؛ الإرسال ينتقل فعليًا إلى `/patients?search=...` — لا نتيجة
- * مُختلقة تُعرض هنا.
- *
- * شرائح النطاق (الاسم، الهاتف، …) لا تُفعِّل فلترة منفصلة فعليًا — الـ API لا
- * يدعم ذلك — بل تُغيِّر نص العنصر النائب فقط لتوضيح الصيغة المتوقَّعة لما
- * يكتبه المستخدم؛ البحث الفعلي خلفها واحد دائمًا. قرار واعٍ لا خداع: محاولة
- * تمثيل 6 حقول بحث منفصلة غير موجودة كانت ستَعِد بقدرة لا يملكها النظام.
+ * يبحث في أطراف التعامل والأصناف والقيود، ويُحوّل إلى الشاشة المناسبة لنوع
+ * البحث المختار. لا نتيجة مُختلقة: الإرسال ينتقل فعليًا إلى شاشة مسجَّلة
+ * بمعامل بحث تقرأه تلك الشاشة.
  */
 
 import { el, cx } from "../../js/core/dom.js";
 import { icon } from "../common/icon.js";
+import { button } from "../common/button.js";
 import { navigate } from "../../js/core/router.js";
 
-const SCOPES = [
-  { key: "nationalId", label: "الرقم القومي (14 رقم)", icon: "code", placeholder: "أدخل الرقم القومي (14 رقمًا)…" },
-  { key: "name", label: "الاسم", icon: "patients", placeholder: "أدخل اسم المريض (حرفين على الأقل)…" },
-  { key: "phone", label: "رقم الهاتف", icon: "bell", placeholder: "أدخل رقم الهاتف…" },
-  { key: "code", label: "رقم الملف الطبي", icon: "billing", placeholder: "أدخل رقم الملف الطبي…" },
-  { key: "governorate", label: "المركز أو المحافظة", icon: "building", placeholder: "أدخل اسم المركز أو المحافظة…" },
-  { key: "date", label: "تاريخ التسجيل", icon: "calendar", placeholder: "أدخل تاريخ الزيارة أو التسجيل…" },
+/** أنواع البحث — كل نوع وشاشته التي يُرسَل إليها. */
+const MODES = [
+  { key: "customers", label: "العملاء", icon: "users", path: "/fin/customers", placeholder: "اسم العميل أو كوده أو رقم هاتفه…" },
+  { key: "suppliers", label: "الموردون", icon: "truck", path: "/fin/suppliers", placeholder: "اسم المورد أو كوده…" },
+  { key: "items", label: "الأصناف", icon: "inventory", path: "/inv/items", placeholder: "اسم الصنف أو كوده أو الباركود…" },
+  { key: "journal", label: "قيود اليومية", icon: "accounting", path: "/gl/journal", placeholder: "رقم القيد أو وصفه أو مرجعه…" },
 ];
 
 export function heroSearch() {
-  let activeScope = SCOPES[0];
+  let mode = MODES[0];
 
   const input = el("input", {
-    type: "text",
-    class: "flex-1 min-w-0 bg-transparent text-base text-ink placeholder:text-faint outline-none h-full px-1",
-    placeholder: activeScope.placeholder,
+    type: "search",
+    class: "w-full h-11 bg-transparent text-sm text-ink placeholder:text-faint outline-none px-1",
+    placeholder: mode.placeholder,
+    "aria-label": "بحث",
     autocomplete: "off",
-    "aria-label": "ابحث عن مريض",
   });
-
-  const chipsHost = el("div", { class: "flex flex-wrap items-center justify-center gap-2 mt-4" });
 
   function submit() {
     const query = input.value.trim();
-    if (!query) {
+    /* بحث بحرف واحد يُعيد كل شيء — لا قيمة في إرساله. */
+    if (query.length < 2) {
       input.focus();
       return;
     }
-    navigate(`/patients?search=${encodeURIComponent(query)}`);
+    navigate(`${mode.path}?search=${encodeURIComponent(query)}`);
   }
 
-  function paintChips() {
-    const chips = SCOPES.map((scope) =>
+  input.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") submit();
+  });
+
+  const tabs = el(
+    "div",
+    { class: "flex items-center gap-1.5 flex-wrap" },
+    ...MODES.map((item) =>
       el(
         "button",
         {
           type: "button",
+          "data-mode": item.key,
           class: cx(
-            "hx-press flex items-center gap-1.5 h-9 px-4 rounded-[var(--radius-pill)] text-sm transition-colors",
-            scope.key === activeScope.key
-              ? "bg-brand-50 text-brand-300 border border-brand-200 font-medium"
-              : "bg-subtle text-muted border border-transparent hover:text-ink hover:border-line-strong",
+            "inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-xl transition-all",
+            item.key === mode.key
+              ? "bg-brand-600 text-white shadow-sm"
+              : "text-muted hover:text-ink hover:bg-subtle",
           ),
-          "aria-pressed": String(scope.key === activeScope.key),
-          onClick: () => {
-            activeScope = scope;
-            input.placeholder = scope.placeholder;
+          onClick: (event) => {
+            mode = item;
+            input.placeholder = item.placeholder;
+            for (const node of event.currentTarget.parentElement.children) {
+              const active = node.dataset.mode === mode.key;
+              node.classList.toggle("bg-brand-600", active);
+              node.classList.toggle("text-white", active);
+              node.classList.toggle("shadow-sm", active);
+              node.classList.toggle("text-muted", !active);
+            }
             input.focus();
-            paintChips();
           },
         },
-        icon(scope.icon, { size: 14 }),
-        el("span", {}, scope.label),
-      ),
-    );
-    chipsHost.replaceChildren(...chips);
-  }
-
-  paintChips();
-
-  const form = el(
-    "form",
-    {
-      class: "w-full",
-      onSubmit: (evt) => {
-        evt.preventDefault();
-        submit();
-      },
-    },
-    el(
-      "div",
-      {
-        class:
-          "glass flex items-center h-14 rounded-[var(--radius-pill)] border border-line shadow-card " +
-          "ps-5 pe-1.5 gap-3 transition-shadow duration-200 focus-within:shadow-raised focus-within:border-brand-300",
-      },
-      icon("search", { size: 20, class: "text-faint shrink-0" }),
-      input,
-      el(
-        "button",
-        {
-          type: "submit",
-          class:
-            "hx-press shrink-0 flex items-center gap-2 h-11 px-6 rounded-[var(--radius-pill)] " +
-            "bg-brand-600 text-white text-sm font-medium transition-[background-color,box-shadow,transform] duration-200 " +
-            "hover:bg-brand-700 hover:shadow-glow-brand hover:-translate-y-px",
-        },
-        icon("search", { size: 16 }),
-        el("span", {}, "بحث"),
+        icon(item.icon, { size: 14 }),
+        item.label,
       ),
     ),
-    chipsHost,
   );
 
   return el(
     "section",
-    { class: "glass rounded-[var(--radius-card)] border border-line shadow-card p-6 sm:p-8 text-center" },
-    el("h2", { class: "text-xl sm:text-2xl font-bold text-ink" }, "البحث والاستعلام عن المرضى"),
+    { class: "rounded-[var(--radius-card)] border border-line bg-surface/80 p-5 space-y-3.5" },
     el(
-      "p",
-      { class: "text-sm text-muted mt-1.5 max-w-xl mx-auto" },
-      "استعلام فوري بالاسم، الهاتف، الرقم القومي، أو المحافظة — ينتقل إلى سجل المرضى الفعلي.",
+      "div",
+      {},
+      el("h2", { class: "text-lg font-bold text-ink" }, "بحث واستعلام سريع"),
+      el(
+        "p",
+        { class: "text-xs text-muted mt-1" },
+        "ابحث في العملاء والموردين والأصناف وقيود اليومية — ينتقل إلى السجل الفعلي.",
+      ),
     ),
-    el("div", { class: "mt-6 max-w-2xl mx-auto" }, form),
+    tabs,
+    el(
+      "div",
+      { class: "flex items-center gap-2" },
+      el(
+        "div",
+        { class: "relative flex-1 flex items-center border border-line-strong rounded-[var(--radius-control)] px-3 bg-surface" },
+        el("span", { class: "text-faint shrink-0" }, icon("search", { size: 16 })),
+        input,
+      ),
+      button({ label: "بحث", variant: "primary", icon: "search", onClick: submit }),
+    ),
   );
 }
