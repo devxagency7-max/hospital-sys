@@ -12,13 +12,27 @@ import { icon } from "../common/icon.js";
 import { navigation } from "../../js/config/navigation.js";
 import { can, canAny, currentUser, currentRole } from "../../js/core/permissions.js";
 import { appState, writePreference } from "../../js/core/store.js";
-import { on } from "../../js/core/events.js";
-import { APP } from "../../js/core/config.js";
+import { on, emit } from "../../js/core/events.js";
+import { APP, UI } from "../../js/core/config.js";
 import { initials } from "../../js/core/format.js";
 import { toast } from "../feedback/toast.js";
 
 /** المجموعات المفتوحة — نُبقيها في الذاكرة فلا تُطوى عند كل انتقال. */
 const expanded = new Set();
+let lastNavigatedPath = null;
+
+function syncRouteExpansion(active) {
+  if (active !== lastNavigatedPath) {
+    lastNavigatedPath = active;
+    for (const entry of navigation) {
+      if (entry.children?.some((child) => child.path === active)) {
+        expanded.clear();
+        expanded.add(entry.key);
+        break;
+      }
+    }
+  }
+}
 
 export function sidebar() {
   const navHost = el("nav", {
@@ -54,6 +68,8 @@ export function sidebar() {
     const active = currentPath();
     const collapsed = appState.get().sidebarCollapsed;
 
+    syncRouteExpansion(active);
+
     element.dataset.collapsed = String(collapsed);
     element.classList.toggle("sidebar-expanded", !collapsed);
     element.classList.toggle("sidebar-collapsed", collapsed);
@@ -76,6 +92,9 @@ export function sidebar() {
         "a",
         {
           href: `#${entry.path}`,
+          onClick: () => {
+            if (window.innerWidth < UI.mobileBreakpoint) emit("sidebar:close-mobile");
+          },
           class: cx(
             "hx-press grid place-items-center size-11 rounded-2xl mx-auto my-1 transition-all cursor-pointer",
             isActive
@@ -93,6 +112,9 @@ export function sidebar() {
       "a",
       {
         href: `#${entry.path}`,
+        onClick: () => {
+          if (window.innerWidth < UI.mobileBreakpoint) emit("sidebar:close-mobile");
+        },
         class: cx(
           "hx-press flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-2xl text-[14px] transition-all cursor-pointer mx-1",
           isActive
@@ -120,8 +142,6 @@ export function sidebar() {
     const children = entry.children.filter((child) => can(child.permission));
     const hasActiveChild = children.some((child) => child.path === active);
 
-    // المجموعة التي تحتوي الشاشة الحالية تُفتح تلقائيًا.
-    if (hasActiveChild) expanded.add(entry.key);
     const isOpen = expanded.has(entry.key) && !collapsed;
 
     if (collapsed) {
@@ -139,6 +159,7 @@ export function sidebar() {
           "aria-expanded": "false",
           onClick: () => {
             setCollapsed(false);
+            expanded.clear();
             expanded.add(entry.key);
             paint();
           },
@@ -162,8 +183,11 @@ export function sidebar() {
         "aria-expanded": String(isOpen),
         onClick: () => {
           if (expanded.has(entry.key)) {
+            // إذا كانت القائمة مفتوحة تُغلق فورًا
             expanded.delete(entry.key);
           } else {
+            // إذا كانت مغلقة تُفتح وتُغلق باقي المجموعات لمنع تضخم الشريط
+            expanded.clear();
             expanded.add(entry.key);
           }
           paint();
@@ -202,6 +226,9 @@ export function sidebar() {
                 "a",
                 {
                   href: `#${child.path}`,
+                  onClick: () => {
+                    if (window.innerWidth < UI.mobileBreakpoint) emit("sidebar:close-mobile");
+                  },
                   class: cx(
                     "hx-press flex items-center justify-between gap-2 px-3 py-2 rounded-2xl text-[12.5px] transition-all",
                     isActive
@@ -264,7 +291,7 @@ export function toggleCollapsed() {
 /* -------------------------------------------------------------------------- */
 
 function brand() {
-  // زر الطيّ (يظهر عندما يكون الشريط مفتوحًا)
+  // زر الطيّ والإغلاق (يظهر عندما يكون الشريط مفتوحًا)
   const collapseBtn = el(
     "button",
     {
@@ -273,8 +300,14 @@ function brand() {
         "hx-press grid place-items-center size-8.5 rounded-2xl shrink-0 " +
         "border border-slate-200/80 dark:border-white/15 bg-white/90 dark:bg-slate-800 hover:bg-white " +
         "text-slate-700 dark:text-slate-200 shadow-xs transition-all cursor-pointer",
-      title: "طيّ القائمة الجانبية",
-      onClick: toggleCollapsed,
+      title: "طيّ أو إغلاق القائمة الجانبية",
+      onClick: () => {
+        if (window.innerWidth < UI.mobileBreakpoint) {
+          emit("sidebar:close-mobile");
+        } else {
+          toggleCollapsed();
+        }
+      },
     },
     icon("chevronEnd", { size: 14 }),
   );
@@ -310,8 +343,8 @@ function brand() {
         "div",
         { class: "min-w-0 flex-1 space-y-0.5" },
         el("p", { class: "text-[13px] font-black text-slate-900 dark:text-white truncate-1 tracking-tight" }, APP.organization),
-        el("p", { class: "text-[11px] font-bold text-slate-600 dark:text-slate-300 truncate-1" }, "منظومة الإدارة الطبية"),
-        el("p", { class: "text-[10px] font-semibold text-slate-400 dark:text-slate-500 truncate-1" }, "ترخيص طبي رقم 1079"),
+        el("p", { class: "text-[11px] font-bold text-slate-600 dark:text-slate-300 truncate-1" }, APP.nameAr),
+        el("p", { class: "text-[10px] font-semibold text-slate-400 dark:text-slate-500 truncate-1" }, APP.tagline),
       ),
     ),
     collapseBtn,

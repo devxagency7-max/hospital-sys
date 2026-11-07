@@ -11,6 +11,7 @@ import { sidebar } from "./sidebar.js";
 import { header } from "./header.js";
 import { breadcrumbs } from "./breadcrumbs.js";
 import { UI } from "../../js/core/config.js";
+import { on } from "../../js/core/events.js";
 
 /**
  * @returns {{ element: HTMLElement, outlet: HTMLElement, setContext: Function }}
@@ -43,6 +44,14 @@ export function appShell() {
     mobileHost.classList.add("hidden");
     desktopHost.appendChild(navPanel);
   }
+
+  on("sidebar:close-mobile", closeMobileNav);
+
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !mobileHost.classList.contains("hidden")) {
+      closeMobileNav();
+    }
+  });
 
   const desktopHost = el("div", { class: "hidden lg:flex flex-col h-full shrink-0" }, navPanel);
 
