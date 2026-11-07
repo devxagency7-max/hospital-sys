@@ -7,6 +7,7 @@
  */
 
 import { createRandom, FISCAL_YEAR, REFERENCE_DATE, COST_CENTERS } from "./seed.js";
+import { inventoryClosingByAccount } from "./inventory.mock.js";
 
 const random = createRandom(410_593);
 
@@ -393,11 +394,15 @@ const openingEntry = entry({
     D(1131, 2_640_000, "عملاء محليون — رصيد افتتاحي"),
     D(1132, 780_000, "عملاء تصدير — رصيد افتتاحي"),
     D(1133, 320_000, "شيكات تحت التحصيل"),
-    D(11411, 1_450_000, "مخزون أصناف تجارية — رصيد افتتاحي"),
-    D(11412, 920_000, "مخزون مواد خام — رصيد افتتاحي"),
-    D(11413, 680_000, "مخزون إنتاج تام — رصيد افتتاحي"),
-    D(11414, 210_000, "مخزون قطع غيار — رصيد افتتاحي"),
-    D(11415, 330_000, "مخزون فرع الإسكندرية — رصيد افتتاحي"),
+    /*
+     * أرصدة المخزون الافتتاحية **نائبة** هنا، وتُضبط أدناه بعد بناء كل قيود
+     * النشاط — راجع كتلة «معايرة أرصدة المخزون الافتتاحية».
+     */
+    D(11411, 0, "مخزون أصناف تجارية — رصيد افتتاحي"),
+    D(11412, 0, "مخزون مواد خام — رصيد افتتاحي"),
+    D(11413, 0, "مخزون إنتاج تام — رصيد افتتاحي"),
+    D(11414, 0, "مخزون قطع غيار — رصيد افتتاحي"),
+    D(11415, 0, "مخزون فرع الإسكندرية — رصيد افتتاحي"),
     D(1151, 96_000, "سلف الموظفين القائمة"),
     D(1152, 240_000, "دفعات مقدمة للموردين"),
     D(1153, 180_000, "مصروفات مدفوعة مقدمًا (إيجار وتأمين)"),
@@ -434,23 +439,6 @@ const openingEntry = entry({
     C(331, 1_957_000, "أرباح مرحلة من سنوات سابقة"),
   ],
 });
-
-/*
- * التوازن ليس اتفاقًا: القيد الافتتاحي أعلاه مكتوب يدويًا ببيانات واقعية،
- * والسطر التالي يُصحّح أي فرق تقريب في الأرباح المرحلة — وهو بالضبط ما يفعله
- * المحاسب في الواقع عند نقل الأرصدة. تركه بلا تصحيح يُنتج ميزانًا غير متوازن
- * في أول شاشة يفتحها المستخدم.
- */
-(() => {
-  const difference = Math.round((openingEntry.totalDebit - openingEntry.totalCredit) * 100) / 100;
-  if (difference === 0) return;
-
-  const retained = openingEntry.lines.find((line) => line.accountId === 331);
-  retained.credit = Math.round((retained.credit + difference) * 100) / 100;
-  retained.description = "أرباح مرحلة من سنوات سابقة (مُعدَّلة بفرق النقل)";
-
-  openingEntry.totalCredit = Math.round((openingEntry.totalCredit + difference) * 100) / 100;
-})();
 
 /* --------------------------------------------------------------------------
    قيود النشاط
@@ -1000,6 +988,79 @@ const monthlyEntries = (() => {
 })();
 
 activityEntries.push(...monthlyEntries);
+
+/* ============================================================================
+   معايرة أرصدة المخزون الافتتاحية
+
+   ═══════════════════════════════════════════════════════════════════════════
+    الحساب الرقابي للمخزون يتبع موديول المخازن، لا العكس.
+   ═══════════════════════════════════════════════════════════════════════════
+
+   موديول المخازن (js/mock/inventory.mock.js) يملك الكمية والتكلفة، ويُقيّمهما
+   بمحرك FIFO / المتوسط المرجّح. قيمته الختامية هي الحقيقة؛ ووظيفة الدفتر أن
+   يُطابقها.
+
+   لذلك نحسب هنا: الرصيد الافتتاحي = القيمة الختامية − صافي حركة الفترة على
+   الحساب. الاتجاه المعاكس (تثبيت الافتتاحي ثم إجبار المخزون على مطابقته) كان
+   سيُفقد محرك التقييم معناه: قيمة المخزون ستصبح رقمًا مكتوبًا لا ناتج تقييم.
+   ============================================================================ */
+
+(() => {
+  const INVENTORY_ACCOUNTS = [11411, 11412, 11413, 11414, 11415];
+
+  /* صافي حركة كل حساب مخزون في قيود النشاط (مدين − دائن). */
+  const activityNet = new Map(INVENTORY_ACCOUNTS.map((accountId) => [accountId, 0]));
+
+  for (const row of activityEntries) {
+    /* القيد المعكوس وقيده العكسي كلاهما في الدفتر، فصافيهما صفر تلقائيًا. */
+    if (row.status !== "posted" && row.status !== "reversed") continue;
+
+    for (const line of row.lines) {
+      if (!activityNet.has(line.accountId)) continue;
+      activityNet.set(
+        line.accountId,
+        round2(activityNet.get(line.accountId) + (line.debit ?? 0) - (line.credit ?? 0)),
+      );
+    }
+  }
+
+  let openingTotal = 0;
+
+  for (const accountId of INVENTORY_ACCOUNTS) {
+    const closing = round2(inventoryClosingByAccount[String(accountId)] ?? 0);
+    const required = round2(closing - activityNet.get(accountId));
+
+    const line = openingEntry.lines.find((row) => row.accountId === accountId);
+
+    /*
+     * رصيد افتتاحي سالب لا معنى له: يعني أن حركة الفترة وحدها تتجاوز القيمة
+     * الختامية. نُقيّده عند الصفر ونترك الفرق يظهر في المطابقة بدل أن نكتب
+     * مخزونًا سالبًا في الميزانية.
+     */
+    line.debit = Math.max(0, required);
+    line.description = `${line.description} (مُعاير على قيمة المخزون الفعلية)`;
+    openingTotal = round2(openingTotal + line.debit);
+  }
+
+  openingEntry.totalDebit = round2(openingEntry.totalDebit + openingTotal);
+})();
+
+/*
+ * التوازن ليس اتفاقًا: القيد الافتتاحي مكتوب يدويًا ببيانات واقعية، وأرصدة
+ * المخزون فيه مُعايرة على موديول المخازن. السطر التالي يُحمِّل الفرق على
+ * الأرباح المرحلة — وهو بالضبط ما يفعله المحاسب عند نقل الأرصدة. تركه بلا
+ * تصحيح يُنتج ميزانًا غير متوازن في أول شاشة يفتحها المستخدم.
+ */
+(() => {
+  const difference = round2(openingEntry.totalDebit - openingEntry.totalCredit);
+  if (difference === 0) return;
+
+  const retained = openingEntry.lines.find((line) => line.accountId === 331);
+  retained.credit = round2(retained.credit + difference);
+  retained.description = "أرباح مرحلة من سنوات سابقة (مُعدَّلة بفرق النقل)";
+
+  openingEntry.totalCredit = round2(openingEntry.totalCredit + difference);
+})();
 
 /** القيد العكسي يحمل مرجع أصله — تقرأه شاشة القيود لعرض الرابط بينهما. */
 activityEntries.find((candidate) => candidate.id === 26).reversalOf = 25;

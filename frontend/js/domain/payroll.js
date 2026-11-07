@@ -254,7 +254,32 @@ export function calculatePayslip(employee, context = {}) {
     .map((row) => ({ label: row.label, amount: money.round(row.amount ?? 0) }));
   const otherDeductions = money.add(money.sumBy(otherRows, "amount"), absence);
 
-  const advanceRecovery = money.round(advanceDue);
+  /*
+   * ═══════════════════════════════════════════════════════════════════════
+   *  الصافي لا يقل عن صفر — ويُحقَّق ذلك بتخفيض قسط السلفة لا بتقييد الصافي.
+   * ═══════════════════════════════════════════════════════════════════════
+   *
+   * استقطاعات تتجاوز المستحقات تعني أن قسط السلفة أكبر مما يحتمله الراتب.
+   * الحل الصحيح: نسترد هذا الشهر بقدر ما يحتمله الراتب، ونُرحّل باقي القسط
+   * إلى الشهر التالي.
+   *
+   * الحل الخاطئ — ورفعه محرك الترحيل فعلًا — هو تقييد `netPay` عند الصفر
+   * مع إبقاء القسط كاملًا في الاستقطاعات: حينها لا يساوي
+   * (الإجمالي − الاستقطاعات) الصافي، فيخرج قيد الرواتب غير متوازن بمقدار
+   * الفرق بالضبط. المال لا يُخلَق بالتقريب: ما لم يُستقطَع لم يُستقطَع.
+   *
+   * الضرائب والتأمينات لا تُخفَّض — فهي التزامات قانونية لا تُؤجَّل بقرار
+   * من المنشأة. القابل للتأجيل هو ما تستحقه المنشأة لنفسها.
+   */
+  const requestedRecovery = money.round(advanceDue);
+
+  const beforeRecovery = money.subtract(
+    gross,
+    money.sum([employeeInsurance, incomeTax, otherDeductions]),
+  );
+
+  const advanceRecovery = money.min(requestedRecovery, money.max(beforeRecovery, 0));
+  const carriedForward = money.subtract(requestedRecovery, advanceRecovery);
 
   const totalDeductions = money.sum([
     employeeInsurance,
@@ -264,13 +289,11 @@ export function calculatePayslip(employee, context = {}) {
   ]);
 
   /*
-   * الصافي لا يقل عن صفر: استقطاعات تتجاوز المستحقات تعني أن قسط السلفة
-   * أكبر مما يحتمله الراتب. نُقيّد الصافي عند الصفر ونُرحّل الفرق إلى الشهر
-   * التالي بدل إنتاج راتب سالب يستحيل صرفه.
+   * قد يبقى الصافي سالبًا بعد تصفير الاسترداد إن كانت الضرائب والتأمينات
+   * وحدها تتجاوز المستحقات — حالة شاذة (راتب أساسي منخفض مع غياب كثيف)
+   * تُكشف في `runPayroll` كتحذير بدل أن تُخفى.
    */
-  const rawNet = money.subtract(gross, totalDeductions);
-  const netPay = money.max(rawNet, 0);
-  const carriedForward = money.isNegative(rawNet) ? money.multiply(rawNet, -1) : 0;
+  const netPay = money.subtract(gross, totalDeductions);
 
   return {
     employeeId: employee?.id,
@@ -372,10 +395,21 @@ export function runPayroll(employees = [], options = {}) {
         warnings.push({
           employeeId: employee.id,
           employeeName: employee.name,
+          type: "advance_deferred",
+          message:
+            `قسط سلفة ${employee.name} يتجاوز ما يحتمله راتبه هذا الشهر. ` +
+            `استُرد ${slip.advanceRecovery} ورُحِّل ${slip.carriedForward} إلى الشهر التالي.`,
+        });
+      }
+
+      if (money.isNegative(slip.netPay)) {
+        warnings.push({
+          employeeId: employee.id,
+          employeeName: employee.name,
           type: "net_below_zero",
           message:
-            `استقطاعات ${employee.name} تتجاوز مستحقاته بمقدار ${slip.carriedForward}. ` +
-            "صُفِّر الصافي ورُحِّل الفرق للشهر التالي.",
+            `صافي راتب ${employee.name} سالب (${slip.netPay}) بعد الضرائب والتأمينات وخصم الغياب. ` +
+            "راجع سجل حضوره وراتبه الأساسي — المسيّر لا يُعتمد بقسيمة سالبة.",
         });
       }
 
