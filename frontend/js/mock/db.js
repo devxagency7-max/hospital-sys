@@ -12,105 +12,155 @@
 
 import { matchesFields, compareValues } from "../core/text.js";
 import { TABLE } from "../core/config.js";
-import { patients } from "./patients.mock.js";
-import { invoices, invoiceLines, payments, refunds, creditNotes } from "./invoices.mock.js";
-import {
-  items,
-  batches,
-  stockMovements,
-  itemCategories,
-  units,
-  warehouses,
-  suppliers,
-  deriveItemStatus,
-  deriveBatchStatus,
-} from "./inventory.mock.js";
-import {
-  DEPARTMENTS,
-  DOCTORS,
-  SERVICES,
-  PAYMENT_METHODS,
-  GOVERNORATES,
-} from "./seed.js";
+
 import {
   accounts,
   journalEntries,
-  cashBoxes,
-  bankAccounts,
-  costCenters,
+  fiscalYears,
   accountingPeriods,
-  appointments,
-  purchaseRequests,
-  purchaseOrders,
+  costCenters,
+  postingMap,
+} from "./accounting.mock.js";
+
+import {
+  customers,
+  suppliers,
+  customerInvoices,
+  customerInvoiceLines,
+  customerReceipts,
+  customerCreditNotes,
   supplierInvoices,
-  prescriptions,
-  labRequests,
-  radiologyRequests,
+  supplierPayments,
+  cashBoxes,
+  cashMovements,
+  cashReconciliations,
+  bankAccounts,
+  bankTransactions,
+  bankReconciliations,
+  assetCategories,
+  fixedAssets,
+  depreciationRuns,
+  taxes,
+  taxReturns,
+  subsidiaryReconciliation,
+} from "./finance.mock.js";
+
+import {
+  employees,
+  departments,
+  positions,
+  shifts,
+  leaveTypes,
+  holidays,
+  attendanceRecords,
+  leaveRequests,
+  employeeAdvances,
+  payrollRuns,
+  payslips,
+  payrollSettings,
+} from "./hr.mock.js";
+
+import {
+  items,
+  itemCategories,
+  units,
+  warehouses,
+  stockMovements,
+  stockBalances,
+  batches,
+  stockCounts,
+  stockCountLines,
+} from "./inventory.mock.js";
+
+import {
   users,
   roles,
   auditLogs,
-  hospitalInfo,
-  clinics,
-  taxes,
-} from "./modules.mock.js";
+  companyInfo,
+  branches,
+  systemPreferences,
+  notificationPreferences,
+  documentSources,
+} from "./admin.mock.js";
+
+import { PAYMENT_METHODS, GOVERNORATES } from "./seed.js";
 
 /**
  * المجموعات. نُنسخ المصفوفات حتى لا تُعدّل ملفات البيانات الأصلية في مكانها،
  * فتبقى إعادة التهيئة ممكنة.
  */
 export const db = {
-  patients: [...patients],
-  invoices: [...invoices],
-  invoiceLines: [...invoiceLines],
-  payments: [...payments],
-  refunds: [...refunds],
-  creditNotes: [...creditNotes],
+  /* --- المحاسبة العامة --- */
+  accounts: [...accounts],
+  journalEntries: [...journalEntries],
+  fiscalYears: [...fiscalYears],
+  accountingPeriods: [...accountingPeriods],
+  costCenters: [...costCenters],
+
+  /* --- المحاسبة المالية --- */
+  customers: [...customers],
+  suppliers: [...suppliers],
+  customerInvoices: [...customerInvoices],
+  customerInvoiceLines: [...customerInvoiceLines],
+  customerReceipts: [...customerReceipts],
+  customerCreditNotes: [...customerCreditNotes],
+  supplierInvoices: [...supplierInvoices],
+  supplierPayments: [...supplierPayments],
+  cashBoxes: [...cashBoxes],
+  cashMovements: [...cashMovements],
+  cashReconciliations: [...cashReconciliations],
+  bankAccounts: [...bankAccounts],
+  bankTransactions: [...bankTransactions],
+  bankReconciliations: [...bankReconciliations],
+  assetCategories: [...assetCategories],
+  fixedAssets: [...fixedAssets],
+  depreciationRuns: [...depreciationRuns],
+  taxes: [...taxes],
+  taxReturns: [...taxReturns],
+
+  /* --- الموارد البشرية --- */
+  employees: [...employees],
+  departments: [...departments],
+  positions: [...positions],
+  shifts: [...shifts],
+  leaveTypes: [...leaveTypes],
+  holidays: [...holidays],
+  attendanceRecords: [...attendanceRecords],
+  leaveRequests: [...leaveRequests],
+  employeeAdvances: [...employeeAdvances],
+  payrollRuns: [...payrollRuns],
+  payslips: [...payslips],
+
+  /* --- المخازن --- */
   items: [...items],
-  batches: [...batches],
-  stockMovements: [...stockMovements],
   itemCategories: [...itemCategories],
   units: [...units],
   warehouses: [...warehouses],
-  suppliers: [...suppliers],
-  departments: [...DEPARTMENTS],
-  doctors: [...DOCTORS],
-  services: [...SERVICES],
-  paymentMethods: [...PAYMENT_METHODS],
-  governorates: GOVERNORATES.map((name, index) => ({ id: index + 1, name })),
-  accounts: [...accounts],
-  journalEntries: [...journalEntries],
-  cashBoxes: [...cashBoxes],
-  bankAccounts: [...bankAccounts],
-  costCenters: [...costCenters],
-  accountingPeriods: [...accountingPeriods],
-  appointments: [...appointments],
-  purchaseRequests: [...purchaseRequests],
-  purchaseOrders: [...purchaseOrders],
-  supplierInvoices: [...supplierInvoices],
-  prescriptions: [...prescriptions],
-  labRequests: [...labRequests],
-  radiologyRequests: [...radiologyRequests],
+  stockMovements: [...stockMovements],
+  stockBalances: [...stockBalances],
+  batches: [...batches],
+  stockCounts: [...stockCounts],
+  stockCountLines: [...stockCountLines],
+
+  /* --- الإدارة والنظام --- */
   users: [...users],
   roles: [...roles],
   auditLogs: [...auditLogs],
-  hospitalInfo: { ...hospitalInfo },
-  clinics: [...clinics],
-  taxes: [...taxes],
+  branches: [...branches],
+  documentSources: [...documentSources],
+  notificationPreferences: [...notificationPreferences],
+
+  /* --- قوائم مرجعية --- */
+  paymentMethods: [...PAYMENT_METHODS],
+  governorates: GOVERNORATES.map((name, index) => ({ id: index + 1, name })),
+
+  /* --- كائنات مفردة (لا مجموعات) --- */
+  companyInfo: { ...companyInfo },
+  postingMap: { ...postingMap },
+  systemPreferences: { ...systemPreferences },
+  payrollSettings: { ...payrollSettings },
+  subsidiaryReconciliation: [...subsidiaryReconciliation],
 };
-
-/* --------------------------------------------------------------------------
-   الحقول المشتقة
-   تُحسب عند القراءة لا تُخزَّن، وإلا تناقضت مع الكمية بعد أي حركة مخزنية.
-   -------------------------------------------------------------------------- */
-
-const DERIVE = {
-  items: (item) => ({ ...item, status: deriveItemStatus(item) }),
-  batches: (batch) => ({ ...batch, status: deriveBatchStatus(batch) }),
-};
-
-function project(collection, row) {
-  return DERIVE[collection] ? DERIVE[collection](row) : row;
-}
 
 /* --------------------------------------------------------------------------
    محرك الاستعلام
@@ -118,59 +168,88 @@ function project(collection, row) {
 
 /** الحقول القابلة للبحث الحر لكل مجموعة. */
 const SEARCHABLE = {
-  patients: ["name", "patientCode", "phone", "nationalId", "governorate"],
-  invoices: ["invoiceNumber", "patientName", "patientCode", "doctorName"],
-  payments: ["reference"],
-  refunds: ["refundNumber", "invoiceNumber", "patientName", "reason"],
-  creditNotes: ["creditNoteNumber", "invoiceNumber", "patientName", "reason"],
-  items: ["name", "code", "category"],
-  batches: ["batchNumber", "itemName", "itemCode"],
-  stockMovements: ["reference", "itemName", "itemCode", "performedBy"],
-  suppliers: ["name", "code", "phone"],
-  doctors: ["name", "title"],
-  services: ["name", "code", "category"],
-  accounts: ["code", "name", "type"],
-  journalEntries: ["entryNumber", "description", "createdBy"],
+  accounts: ["code", "name", "nameEn", "type"],
+  journalEntries: ["entryNumber", "description", "reference", "createdBy", "sourceType"],
+  accountingPeriods: ["name", "periodKey", "status"],
+  fiscalYears: ["name", "status"],
+  costCenters: ["code", "name", "nameEn", "type"],
+
+  customers: ["code", "name", "nameEn", "phone", "taxId", "activity", "contactPerson", "governorate"],
+  suppliers: ["code", "name", "nameEn", "phone", "taxId", "activity", "contactPerson", "governorate"],
+  customerInvoices: ["invoiceNumber", "customerName", "customerCode", "paymentTermsLabel"],
+  customerReceipts: ["receiptNumber", "invoiceNumber", "customerName", "reference", "methodLabel"],
+  customerCreditNotes: ["creditNoteNumber", "invoiceNumber", "customerName", "reason"],
+  supplierInvoices: ["invoiceNumber", "supplierInvoiceNumber", "supplierName", "supplierCode"],
+  supplierPayments: ["paymentNumber", "invoiceNumber", "supplierName", "reference"],
   cashBoxes: ["code", "name", "custodian", "location"],
-  bankAccounts: ["bankName", "accountName", "accountNumber", "iban"],
-  costCenters: ["code", "name", "manager"],
-  accountingPeriods: ["name", "status"],
-  appointments: ["appointmentNumber", "patientName", "doctorName", "clinicName", "notes"],
-  purchaseRequests: ["requestNumber", "department", "requestedBy"],
-  purchaseOrders: ["orderNumber", "supplierName"],
-  supplierInvoices: ["invoiceNumber", "poNumber", "supplierName"],
-  prescriptions: ["prescriptionNumber", "patientName", "doctorName"],
-  labRequests: ["requestNumber", "patientName", "doctorName", "testName"],
-  radiologyRequests: ["requestNumber", "patientName", "doctorName", "scanName"],
-  users: ["name", "username", "email", "phone", "roleName", "department"],
+  cashMovements: ["voucherNumber", "description", "reference", "performedBy"],
+  bankAccounts: ["code", "bankName", "accountName", "accountNumber", "iban", "branch"],
+  bankTransactions: ["description", "reference", "type"],
+  fixedAssets: ["code", "name", "nameEn", "categoryName", "serialNumber"],
+  assetCategories: ["code", "name"],
+  depreciationRuns: ["runNumber", "period"],
+  taxes: ["code", "name", "nameEn", "type"],
+  taxReturns: ["returnNumber", "period"],
+
+  employees: ["code", "name", "nameEn", "jobTitle", "departmentName", "phone", "nationalId", "email"],
+  departments: ["code", "name", "nameEn"],
+  positions: ["code", "title"],
+  attendanceRecords: ["employeeName", "status"],
+  leaveRequests: ["requestNumber", "employeeName", "employeeCode", "typeLabel", "reason", "departmentName"],
+  employeeAdvances: ["advanceNumber", "employeeName", "employeeCode", "reason", "departmentName"],
+  payrollRuns: ["runNumber", "periodLabel", "period"],
+  payslips: ["payslipNumber", "employeeName", "employeeCode", "jobTitle", "departmentName", "periodLabel"],
+
+  items: ["code", "barcode", "name", "nameEn", "category", "unit"],
+  itemCategories: ["code", "name", "nameEn"],
+  units: ["code", "name", "nameEn"],
+  warehouses: ["code", "name", "nameEn", "location"],
+  stockMovements: ["reference", "itemName", "itemCode", "warehouseName", "typeLabel", "performedBy", "reason"],
+  stockBalances: ["itemCode", "itemName", "itemNameEn", "category", "warehouseName"],
+  batches: ["batchNumber", "itemName", "itemCode", "warehouseName", "reference"],
+  stockCounts: ["countNumber", "warehouseName", "countedBy"],
+
+  users: ["code", "name", "username", "email", "phone", "roleName", "jobTitle"],
   roles: ["code", "name", "description"],
-  auditLogs: ["user", "action", "module", "entity", "ip", "details"],
-  clinics: ["code", "name", "departmentName", "doctor", "room"],
-  taxes: ["code", "name", "applicableTo"],
+  auditLogs: ["user", "actionLabel", "action", "module", "entity", "ip", "details"],
+  branches: ["code", "name", "governorate", "address"],
 };
 
 /** حقل التاريخ الذي يستهدفه فلتر `dateFrom` / `dateTo` لكل مجموعة. */
 const DATE_FIELD = {
-  patients: "registeredAt",
-  invoices: "date",
-  payments: "date",
-  refunds: "date",
-  creditNotes: "date",
-  batches: "expiryDate",
-  stockMovements: "date",
   journalEntries: "date",
-  appointments: "date",
-  purchaseRequests: "date",
-  purchaseOrders: "date",
+  customerInvoices: "date",
+  customerReceipts: "date",
+  customerCreditNotes: "date",
   supplierInvoices: "date",
-  prescriptions: "date",
-  labRequests: "date",
-  radiologyRequests: "date",
+  supplierPayments: "date",
+  cashMovements: "date",
+  bankTransactions: "date",
+  fixedAssets: "purchaseDate",
+  depreciationRuns: "date",
+  attendanceRecords: "date",
+  leaveRequests: "fromDate",
+  stockMovements: "date",
+  batches: "expiryDate",
+  stockCounts: "plannedDate",
   auditLogs: "timestamp",
+  customers: "openedAt",
+  suppliers: "openedAt",
+  employees: "hireDate",
+  users: "createdAt",
 };
 
-/** معاملات لا تُعامل كفلاتر على الحقول. */
-const RESERVED = new Set(["page", "perPage", "search", "sort", "order", "dateFrom", "dateTo"]);
+/**
+ * معاملات لا تُعامل كفلاتر على الحقول.
+ *
+ * `asOf` و `period` و `method` و `costCenterId` مُدرَجة لأن بعض نقاط النهاية
+ * تستخدمها كمعاملات حساب لا كفلاتر مطابقة على حقل — تمريرها إلى فلتر الحقول
+ * يُفرِّغ النتيجة بصمت.
+ */
+const RESERVED = new Set([
+  "page", "perPage", "search", "sort", "order", "dateFrom", "dateTo",
+  "asOf", "period", "method", "includeZero", "groupBy",
+]);
 
 /**
  * يطبّق البحث والفلترة والترتيب والترقيم على مجموعة.
@@ -181,7 +260,7 @@ export function query(collection, params = {}) {
   const rows = db[collection];
   if (!rows) throw new Error(`مجموعة غير معروفة: ${collection}`);
 
-  let result = rows.map((row) => project(collection, row));
+  let result = [...rows];
 
   /* --- البحث الحر --- */
   if (params.search) {
@@ -241,23 +320,24 @@ export function query(collection, params = {}) {
 
 /** يُعيد سجلاً واحدًا بالمعرّف، أو undefined. */
 export function find(collection, id) {
-  const row = db[collection]?.find(
+  return db[collection]?.find(
     (item) =>
       String(item.id) === String(id) ||
-      String(item.patientCode ?? "") === String(id) ||
-      String(item.code ?? "") === String(id),
+      String(item.code ?? "") === String(id) ||
+      String(item.entryNumber ?? "") === String(id) ||
+      String(item.invoiceNumber ?? "") === String(id) ||
+      String(item.runNumber ?? "") === String(id),
   );
-  return row ? project(collection, row) : undefined;
 }
 
 /** يُعيد كل السجلات المطابقة لمُرشِّح — للقوائم المرجعية والتجميعات. */
 export function where(collection, predicate) {
-  return (db[collection] ?? []).filter(predicate).map((row) => project(collection, row));
+  return (db[collection] ?? []).filter(predicate);
 }
 
-/** يُعيد كل السجلات دون ترقيم — للقوائم المنسدلة فقط. */
+/** يُعيد كل السجلات دون ترقيم — للقوائم المنسدلة والحساب في طبقة المجال. */
 export function all(collection) {
-  return (db[collection] ?? []).map((row) => project(collection, row));
+  return [...(db[collection] ?? [])];
 }
 
 /* --------------------------------------------------------------------------
@@ -275,18 +355,30 @@ export function insert(collection, record) {
 
   const row = { id: nextId(collection), ...record };
   db[collection].unshift(row);
-  return project(collection, row);
+  return row;
 }
 
 export function update(collection, id, patch) {
   const rows = db[collection];
   if (!rows) throw new Error(`مجموعة غير معروفة: ${collection}`);
 
+  /*
+   * معرّف فارغ يُرفض صراحةً.
+   *
+   * بدون هذا الفحص تُطابق المقارنة النصية `String(undefined)` نفسها، فأي
+   * تحديث بمعرّف مفقود يُصيب أول صف بلا معرّف في المجموعة بدل أن يفشل —
+   * وهو خطأ صامت يُعدّل بيانات سجل غير مقصود. حدث فعلًا مع صفوف أرصدة
+   * المخزون قبل إضافة معرّفاتها.
+   */
+  if (id === undefined || id === null || id === "") {
+    throw new Error(`update(${collection}) بمعرّف فارغ — السجل المقصود غير محدَّد.`);
+  }
+
   const index = rows.findIndex((row) => String(row.id) === String(id));
   if (index === -1) return undefined;
 
   rows[index] = { ...rows[index], ...patch, id: rows[index].id };
-  return project(collection, rows[index]);
+  return rows[index];
 }
 
 /**
@@ -308,4 +400,14 @@ export function sum(collection, field, predicate) {
   return all(collection)
     .filter(predicate ?? (() => true))
     .reduce((total, row) => total + (Number(row[field]) || 0), 0);
+}
+
+/** الكائنات المفردة — إعدادات لا مجموعات. */
+export function singleton(key) {
+  return db[key];
+}
+
+export function updateSingleton(key, patch) {
+  db[key] = { ...db[key], ...patch };
+  return db[key];
 }

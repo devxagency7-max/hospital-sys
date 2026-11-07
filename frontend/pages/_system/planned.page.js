@@ -2,8 +2,8 @@
  * صفحة «شاشة مخطَّطة».
  *
  * تُعرض لكل شاشة مسجَّلة في خريطة التنقل ولم تُنفَّذ بعد. الغرض الصراحة: المستخدم
- * يعرف أن الشاشة قادمة في مرحلة محددة، لا أن النظام مكسور. وهي تُرضي شرط
- * «لا روابط مكسورة» في docs/09-DEFINITION-OF-DONE.md دون التظاهر بأن الشاشة جاهزة.
+ * يعرف أن الشاشة قادمة، لا أن النظام مكسور. وهي تُرضي شرط «لا روابط مكسورة» في
+ * docs/09-DEFINITION-OF-DONE.md دون التظاهر بأن الشاشة جاهزة.
  *
  * تُحذف تلقائيًا من المسارات بمجرد تسجيل الشاشة الحقيقية في js/config/routes.js.
  */
@@ -14,28 +14,20 @@ import { button } from "../../components/common/button.js";
 import { badge } from "../../components/common/badge.js";
 import { pageHeader } from "../../components/layout/breadcrumbs.js";
 import { findScreen, navigation } from "../../js/config/navigation.js";
-import { APP } from "../../js/core/config.js";
-
-/** ما تتضمنه كل مرحلة — من docs/08-IMPLEMENTATION-PLAN.md. */
-const PHASES = {
-  0: "الأساس: اللياوت، نظام التصميم، المكوّنات، طبقة البيانات",
-  1: "الأساسيات: لوحة التحكم، المرضى، المواعيد، الفواتير",
-  2: "المالية: المحاسبة، شجرة الحسابات، القيود، المدينون والدائنون",
-  3: "العمليات: المخازن، المشتريات، الموردون، الصيدلية",
-  4: "الإكلينيكي: المختبر، الأشعة، المسارات الطبية",
-  5: "التقارير: مركز التقارير، الفلاتر، المعاينة، التصدير",
-  6: "الإدارة: المستخدمون، الأدوار، الصلاحيات، سجل التدقيق، الإعدادات",
-};
 
 export default function plannedPage({ path, route }) {
-  const screen = findScreen(path);
-  const phase = screen?.phase ?? route?.meta?.screen?.phase;
+  /*
+   * `findScreen` يُطابق مسارات خريطة التنقل الثابتة. شاشات التفاصيل مسارها
+   * ديناميكي (`/fin/customers/3`) فلا يُطابق شيئًا — ولذلك يحمل المسار
+   * وصفه في `route.meta.screen`. القراءة من الاثنين تُغطي الحالتين.
+   */
+  const screen = findScreen(path) ?? route?.meta?.screen;
   const moduleEntry = navigation.find((entry) => entry.key === screen?.module);
 
   /** شاشات أخرى في نفس الموديول — تساعد على التنقل بدل الطريق المسدود. */
   const siblings = (moduleEntry?.children ?? [])
     .filter((child) => child.path !== path)
-    .slice(0, 6);
+    .slice(0, 8);
 
   return el(
     "div",
@@ -43,7 +35,7 @@ export default function plannedPage({ path, route }) {
     pageHeader({
       title: screen?.label ?? route?.title ?? "شاشة مخطَّطة",
       description: moduleEntry ? `موديول ${moduleEntry.label}` : undefined,
-      meta: phase ? badge(`المرحلة ${phase}`, { tone: "info" }) : null,
+      meta: badge("غير منفَّذة", { tone: "warning" }),
     }),
 
     el(
@@ -64,22 +56,14 @@ export default function plannedPage({ path, route }) {
       el(
         "p",
         { class: "text-sm text-muted mt-2 max-w-lg leading-relaxed" },
-        phase
-          ? `«${screen?.label}» مخطَّطة في المرحلة ${phase} — ${PHASES[phase] ?? ""}.`
-          : "هذه الشاشة مسجَّلة في خريطة النظام ولم يُبنَ محتواها بعد.",
-      ),
-
-      el(
-        "p",
-        { class: "text-xs text-faint mt-3" },
-        `المرحلة المنفَّذة حاليًا: ${APP.phase} — ${PHASES[APP.phase] ?? ""}`,
+        `«${screen?.label ?? route?.title}» مسجَّلة في خريطة النظام ولم يُبنَ محتواها بعد. ` +
+          "تظهر هكذا صراحةً بدل أن تكون رابطًا مكسورًا أو شاشة فارغة بلا تفسير.",
       ),
 
       el(
         "div",
         { class: "flex flex-wrap items-center justify-center gap-2 mt-6" },
-        button({ label: "نظام التصميم والمكوّنات", icon: "palette", variant: "primary", size: "sm", href: "#/design-system" }),
-        button({ label: "لوحة التحكم", variant: "secondary", size: "sm", href: "#/" }),
+        button({ label: "لوحة التحكم", icon: "dashboard", variant: "primary", size: "sm", href: "#/" }),
       ),
 
       siblings.length

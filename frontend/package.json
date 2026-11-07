@@ -1,8 +1,8 @@
 {
-  "name": "hospital-erp-frontend",
-  "version": "0.1.0",
+  "name": "advanced-erp-frontend",
+  "version": "1.0.0",
   "private": true,
-  "description": "Hospital ERP — Arabic-first RTL frontend (HTML + Tailwind + ES Modules)",
+  "description": "ADVANCED ERP — Financial & Business Management System. Arabic-first RTL frontend (HTML + Tailwind + ES Modules)",
   "type": "module",
   "scripts": {
     "build": "tailwindcss -i ./css/tailwind.src.css -o ./css/app.css --minify",

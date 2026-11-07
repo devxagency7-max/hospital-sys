@@ -7,24 +7,30 @@
  *  API.mode = 'live' في js/core/config.js. لا تعديل في الشاشات.
  * ═══════════════════════════════════════════════════════════════════════════
  *
+ * منطق العمل كله في `js/mock/services/*` — وهي محاكاة لطبقة خدمات الباك-إند
+ * ومواصفتها في الوقت نفسه. هذا الملف توجيه ومعاملات فقط، بلا حساب ولا قرار.
+ *
  * قاعدة صارمة: أي مسار غير مسجَّل هنا يرمي NOT_IMPLEMENTED ولا يُعيد نجاحًا
  * وهميًا. فزر يبدو عاملاً وهو لا يفعل شيئًا أسوأ من زر يقول بصراحة إنه غير
  * منفَّذ (docs/07-FRONTEND-RULES.md).
  */
 
-import { notImplemented, notFound, validationError } from "../core/errors.js";
-import { db, query, find, all, insert, update, archive, where } from "../mock/db.js";
-import { REFERENCE_DATE } from "../mock/seed.js";
-import { deriveBatchStatus } from "../mock/inventory.mock.js";
-import {
-  summarizePatientAccount,
-  buildInvoiceTimeline,
-  totalInvoiced,
-  totalCollected,
-  totalOutstanding,
-  inventoryValuation,
-  isOverdue,
-} from "../domain/billing.js";
+import { notImplemented, notFound } from "../core/errors.js";
+import { db, query, find, all, insert, update, where, singleton, updateSingleton } from "../mock/db.js";
+
+/* كتالوج الصلاحيات وأسماء مفاتيح الربط — تُقرأ من مصدرها ولا تُكرَّر هنا. */
+import { currentUser, PERMISSIONS as PERMISSION_LABELS } from "../core/permissions.js";
+import { MAP_KEYS as MAP_LABELS } from "../domain/posting-rules.js";
+
+import * as posting from "../mock/services/posting.service.js";
+import * as accounting from "../mock/services/accounting.service.js";
+import * as finance from "../mock/services/finance.service.js";
+import * as hr from "../mock/services/hr.service.js";
+import * as inventory from "../mock/services/inventory.service.js";
+import * as dashboard from "../mock/services/dashboard.service.js";
+
+/** المستخدم الحالي — يُمرَّر لكل عملية كتابة لتوثيقها في سجل التدقيق. */
+const actor = () => ({ user: currentUser() });
 
 /* --------------------------------------------------------------------------
    جدول المسارات
@@ -32,532 +38,491 @@ import {
    -------------------------------------------------------------------------- */
 
 const ROUTES = {
-  /* ========================= المرضى ========================= */
+  /* ======================================================================
+     لوحة التحكم
+     ====================================================================== */
 
-  "GET /patients": ({ params }) => query("patients", params),
+  "GET /dashboard/summary": () => ({ data: dashboard.getSummary() }),
 
-  "GET /patients/:id": ({ params }) => {
-    const patient = find("patients", params.id);
-    if (!patient) throw notFound("المريض غير موجود.");
-    return { data: patient };
+  /* ======================================================================
+     1. المحاسبة العامة
+     ====================================================================== */
+
+  /* --- دليل الحسابات --- */
+  "GET /gl/accounts": ({ params }) => query("accounts", params),
+  "GET /gl/accounts/tree": ({ params }) => ({ data: accounting.accountsTree(params) }),
+  "GET /gl/accounts/postable": () => ({ data: accounting.postableAccounts() }),
+  "GET /gl/accounts/:id": ({ params }) => {
+    const account = find("accounts", params.id);
+    if (!account) throw notFound("الحساب غير موجود.");
+    return { data: account };
+  },
+  "POST /gl/accounts": ({ body }) => ({ data: accounting.createAccount(body, actor()) }),
+  "PUT /gl/accounts/:id": ({ params, body }) => ({
+    data: accounting.updateAccount(params.id, body, actor()),
+  }),
+
+  /* --- قيود اليومية --- */
+  "GET /gl/journal": ({ params }) => accounting.listJournalEntries(params),
+  "GET /gl/journal/:id": ({ params }) => ({ data: accounting.getJournalEntry(params.id) }),
+  "POST /gl/journal": ({ body }) => ({
+    data: posting.createManualEntry(body, { ...actor(), submit: body?.submit === true }),
+  }),
+  "POST /gl/journal/:id/submit": ({ params }) => ({
+    data: posting.submitJournalEntry(params.id, actor()),
+  }),
+  "POST /gl/journal/:id/approve": ({ params }) => ({
+    data: posting.approveJournalEntry(params.id, actor()),
+  }),
+  "POST /gl/journal/:id/post": ({ params }) => ({
+    data: posting.postJournalEntry(params.id, actor()),
+  }),
+  "POST /gl/journal/:id/reverse": ({ params, body }) => ({
+    data: posting.reverseJournalEntry(params.id, { ...body, ...actor() }),
+  }),
+
+  /* --- دفتر الأستاذ العام --- */
+  "GET /gl/ledger": ({ params }) => ({ data: accounting.generalLedger(params) }),
+
+  /* --- ميزان المراجعة --- */
+  "GET /gl/trial-balance": ({ params }) => ({ data: accounting.getTrialBalance(params) }),
+
+  /* --- الفترات والسنوات المالية --- */
+  "GET /gl/fiscal-years": ({ params }) => query("fiscalYears", params),
+  "GET /gl/periods": ({ params }) => accounting.listPeriods(params),
+  "POST /gl/periods/:id/close": ({ params }) => ({
+    data: accounting.closePeriod(params.id, actor()),
+  }),
+  "POST /gl/periods/:id/reopen": ({ params, body }) => ({
+    data: accounting.reopenPeriod(params.id, { ...body, ...actor() }),
+  }),
+  "GET /gl/fiscal-years/:id/closing-preview": ({ params }) => ({
+    data: accounting.previewYearClosing(params.id),
+  }),
+
+  /* --- مراكز التكلفة --- */
+  "GET /gl/cost-centers": ({ params }) => query("costCenters", params),
+  "GET /gl/cost-centers/analysis": ({ params }) => ({
+    data: accounting.getCostCenterAnalysis(params),
+  }),
+
+  /* ======================================================================
+     2. المحاسبة المالية
+     ====================================================================== */
+
+  /* --- العملاء --- */
+  "GET /fin/customers": ({ params }) => finance.listCustomers(params),
+  "GET /fin/customers/:id": ({ params }) => {
+    const customer = find("customers", params.id);
+    if (!customer) throw notFound("العميل غير موجود.");
+    return { data: customer };
+  },
+  "GET /fin/customers/:id/account": ({ params }) => ({
+    data: finance.getCustomerAccount(params.id),
+  }),
+  "POST /fin/customers": ({ body }) => ({ data: insert("customers", { ...body, status: "active" }) }),
+  "PUT /fin/customers/:id": ({ params, body }) => {
+    const next = update("customers", params.id, body);
+    if (!next) throw notFound("العميل غير موجود.");
+    return { data: next };
   },
 
-  "POST /patients": ({ body }) => {
-    const errors = {};
-    if (!body?.name?.trim()) errors.name = "اسم المريض مطلوب.";
-    if (!body?.phone?.trim()) errors.phone = "رقم الهاتف مطلوب.";
-    if (Object.keys(errors).length) throw validationError(errors);
+  /* --- فواتير العملاء --- */
+  "GET /fin/customer-invoices": ({ params }) => query("customerInvoices", params),
+  "GET /fin/customer-invoices/:id": ({ params }) => ({
+    data: finance.getCustomerInvoice(params.id),
+  }),
+  "POST /fin/customer-invoices": ({ body }) => ({
+    data: finance.createCustomerInvoice(body, actor()),
+  }),
 
-    const id = (db.patients.reduce((max, row) => Math.max(max, row.id), 1000) ?? 1000) + 1;
+  /* --- التحصيلات --- */
+  "GET /fin/receipts": ({ params }) => query("customerReceipts", params),
+  "POST /fin/receipts": ({ body }) => ({ data: finance.createCustomerReceipt(body, actor()) }),
 
-    const patient = insert("patients", {
-      ...body,
-      id,
-      patientCode: `P-${id}`,
-      status: body.status ?? "active",
-      registeredAt: new Date().toISOString().slice(0, 10),
-      visitsCount: 0,
-      outstandingBalance: 0,
-    });
+  /* --- إشعارات الدائن --- */
+  "GET /fin/credit-notes": ({ params }) => query("customerCreditNotes", params),
+  "POST /fin/credit-notes/:id/approve": ({ params }) => ({
+    data: finance.approveCreditNote(params.id, actor()),
+  }),
 
-    return { data: patient };
+  /* --- الموردون --- */
+  "GET /fin/suppliers": ({ params }) => finance.listSuppliers(params),
+  "GET /fin/suppliers/:id": ({ params }) => {
+    const supplier = find("suppliers", params.id);
+    if (!supplier) throw notFound("المورد غير موجود.");
+    return { data: supplier };
+  },
+  "GET /fin/suppliers/:id/account": ({ params }) => ({
+    data: finance.getSupplierAccount(params.id),
+  }),
+  "POST /fin/suppliers": ({ body }) => ({ data: insert("suppliers", { ...body, status: "active" }) }),
+  "PUT /fin/suppliers/:id": ({ params, body }) => {
+    const next = update("suppliers", params.id, body);
+    if (!next) throw notFound("المورد غير موجود.");
+    return { data: next };
   },
 
-  "PUT /patients/:id": ({ params, body }) => {
-    const patient = update("patients", params.id, body);
-    if (!patient) throw notFound("المريض غير موجود.");
-    return { data: patient };
-  },
+  /* --- فواتير الموردين ومدفوعاتهم --- */
+  "GET /fin/supplier-invoices": ({ params }) => query("supplierInvoices", params),
+  "GET /fin/supplier-invoices/:id": ({ params }) => ({
+    data: finance.getSupplierInvoice(params.id),
+  }),
+  "GET /fin/supplier-payments": ({ params }) => query("supplierPayments", params),
+  "POST /fin/supplier-payments": ({ body }) => ({
+    data: finance.createSupplierPayment(body, actor()),
+  }),
 
-  /** أرشفة لا حذف — سجل المريض مرتبط بمعاملات مالية. */
-  "DELETE /patients/:id": ({ params }) => {
-    const patient = archive("patients", params.id);
-    if (!patient) throw notFound("المريض غير موجود.");
-    return { data: patient };
-  },
+  /* --- التقادم --- */
+  "GET /fin/receivables/aging": ({ params }) => ({ data: finance.receivablesAging(params) }),
+  "GET /fin/payables/aging": ({ params }) => ({ data: finance.payablesAging(params) }),
 
-  /** كشف حساب المريض — المصدر الذي يبني منه التقرير أقسامه. */
-  "GET /patients/:id/account": ({ params }) => {
-    const patient = find("patients", params.id);
-    if (!patient) throw notFound("المريض غير موجود.");
-
-    const patientInvoices = where("invoices", (row) => String(row.patientId) === String(params.id));
-    const invoiceIds = new Set(patientInvoices.map((invoice) => invoice.id));
-
-    const patientPayments = where("payments", (row) => invoiceIds.has(row.invoiceId));
-    const patientRefunds = where("refunds", (row) => invoiceIds.has(row.invoiceId));
-    const patientCreditNotes = where("creditNotes", (row) => invoiceIds.has(row.invoiceId));
-
-    // كل الحساب في وحدة المجال — لا رياضيات مالية في طبقة الـ API.
-    const { invoices: settled, summary } = summarizePatientAccount({
-      invoices: patientInvoices,
-      payments: patientPayments,
-      refunds: patientRefunds,
-      creditNotes: patientCreditNotes,
-    });
-
+  /* --- الخزينة --- */
+  "GET /fin/cash-boxes": ({ params }) => finance.listCashBoxes(params),
+  "GET /fin/cash-boxes/:id": ({ params }) => {
+    const box = find("cashBoxes", params.id);
+    if (!box) throw notFound("الخزينة غير موجودة.");
     return {
       data: {
-        patient,
-        invoices: settled,
-        payments: patientPayments,
-        refunds: patientRefunds,
-        creditNotes: patientCreditNotes,
-        summary,
+        ...box,
+        movements: where("cashMovements", (row) => String(row.cashBoxId) === String(box.id)),
+        reconciliations: where("cashReconciliations", (row) => String(row.cashBoxId) === String(box.id)),
+      },
+    };
+  },
+  "GET /fin/cash-movements": ({ params }) => query("cashMovements", params),
+  "POST /fin/cash-movements": ({ body }) => ({ data: finance.createCashVoucher(body, actor()) }),
+  "GET /fin/cash-reconciliations": ({ params }) => query("cashReconciliations", params),
+
+  /* --- التحويلات بين الخزائن والبنوك --- */
+  "POST /fin/transfers": ({ body }) => ({ data: finance.createTransfer(body, actor()) }),
+
+  /* --- البنوك --- */
+  "GET /fin/bank-accounts": ({ params }) => finance.listBankAccounts(params),
+  "GET /fin/bank-accounts/:id": ({ params }) => {
+    const bank = find("bankAccounts", params.id);
+    if (!bank) throw notFound("الحساب البنكي غير موجود.");
+    return {
+      data: {
+        ...bank,
+        transactions: where("bankTransactions", (row) => String(row.bankAccountId) === String(bank.id)),
+      },
+    };
+  },
+  "GET /fin/bank-transactions": ({ params }) => query("bankTransactions", params),
+  "GET /fin/bank-reconciliations": ({ params }) => query("bankReconciliations", params),
+  "POST /fin/bank-reconciliations": ({ body }) => ({ data: finance.reconcileBank(body, actor()) }),
+
+  /* --- الأصول الثابتة --- */
+  "GET /fin/assets": ({ params }) => finance.listAssets(params),
+  "GET /fin/assets/register": () => ({ data: finance.getAssetRegister() }),
+  "GET /fin/assets/:id": ({ params }) => ({ data: finance.getAsset(params.id) }),
+  "GET /fin/asset-categories": ({ params }) => query("assetCategories", params),
+  "POST /fin/assets/:id/dispose": ({ params, body }) => ({
+    data: finance.disposeAsset(params.id, body, actor()),
+  }),
+
+  /* --- الإهلاك --- */
+  "GET /fin/depreciation/runs": ({ params }) => query("depreciationRuns", params),
+  "GET /fin/depreciation/preview": ({ params }) => ({ data: finance.previewDepreciation(params) }),
+  "POST /fin/depreciation/run": ({ body }) => ({ data: finance.processDepreciation(body, actor()) }),
+
+  /* --- الضرائب --- */
+  "GET /fin/taxes": ({ params }) => query("taxes", params),
+  "GET /fin/tax-returns": ({ params }) => query("taxReturns", params),
+  "POST /fin/taxes": ({ body }) => ({ data: insert("taxes", { ...body, status: "active" }) }),
+  "PUT /fin/taxes/:id": ({ params, body }) => {
+    const next = update("taxes", params.id, body);
+    if (!next) throw notFound("الضريبة غير موجودة.");
+    return { data: next };
+  },
+
+  /* --- القوائم المالية --- */
+  "GET /fin/statements/income": ({ params }) => ({ data: accounting.getIncomeStatement(params) }),
+  "GET /fin/statements/balance-sheet": ({ params }) => ({ data: accounting.getBalanceSheet(params) }),
+  "GET /fin/statements/cash-flow": ({ params }) => ({ data: accounting.getCashFlow(params) }),
+
+  /* --- المطابقة مع الحسابات الرقابية --- */
+  "GET /fin/reconciliation-summary": () => ({ data: finance.reconciliationSummary() }),
+
+  /* ======================================================================
+     3. الموارد البشرية
+     ====================================================================== */
+
+  /* --- الموظفون --- */
+  "GET /hr/employees": ({ params }) => hr.listEmployees(params),
+  "GET /hr/employees/:id": ({ params }) => ({ data: hr.getEmployee(params.id) }),
+  "POST /hr/employees": ({ body }) => ({
+    data: insert("employees", { ...body, status: body?.status ?? "probation" }),
+  }),
+  "PUT /hr/employees/:id": ({ params, body }) => {
+    const next = update("employees", params.id, body);
+    if (!next) throw notFound("الموظف غير موجود.");
+    return { data: next };
+  },
+
+  /* --- الهيكل التنظيمي --- */
+  "GET /hr/departments": ({ params }) => query("departments", params),
+  "GET /hr/positions": ({ params }) => query("positions", params),
+  "GET /hr/shifts": ({ params }) => query("shifts", params),
+  "GET /hr/org-chart": () => ({ data: hr.organizationChart() }),
+
+  /* --- الحضور --- */
+  "GET /hr/attendance": ({ params }) => query("attendanceRecords", params),
+  "GET /hr/attendance/report": ({ params }) => ({ data: hr.getAttendanceReport(params) }),
+  "PUT /hr/attendance/:id": ({ params, body }) => ({
+    data: hr.correctAttendance(params.id, body, actor()),
+  }),
+  "GET /hr/holidays": ({ params }) => query("holidays", params),
+
+  /* --- الإجازات --- */
+  "GET /hr/leave-types": () => ({ data: all("leaveTypes") }),
+  "GET /hr/leave-requests": ({ params }) => hr.listLeaveRequests(params),
+  "POST /hr/leave-requests": ({ body }) => ({ data: hr.createLeaveRequest(body, actor()) }),
+  "POST /hr/leave-requests/:id/approve": ({ params }) => ({
+    data: hr.approveLeaveRequest(params.id, actor()),
+  }),
+  "POST /hr/leave-requests/:id/reject": ({ params, body }) => ({
+    data: hr.rejectLeaveRequest(params.id, { ...body, ...actor() }),
+  }),
+  "GET /hr/leave-balances": ({ params }) => ({ data: hr.leaveBalancesReport(params) }),
+
+  /* --- السلف --- */
+  "GET /hr/advances": ({ params }) => query("employeeAdvances", params),
+  "POST /hr/advances": ({ body }) => ({ data: hr.createAdvance(body, actor()) }),
+
+  /* --- الرواتب --- */
+  "GET /hr/payroll/runs": ({ params }) => hr.listPayrollRuns(params),
+  "GET /hr/payroll/runs/:id": ({ params }) => ({ data: hr.getPayrollRun(params.id) }),
+  "POST /hr/payroll/process": ({ body }) => ({ data: hr.processPayroll(body, actor()) }),
+  "POST /hr/payroll/runs/:id/approve": ({ params }) => ({
+    data: hr.approvePayroll(params.id, actor()),
+  }),
+  "POST /hr/payroll/runs/:id/pay": ({ params, body }) => ({
+    data: hr.payPayroll(params.id, body, actor()),
+  }),
+  "GET /hr/payslips": ({ params }) => query("payslips", params),
+  "GET /hr/payslips/:id": ({ params }) => ({ data: hr.getPayslip(params.id) }),
+  "GET /hr/payroll/settings": () => ({ data: singleton("payrollSettings") }),
+  "PUT /hr/payroll/settings": ({ body }) => ({ data: updateSingleton("payrollSettings", body) }),
+
+  /* ======================================================================
+     4. المخازن
+     ====================================================================== */
+
+  /* --- الأصناف --- */
+  "GET /inv/items": ({ params }) => inventory.listItems(params),
+  "GET /inv/items/:id": ({ params }) => ({ data: inventory.getItem(params.id) }),
+  "POST /inv/items": ({ body }) => ({ data: insert("items", { ...body, status: "active" }) }),
+  "PUT /inv/items/:id": ({ params, body }) => {
+    const next = update("items", params.id, body);
+    if (!next) throw notFound("الصنف غير موجود.");
+    return { data: next };
+  },
+  "GET /inv/categories": ({ params }) => query("itemCategories", params),
+  "GET /inv/units": ({ params }) => query("units", params),
+
+  /* --- المخازن --- */
+  "GET /inv/warehouses": ({ params }) => query("warehouses", params),
+  "GET /inv/warehouses/:id": ({ params }) => {
+    const warehouse = find("warehouses", params.id);
+    if (!warehouse) throw notFound("المخزن غير موجود.");
+    return {
+      data: {
+        ...warehouse,
+        balances: where("stockBalances", (row) => String(row.warehouseId) === String(warehouse.id)),
       },
     };
   },
 
-  /* ========================= الفواتير ========================= */
+  /* --- الأرصدة والحركات --- */
+  "GET /inv/balances": ({ params }) => inventory.listBalances(params),
+  "GET /inv/balance": ({ params }) => ({
+    data: inventory.currentBalance(params.itemId, params.warehouseId),
+  }),
+  "GET /inv/movements": ({ params }) => inventory.listMovements(params),
+  "GET /inv/movements/history": ({ params }) => ({
+    data: inventory.itemMovementHistory(params),
+  }),
 
-  "GET /invoices": ({ params }) => query("invoices", params),
+  "POST /inv/receipts": ({ body }) => ({ data: inventory.createReceipt(body, actor()) }),
+  "POST /inv/issues": ({ body }) => ({ data: inventory.createIssue(body, actor()) }),
+  "POST /inv/transfers": ({ body }) => ({ data: inventory.createTransfer(body, actor()) }),
+  "POST /inv/adjustments": ({ body }) => ({ data: inventory.createAdjustment(body, actor()) }),
+  "POST /inv/adjustments/:id/approve": ({ params }) => ({
+    data: inventory.approveAdjustment(params.id, actor()),
+  }),
 
-  "GET /invoices/:id": ({ params }) => {
-    const invoice = find("invoices", params.id);
-    if (!invoice) throw notFound("الفاتورة غير موجودة.");
+  /* --- التشغيلات والصلاحية --- */
+  "GET /inv/batches": ({ params }) => query("batches", params),
+  "GET /inv/expiry": ({ params }) => ({ data: inventory.getExpiryReport(params) }),
 
-    const lines = where("invoiceLines", (row) => String(row.invoiceId) === String(params.id));
-    const invoicePayments = where("payments", (row) => String(row.invoiceId) === String(params.id));
-    const invoiceRefunds = where("refunds", (row) => String(row.invoiceId) === String(params.id));
-    const invoiceCreditNotes = where("creditNotes", (row) => String(row.invoiceId) === String(params.id));
+  /* --- التقييم --- */
+  "GET /inv/valuation": ({ params }) => ({ data: inventory.getValuation(params) }),
+  "GET /inv/valuation/compare": ({ params }) => ({
+    data: inventory.compareCostingMethods(params),
+  }),
+  "GET /inv/low-stock": () => ({ data: inventory.lowStockReport() }),
+  "GET /inv/alerts": () => ({ data: inventory.getAlerts() }),
 
-    return {
-      data: {
-        ...invoice,
-        lines,
-        payments: invoicePayments,
-        refunds: invoiceRefunds,
-        creditNotes: invoiceCreditNotes,
-        /** للتدقيق — عرض مُشتَق لا سجل مُخزَّن، راجع buildInvoiceTimeline. */
-        timeline: buildInvoiceTimeline(invoice, {
-          payments: invoicePayments,
-          refunds: invoiceRefunds,
-          creditNotes: invoiceCreditNotes,
-        }),
-      },
-    };
+  /* --- الجرد الفعلي --- */
+  "GET /inv/counts": ({ params }) => query("stockCounts", params),
+  "GET /inv/counts/:id": ({ params }) => ({ data: inventory.getStockCount(params.id) }),
+  "POST /inv/counts/:id/start": ({ params }) => ({
+    data: inventory.startStockCount(params.id, actor()),
+  }),
+  "POST /inv/counts/:id/close": ({ params, body }) => ({
+    data: inventory.closeStockCount(params.id, body, actor()),
+  }),
+
+  /* ======================================================================
+     5. الإدارة والنظام
+     ====================================================================== */
+
+  "GET /admin/users": ({ params }) => query("users", params),
+  "GET /admin/users/:id": ({ params }) => {
+    const user = find("users", params.id);
+    if (!user) throw notFound("المستخدم غير موجود.");
+    return { data: user };
+  },
+  "POST /admin/users": ({ body }) => ({
+    data: insert("users", { ...body, status: "active", lastLoginAt: null }),
+  }),
+  "PUT /admin/users/:id": ({ params, body }) => {
+    const next = update("users", params.id, body);
+    if (!next) throw notFound("المستخدم غير موجود.");
+    return { data: next };
   },
 
-  "GET /payments": ({ params }) => query("payments", params),
-  "GET /refunds": ({ params }) => query("refunds", params),
-  "GET /credit-notes": ({ params }) => query("creditNotes", params),
+  "GET /admin/roles": ({ params }) => query("roles", params),
+  "GET /admin/permissions": () => ({ data: permissionCatalog() }),
+  "GET /admin/audit": ({ params }) => query("auditLogs", params),
+  "GET /admin/branches": ({ params }) => query("branches", params),
 
-  /** الأرصدة المستحقة — فواتير لم تُسدَّد كاملة. */
-  "GET /billing/outstanding": ({ params }) =>
-    query("invoices", {
-      ...params,
-      status: params.status ?? "unpaid,partially_paid",
-      sort: params.sort ?? "dueDate",
-      order: params.order ?? "asc",
-    }),
-
-  /* ========================= المخزون ========================= */
-
-  "GET /inventory/items": ({ params }) => query("items", params),
-
-  "GET /inventory/items/:id": ({ params }) => {
-    const item = find("items", params.id);
-    if (!item) throw notFound("الصنف غير موجود.");
-
-    return {
-      data: {
-        ...item,
-        batches: where("batches", (row) => String(row.itemId) === String(params.id)),
-      },
-    };
+  /* --- الإعدادات --- */
+  "GET /settings/company": () => ({ data: singleton("companyInfo") }),
+  "PUT /settings/company": ({ body }) => ({ data: updateSingleton("companyInfo", body) }),
+  "GET /settings/preferences": () => ({ data: singleton("systemPreferences") }),
+  "PUT /settings/preferences": ({ body }) => ({ data: updateSingleton("systemPreferences", body) }),
+  "GET /settings/posting-map": () => ({ data: postingMapView() }),
+  "PUT /settings/posting-map": ({ body }) => {
+    updateSingleton("postingMap", body);
+    return { data: postingMapView() };
   },
+  "GET /settings/notifications": ({ params }) => query("notificationPreferences", params),
 
-  "GET /inventory/batches": ({ params }) => query("batches", params),
-  "GET /inventory/movements": ({ params }) => query("stockMovements", params),
+  /* ======================================================================
+     6. قوائم مرجعية (للقوائم المنسدلة)
+     ====================================================================== */
 
-  /** تنبيهات المخزون — تغذّي لوحة التحكم. */
-  "GET /inventory/alerts": () => {
-    const itemRows = all("items");
-    const batchRows = all("batches");
-
-    return {
-      data: {
-        lowStock: itemRows.filter((item) => item.status === "low_stock"),
-        outOfStock: itemRows.filter((item) => item.status === "out_of_stock"),
-        expired: batchRows.filter((batch) => deriveBatchStatus(batch, REFERENCE_DATE) === "expired"),
-        nearExpiry: batchRows.filter(
-          (batch) => deriveBatchStatus(batch, REFERENCE_DATE) === "near_expiry",
-        ),
-      },
-    };
-  },
-
-  /* ===================== قوائم مرجعية (للقوائم المنسدلة) ===================== */
-
+  "GET /lookups/accounts": () => ({ data: accounting.postableAccounts() }),
+  "GET /lookups/cost-centers": () => ({ data: all("costCenters") }),
+  "GET /lookups/customers": () => ({ data: activeOnly("customers") }),
+  "GET /lookups/suppliers": () => ({ data: activeOnly("suppliers") }),
+  "GET /lookups/cash-boxes": () => ({ data: activeOnly("cashBoxes") }),
+  "GET /lookups/bank-accounts": () => ({ data: activeOnly("bankAccounts") }),
+  "GET /lookups/taxes": () => ({ data: activeOnly("taxes") }),
   "GET /lookups/departments": () => ({ data: all("departments") }),
-  "GET /lookups/doctors": () => ({ data: all("doctors") }),
-  "GET /lookups/services": () => ({ data: all("services") }),
-  "GET /lookups/warehouses": () => ({ data: all("warehouses") }),
-  "GET /lookups/suppliers": () => ({ data: all("suppliers") }),
-  "GET /lookups/categories": () => ({ data: all("itemCategories") }),
+  "GET /lookups/positions": () => ({ data: all("positions") }),
+  "GET /lookups/shifts": () => ({ data: all("shifts") }),
+  "GET /lookups/employees": () => ({
+    data: all("employees")
+      .filter((row) => ["employed", "probation"].includes(row.status))
+      .map((row) => ({ id: row.id, code: row.code, name: row.name, jobTitle: row.jobTitle })),
+  }),
+  "GET /lookups/items": () => ({
+    data: activeOnly("items").map((row) => ({
+      id: row.id, code: row.code, name: row.name, unit: row.unit,
+      costPrice: row.costPrice, sellingPrice: row.sellingPrice,
+      warehouseIds: row.warehouseIds, trackBatches: row.trackBatches,
+      trackExpiry: row.trackExpiry, trackSerials: row.trackSerials,
+    })),
+  }),
+  "GET /lookups/warehouses": () => ({ data: activeOnly("warehouses") }),
+  "GET /lookups/categories": () => ({ data: activeOnly("itemCategories") }),
   "GET /lookups/units": () => ({ data: all("units") }),
   "GET /lookups/payment-methods": () => ({ data: all("paymentMethods") }),
   "GET /lookups/governorates": () => ({ data: all("governorates") }),
+  "GET /lookups/branches": () => ({ data: activeOnly("branches") }),
+  "GET /lookups/periods": () => ({ data: all("accountingPeriods") }),
+  "GET /lookups/document-sources": () => ({ data: all("documentSources") }),
+  "GET /lookups/asset-categories": () => ({ data: all("assetCategories") }),
 
-  /* ========================= لوحة التحكم ========================= */
+  /* ======================================================================
+     7. الجلسة
+     ====================================================================== */
 
-  "GET /dashboard/summary": () => {
-    const allInvoices = all("invoices");
-    const itemRows = all("items");
-    const allPayments = all("payments");
-    const allRefunds = all("refunds");
-    const allPatients = all("patients");
-
-    const today = REFERENCE_DATE.toISOString().slice(0, 10);
-    const monthPrefix = today.slice(0, 7);
-
-    // دوال المجال تستبعد الملغاة بنفسها — لا نكرر الشرط في كل مجموع.
-    const thisMonth = allInvoices.filter((row) => row.date.startsWith(monthPrefix));
-    const invoiceRows = allInvoices.filter((row) => row.status !== "cancelled");
-
-    const todaysInvoices = allInvoices.filter((row) => row.date === today);
-    const todaysPayments = allPayments.filter((row) => row.date === today);
-    const todaysRefunds = allRefunds.filter((row) => row.date === today);
-
+  /** نائب عن المصادقة — تُنفَّذ فعليًا في الباك-إند. */
+  "GET /auth/me": () => {
+    const user = currentUser();
     return {
       data: {
-        asOf: REFERENCE_DATE.toISOString(),
-        patients: {
-          total: db.patients.length,
-          active: db.patients.filter((row) => row.status === "active").length,
-          newThisMonth: db.patients.filter((row) => row.registeredAt?.startsWith(monthPrefix)).length,
-        },
-        revenue: {
-          invoicedThisMonth: totalInvoiced(thisMonth),
-          // المحصَّل فعلًا = المدفوعات ناقص المرتجعات المعتمدة في نفس الشهر.
-          collectedThisMonth: totalCollected({
-            payments: allPayments.filter((row) => row.date.startsWith(monthPrefix)),
-            refunds: allRefunds.filter((row) => row.date.startsWith(monthPrefix)),
-          }),
-          outstanding: totalOutstanding(allInvoices),
-        },
-        invoices: {
-          total: invoiceRows.length,
-          unpaid: invoiceRows.filter((row) => row.status === "unpaid").length,
-          partiallyPaid: invoiceRows.filter((row) => row.status === "partially_paid").length,
-          overdue: allInvoices.filter((row) => isOverdue(row, today)).length,
-        },
-        inventory: {
-          items: itemRows.length,
-          lowStock: itemRows.filter((row) => row.status === "low_stock").length,
-          outOfStock: itemRows.filter((row) => row.status === "out_of_stock").length,
-          valuation: inventoryValuation(itemRows),
-        },
-        approvals: {
-          stockAdjustments: all("stockMovements").filter(
-            (row) => row.type === "adjustment" && row.status === "pending",
-          ).length,
-          refunds: all("refunds").filter((row) => row.status === "pending").length,
-          /** إشعارات الدائن تمر بنفس مسار المراجعة — بند منفصل لا جزء من المرتجعات. */
-          creditNotes: all("creditNotes").filter((row) => row.status === "pending").length,
-        },
-
-        /**
-         * نبض العمليات اليومي. «المحصَّل اليوم» لا «المفوتر اليوم» تحديدًا:
-         * الفاتورة تُنشأ لحظة الخدمة لكن السداد يتوزّع على أيام تالية (تقسيط،
-         * تحويل بنكي متأخر)، فالمبلغ الذي دخل الخزينة فعليًا اليوم أصدق مؤشرًا
-         * على نشاط اليوم التشغيلي من قيمة فواتير رُفعَت اليوم وقد تُسدَّد لاحقًا.
-         */
-        today: {
-          collected: totalCollected({ payments: todaysPayments, refunds: todaysRefunds }),
-          invoicesIssued: todaysInvoices.filter((row) => row.status !== "cancelled").length,
-          patientsVisited: allPatients.filter((row) => row.lastVisitAt === today).length,
-          newPatients: allPatients.filter((row) => row.registeredAt === today).length,
-        },
-
-        /** سلسلة 14 يومًا للرسم البياني — مفوتر مقابل محصَّل، يومًا بيوم. */
-        revenueTrend: buildRevenueTrend(allInvoices, allPayments, allRefunds, REFERENCE_DATE, 14),
-
-        /** توزيع إيراد الشهر الحالي على الأقسام — الأقسام بلا نشاط لا تُعرض. */
-        departments: buildDepartmentSummary(thisMonth),
-
-        /**
-         * الكادر الطبي الفعلي من سجل المستخدمين (/users) — الأدوار الإكلينيكية
-         * المباشرة فقط (طبيب، صيدلي، فني مختبر، فني أشعة)، لا الإدارة أو
-         * المحاسبة أو الاستقبال أو المخازن، فهذه أدوار دعم لا رعاية مباشرة.
-         */
-        workforce: {
-          medicalStaff: all("users").filter(
-            (row) =>
-              ["doctor", "pharmacist", "lab_technician", "radiologist"].includes(row.role) &&
-              row.status === "active",
-          ).length,
-          total: all("users").filter((row) => row.status === "active").length,
-        },
-
-        /**
-         * العيادات المسجَّلة فعليًا في سجل العيادات (/settings/clinics) — لا
-         * طول مصفوفة departments أعلاه، فتلك توزيع إيراد الشهر الحالي على
-         * الأقسام (مقياس مختلف تمامًا، وعدد عناصرها يتغيّر مع نشاط الفواتير).
-         */
-        clinics: {
-          total: all("clinics").length,
-          active: all("clinics").filter((row) => row.status === "active").length,
-        },
-
-        /** آخر الحركات المالية — دفعات ومرتجعات، الأحدث أولًا. */
-        recentActivity: buildRecentActivity(allPayments, allRefunds, allInvoices, 8),
-
-        /** آخر المرضى المسجَّلين — الأحدث أولًا. */
-        recentPatients: [...allPatients]
-          .sort((a, b) => String(b.registeredAt).localeCompare(String(a.registeredAt)))
-          .slice(0, 6),
+        id: user.id,
+        name: user.name,
+        role: user.role,
+        jobTitle: user.jobTitle,
+        company: db.companyInfo.name,
       },
     };
   },
-
-  /* ========================= المحاسبة ========================= */
-
-  "GET /accounting/accounts": ({ params }) => query("accounts", params),
-  "POST /accounting/accounts": ({ body }) => {
-    const id = (db.accounts.reduce((max, r) => Math.max(max, r.id), 100) ?? 100) + 1;
-    const account = insert("accounts", {
-      ...body,
-      id,
-      balance: 0,
-      status: "active",
-    });
-    return { data: account };
-  },
-
-  "GET /accounting/journal": ({ params }) => query("journalEntries", params),
-  "POST /accounting/journal": ({ body }) => {
-    const id = (db.journalEntries.reduce((max, r) => Math.max(max, r.id), 100) ?? 100) + 1;
-    const entry = insert("journalEntries", {
-      ...body,
-      id,
-      entryNumber: `JV-2026-00${id}`,
-      date: body.date || new Date().toISOString().slice(0, 10),
-      status: body.status || "approved",
-    });
-    return { data: entry };
-  },
-
-  "GET /accounting/cash": ({ params }) => query("cashBoxes", params),
-  "GET /accounting/banks": ({ params }) => query("bankAccounts", params),
-  "GET /accounting/cost-centers": ({ params }) => query("costCenters", params),
-  "GET /accounting/periods": ({ params }) => query("accountingPeriods", params),
-
-  "GET /accounting/trial-balance": () => {
-    const allAccounts = all("accounts").filter((a) => a.level === 4 || a.level === 3 && !all("accounts").some((sub) => sub.parentId === a.id));
-    const rows = allAccounts.map((acc) => {
-      const isDebit = acc.nature === "debit";
-      const bal = Math.abs(acc.balance);
-      return {
-        id: acc.id,
-        code: acc.code,
-        name: acc.name,
-        type: acc.type,
-        openingDebit: isDebit ? bal * 0.8 : 0,
-        openingCredit: !isDebit ? bal * 0.8 : 0,
-        periodDebit: isDebit ? bal * 0.2 : 0,
-        periodCredit: !isDebit ? bal * 0.2 : 0,
-        endingDebit: isDebit ? bal : 0,
-        endingCredit: !isDebit ? bal : 0,
-      };
-    });
-    const totals = rows.reduce(
-      (acc, r) => ({
-        openingDebit: acc.openingDebit + r.openingDebit,
-        openingCredit: acc.openingCredit + r.openingCredit,
-        periodDebit: acc.periodDebit + r.periodDebit,
-        periodCredit: acc.periodCredit + r.periodCredit,
-        endingDebit: acc.endingDebit + r.endingDebit,
-        endingCredit: acc.endingCredit + r.endingCredit,
-      }),
-      { openingDebit: 0, openingCredit: 0, periodDebit: 0, periodCredit: 0, endingDebit: 0, endingCredit: 0 }
-    );
-    return { data: { rows, totals } };
-  },
-
-  /* ========================= المواعيد ========================= */
-
-  "GET /appointments": ({ params }) => query("appointments", params),
-  "GET /appointments/queue": ({ params }) => {
-    const today = REFERENCE_DATE.toISOString().slice(0, 10);
-    return query("appointments", {
-      ...params,
-      date: today,
-      status: params.status || "waiting,confirmed",
-    });
-  },
-  "POST /appointments": ({ body }) => {
-    const id = (db.appointments.reduce((max, r) => Math.max(max, r.id), 1000) ?? 1000) + 1;
-    const item = insert("appointments", {
-      ...body,
-      id,
-      appointmentNumber: `APT-2026${id}`,
-      status: body.status || "confirmed",
-    });
-    return { data: item };
-  },
-  "PUT /appointments/:id": ({ params, body }) => {
-    const updated = update("appointments", params.id, body);
-    if (!updated) throw notFound("الموعد غير موجود.");
-    return { data: updated };
-  },
-
-  /* ========================= المشتريات ========================= */
-
-  "GET /purchasing/requests": ({ params }) => query("purchaseRequests", params),
-  "GET /purchasing/orders": ({ params }) => query("purchaseOrders", params),
-  "GET /purchasing/invoices": ({ params }) => query("supplierInvoices", params),
-  "GET /purchasing/suppliers": ({ params }) => query("suppliers", params),
-
-  /* ========================= الصيدلية ========================= */
-
-  "GET /pharmacy/prescriptions": ({ params }) => query("prescriptions", params),
-  "POST /pharmacy/prescriptions/:id/dispense": ({ params }) => {
-    const rx = update("prescriptions", params.id, {
-      status: "dispensed",
-      dispensedAt: new Date().toISOString(),
-      dispensedBy: "صيدلي / مينا سمير",
-    });
-    if (!rx) throw notFound("الروشتة غير موجودة.");
-    return { data: rx };
-  },
-
-  /* ========================= المختبر والأشعة ========================= */
-
-  "GET /laboratory/requests": ({ params }) => query("labRequests", params),
-  "PUT /laboratory/requests/:id": ({ params, body }) => {
-    const updated = update("labRequests", params.id, body);
-    if (!updated) throw notFound("طلب التحليل غير موجود.");
-    return { data: updated };
-  },
-
-  "GET /radiology/requests": ({ params }) => query("radiologyRequests", params),
-  "PUT /radiology/requests/:id": ({ params, body }) => {
-    const updated = update("radiologyRequests", params.id, body);
-    if (!updated) throw notFound("طلب الأشعة غير موجود.");
-    return { data: updated };
-  },
-
-  /* ========================= المستخدمون وسجل التدقيق ========================= */
-
-  "GET /users": ({ params }) => query("users", params),
-  "POST /users": ({ body }) => {
-    const id = (db.users.reduce((max, r) => Math.max(max, r.id), 10) ?? 10) + 1;
-    const user = insert("users", {
-      ...body,
-      id,
-      status: "active",
-      lastLogin: "—",
-    });
-    return { data: user };
-  },
-  "GET /users/roles": () => ({ data: all("roles") }),
-  "GET /audit": ({ params }) => query("auditLogs", params),
-
-  /* ========================= الإعدادات ========================= */
-
-  "GET /settings/hospital": () => ({ data: db.hospitalInfo }),
-  "PUT /settings/hospital": ({ body }) => {
-    db.hospitalInfo = { ...db.hospitalInfo, ...body };
-    return { data: db.hospitalInfo };
-  },
-  "GET /settings/clinics": ({ params }) => query("clinics", params),
-  "GET /settings/taxes": ({ params }) => query("taxes", params),
-
-  /* ========================= الجلسة ========================= */
-
-  /** نائب عن المصادقة — تُنفَّذ فعليًا في Phase 7. */
-  "GET /auth/me": () => ({
-    data: {
-      id: 1,
-      name: "عبدالله محمد",
-      role: "admin",
-      jobTitle: "مدير النظام",
-    },
-  }),
 };
 
 /* --------------------------------------------------------------------------
-   مساعدات لوحة التحكم
+   مساعدات
    -------------------------------------------------------------------------- */
 
-/** يبني سلسلة أيام متتالية بصيغة ISO تنتهي بـ `endDate`. */
-function lastNDays(endDate, count) {
-  return Array.from({ length: count }, (_unused, index) => {
-    const date = new Date(endDate);
-    date.setDate(date.getDate() - (count - 1 - index));
-    return date.toISOString().slice(0, 10);
-  });
-}
-
-/** سلسلة يومية: مفوتر الفواتير الصادرة مقابل ما حُصِّل فعليًا، لكل يوم على حدة. */
-function buildRevenueTrend(invoices, payments, refunds, endDate, days) {
-  return lastNDays(endDate, days).map((date) => ({
-    date,
-    invoiced: totalInvoiced(invoices.filter((row) => row.date === date)),
-    collected: totalCollected({
-      payments: payments.filter((row) => row.date === date),
-      refunds: refunds.filter((row) => row.date === date),
-    }),
-  }));
-}
-
-/** إيراد الشهر الحالي مُوزَّعًا على الأقسام — الأقسام بلا فواتير تُستبعد. */
-function buildDepartmentSummary(monthInvoices) {
-  const byDepartment = new Map();
-
-  for (const invoice of monthInvoices) {
-    if (invoice.status === "cancelled" || !invoice.departmentId) continue;
-
-    const entry = byDepartment.get(invoice.departmentId) ?? { invoices: [] };
-    entry.invoices.push(invoice);
-    byDepartment.set(invoice.departmentId, entry);
-  }
-
-  return [...byDepartment.entries()]
-    .map(([departmentId, entry]) => {
-      const department = find("departments", departmentId);
-      return {
-        departmentId,
-        name: department?.name ?? "—",
-        invoicesCount: entry.invoices.length,
-        revenue: totalInvoiced(entry.invoices),
-      };
-    })
-    .sort((a, b) => b.revenue - a.revenue);
+/** السجلات النشطة فقط — ما تحتاجه القوائم المنسدلة. */
+function activeOnly(collection) {
+  return all(collection).filter((row) => !row.status || row.status === "active");
 }
 
 /**
- * آخر الحركات المالية — دفعات ومرتجعات مُدمَجة زمنيًا في سجل واحد.
- * اسم المريض يُستخرَج عبر الفاتورة المرتبطة (الدفعة لا تحمله مباشرة)
- * لتفادي الازدواج مع مجموعة المرضى — عقدة ربط واحدة لا اثنتان.
+ * خريطة الربط المحاسبي بشكل صالح للعرض: المفتاح ووصفه والحساب المرتبط.
+ * شاشة الإعدادات تبني نموذجها من هذه القائمة، فإضافة مفتاح تظهر تلقائيًا.
  */
-function buildRecentActivity(payments, refunds, invoices, limit) {
-  const invoiceById = new Map(invoices.map((invoice) => [invoice.id, invoice]));
+function postingMapView() {
+  const accounts = all("accounts");
+  const map = singleton("postingMap");
 
-  const events = [
-    ...payments.map((payment) => ({
-      type: "payment",
-      id: `payment-${payment.id}`,
-      date: payment.date,
-      amount: payment.amount,
-      invoiceNumber: invoiceById.get(payment.invoiceId)?.invoiceNumber,
-      patientName: invoiceById.get(payment.invoiceId)?.patientName,
-    })),
-    ...refunds
-      .filter((refund) => refund.status === "approved")
-      .map((refund) => ({
-        type: "refund",
-        id: `refund-${refund.id}`,
-        date: refund.date,
-        amount: refund.amount,
-        invoiceNumber: refund.invoiceNumber,
-        patientName: refund.patientName,
-      })),
-  ];
+  return Object.entries(MAP_LABELS).map(([key, label]) => {
+    const account = accounts.find((row) => String(row.id) === String(map[key]));
 
-  return events.sort((a, b) => String(b.date).localeCompare(String(a.date))).slice(0, limit);
+    return {
+      key,
+      label,
+      accountId: map[key] ?? null,
+      accountCode: account?.code ?? null,
+      accountName: account?.name ?? null,
+      /** المفتاح غير المُعَد يُعطّل كل عملية تحتاجه — نُعلنه بوضوح. */
+      isConfigured: Boolean(account),
+    };
+  });
 }
+
+/** كتالوج الصلاحيات بشكل مجموعات — لشاشة إدارة الأدوار. */
+function permissionCatalog() {
+  const groups = new Map();
+
+  for (const [key, label] of Object.entries(PERMISSION_LABELS)) {
+    const domain = key.split(".")[0];
+    if (!groups.has(domain)) {
+      groups.set(domain, { domain, label: DOMAIN_LABELS[domain] ?? domain, permissions: [] });
+    }
+    groups.get(domain).permissions.push({ key, label });
+  }
+
+  return [...groups.values()];
+}
+
+const DOMAIN_LABELS = {
+  dashboard: "لوحة التحكم",
+  gl: "المحاسبة العامة",
+  fin: "المحاسبة المالية",
+  hr: "الموارد البشرية",
+  inv: "المخازن",
+  reports: "التقارير",
+  admin: "الإدارة والنظام",
+};
 
 /* --------------------------------------------------------------------------
    المطابقة والتوجيه
@@ -576,10 +541,18 @@ const COMPILED = Object.entries(ROUTES).map(([key, handler]) => {
   return { method, pattern, regex: new RegExp(`^${source}$`), keys, handler };
 });
 
-/** قائمة المسارات المنفَّذة — تظهر في صفحة نظام التصميم وتفيد التوثيق. */
+/**
+ * قائمة المسارات المنفَّذة — تظهر في صفحة نظام التصميم وتفيد التوثيق.
+ *
+ * المسارات الثابتة تُطابَق قبل المتغيرة: `/gl/accounts/tree` يجب أن يسبق
+ * `/gl/accounts/:id`، وإلا التقط النمط المتغيّر الكلمة «tree» كمُعرِّف.
+ */
 export function registeredEndpoints() {
   return COMPILED.map(({ method, pattern }) => `${method} ${pattern}`).sort();
 }
+
+/* الترتيب: الأقل عددًا من المعاملات أولًا — فتسبق المسارات الثابتة المتغيرة. */
+COMPILED.sort((a, b) => a.keys.length - b.keys.length || b.pattern.length - a.pattern.length);
 
 /**
  * ينفّذ طلبًا تجريبيًا.

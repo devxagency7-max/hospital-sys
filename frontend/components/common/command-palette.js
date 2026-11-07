@@ -1,10 +1,10 @@
 /**
  * لوحة البحث السريع (Command Palette).
  *
- * بحث واحد يغطي ثلاثة مصادر حقيقية: شاشات النظام (محليًا من خريطة التنقل)،
- * والمرضى والفواتير (عبر الـ API الفعلي، بنفس طبقة البيانات التي تستخدمها
- * الجداول). لا نتائج مُختلقة — فراغ كلمة البحث يُظهر اختصارات شائعة فقط،
- * وكل قسم يملك حالتي تحميل وفراغ مستقلتين.
+ * بحث واحد يغطي أربعة مصادر حقيقية: شاشات النظام (محليًا من خريطة التنقل)،
+ * وأطراف التعامل والأصناف وقيود اليومية (عبر الـ API الفعلي، بنفس طبقة
+ * البيانات التي تستخدمها الجداول). لا نتائج مُختلقة — فراغ كلمة البحث يُظهر
+ * اختصارات شائعة فقط، وكل قسم يملك حالتي تحميل وفراغ مستقلتين.
  */
 
 import { el, cx, render, debounce } from "../../js/core/dom.js";
@@ -14,8 +14,9 @@ import { flatScreens, navigation } from "../../js/config/navigation.js";
 import { matchesQuery } from "../../js/core/text.js";
 import { can } from "../../js/core/permissions.js";
 import { navigate } from "../../js/core/router.js";
-import { listPatients } from "../../js/api/patients.api.js";
-import { listInvoices } from "../../js/api/billing.api.js";
+import { listCustomers } from "../../js/api/finance.api.js";
+import { listItems } from "../../js/api/inventory.api.js";
+import { listJournalEntries } from "../../js/api/accounting.api.js";
 import { TABLE } from "../../js/core/config.js";
 import * as fmt from "../../js/core/format.js";
 
@@ -23,7 +24,7 @@ import * as fmt from "../../js/core/format.js";
 const SCREENS = flatScreens().filter((screen) => can(screen.permission));
 
 /** اختصارات تُعرض قبل أي كتابة — أكثر الوجهات استخدامًا يوميًا. */
-const QUICK_PATHS = ["/", "/patients", "/billing/invoices", "/billing/outstanding"];
+const QUICK_PATHS = ["/", "/gl/journal", "/fin/customer-invoices", "/fin/receivables-aging", "/inv/balances"];
 
 export function openCommandPalette() {
   let selectedIndex = 0;
@@ -33,7 +34,7 @@ export function openCommandPalette() {
 
   const input = el("input", {
     type: "text",
-    placeholder: "ابحث عن شاشة، مريض، أو رقم فاتورة…",
+    placeholder: "ابحث عن شاشة، عميل، صنف، أو رقم قيد…",
     class:
       "w-full bg-transparent text-base text-ink placeholder:text-faint outline-none h-12 px-1",
     autocomplete: "off",
@@ -141,28 +142,37 @@ export function openCommandPalette() {
   }
 
   /* --------------------------------------------------------------------
-     نتائج شبكية مؤجَّلة: المرضى والفواتير
+     نتائج شبكية مؤجَّلة: العملاء والأصناف والقيود
      -------------------------------------------------------------------- */
 
   async function runSearch(query) {
     const token = ++searchToken;
 
     const screens = screenMatches(query);
-    paint({ screens, patients: query ? "loading" : [], invoices: query ? "loading" : [] });
+    const pending = query ? "loading" : [];
+    paint({ screens, customers: pending, items: pending, entries: pending });
 
     if (!query) return; // لا نستدعي الشبكة من أجل شاشة فارغة
 
-    const [patientsResult, invoicesResult] = await Promise.allSettled([
-      listPatients({ search: query, perPage: 5 }),
-      listInvoices({ search: query, perPage: 5 }),
+    /*
+     * `allSettled` لا `all`: فشل بحث واحد لا يُسقط البقية. قسم يفشل يُعرض
+     * كخطأ مستقل، والمستخدم يرى ما نجح — بدل لوحة فارغة بلا تفسير.
+     */
+    const [customers, items, entries] = await Promise.allSettled([
+      listCustomers({ search: query, perPage: 4 }),
+      listItems({ search: query, perPage: 4 }),
+      listJournalEntries({ search: query, perPage: 4 }),
     ]);
 
     if (token !== searchToken) return; // استعلام أحدث سبقه
 
+    const unwrap = (result) => (result.status === "fulfilled" ? result.value.data : "error");
+
     paint({
       screens,
-      patients: patientsResult.status === "fulfilled" ? patientsResult.value.data : "error",
-      invoices: invoicesResult.status === "fulfilled" ? invoicesResult.value.data : "error",
+      customers: unwrap(customers),
+      items: unwrap(items),
+      entries: unwrap(entries),
     });
   }
 
@@ -173,19 +183,23 @@ export function openCommandPalette() {
      الرسم
      -------------------------------------------------------------------- */
 
-  function paint({ screens, patients, invoices }) {
+  function paint({ screens, customers, items, entries }) {
     flatItems = [];
     selectedIndex = 0;
 
     const sections = [
       section("الشاشات", screens.map(screenRow), { emptyLabel: null }),
-      section("المرضى", resolveRows(patients, patientRow), {
-        emptyLabel: patients === "error" ? null : "لا مرضى مطابقون",
-        error: patients === "error",
+      section("العملاء", resolveRows(customers, customerRow), {
+        emptyLabel: customers === "error" ? null : "لا عملاء مطابقون",
+        error: customers === "error",
       }),
-      section("الفواتير", resolveRows(invoices, invoiceRow), {
-        emptyLabel: invoices === "error" ? null : "لا فواتير مطابقة",
-        error: invoices === "error",
+      section("الأصناف", resolveRows(items, itemRow), {
+        emptyLabel: items === "error" ? null : "لا أصناف مطابقة",
+        error: items === "error",
+      }),
+      section("قيود اليومية", resolveRows(entries, entryRow), {
+        emptyLabel: entries === "error" ? null : "لا قيود مطابقة",
+        error: entries === "error",
       }),
     ].filter(Boolean);
 
@@ -195,7 +209,7 @@ export function openCommandPalette() {
         el(
           "div",
           { class: "py-10 text-center text-sm text-faint" },
-          "اكتب للبحث في الشاشات والمرضى والفواتير",
+          "اكتب للبحث في الشاشات والعملاء والأصناف والقيود",
         ),
       );
       return;
@@ -285,30 +299,38 @@ export function openCommandPalette() {
   }
 
   /*
-   * الوجهة قائمة المريض لا ملفه الشخصي: شاشة تفاصيل المريض (`/patients/:id`)
-   * لم تُبنَ بعد — توجيه النتيجة إليها كان سيصطدم بـ 404 حقيقي. القائمة
-   * مسجَّلة فعلًا (كصفحة «مخطَّطة» صريحة حتى تُبنى)، فلا رابط مكسور.
-   * معامل `search` تمهيدي يبقى بلا أثر الآن حتى تُبنى الشاشة الفعلية.
+   * الوجهة هي المستند نفسه لا القائمة التي تحتويه: من يبحث عن «شركة النور»
+   * يريد كشف حسابها، لا قائمة العملاء مفلترة باسمها. المسارات الثلاثة أدناه
+   * كلها مسجَّلة في js/config/routes.js كمسارات ديناميكية، فلا رابط مكسور.
    */
-  function patientRow(patient) {
+  function customerRow(customer) {
     return resultRow({
-      path: `/patients?search=${encodeURIComponent(patient.patientCode)}`,
-      icon: "patients",
-      primary: patient.name,
-      secondary: `${patient.patientCode} — ${fmt.phone(patient.phone)}`,
+      path: `/fin/customers/${customer.id}`,
+      icon: "users",
+      primary: customer.name,
+      secondary: `${customer.code} — رصيد ${fmt.amount(customer.balance ?? 0)}`,
     });
   }
 
-  function invoiceRow(invoice) {
+  function itemRow(item) {
     return resultRow({
-      path: `/billing/invoices?search=${encodeURIComponent(invoice.invoiceNumber)}`,
-      icon: "billing",
-      primary: invoice.invoiceNumber,
-      secondary: `${invoice.patientName} — ${fmt.amount(invoice.total)}`,
+      path: `/inv/items/${item.id}`,
+      icon: "inventory",
+      primary: item.name,
+      secondary: `${item.code} — متاح ${fmt.integer(item.available ?? item.onHand ?? 0)} ${item.unit ?? ""}`,
     });
   }
 
-  paint({ screens: screenMatches(""), patients: [], invoices: [] });
+  function entryRow(entry) {
+    return resultRow({
+      path: `/gl/journal/${entry.id}`,
+      icon: "accounting",
+      primary: entry.entryNumber,
+      secondary: `${entry.description} — ${fmt.amount(entry.totalDebit)}`,
+    });
+  }
+
+  paint({ screens: screenMatches(""), customers: [], items: [], entries: [] });
   input.focus();
 
   return close;

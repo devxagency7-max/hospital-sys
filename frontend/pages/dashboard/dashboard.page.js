@@ -1,740 +1,463 @@
 /**
- * لوحة التحكم.
+ * لوحة التحكم — مؤشرات الموديولات الأربعة.
  *
- * أول شاشة إنتاجية حقيقية في المشروع (المرحلة 1) — لا عرض توضيحي كصفحة
- * نظام التصميم، بل شاشة تُستهلَك يوميًا. كل رقم هنا من `GET /dashboard/summary`
- * الفعلي؛ لا قيمة مكتوبة يدويًا في هذا الملف.
+ * كل رقم هنا يأتي من `GET /dashboard/summary`، وهو محسوب بنفس المحركات التي
+ * تُغذّي الشاشات التفصيلية. مؤشر يخالف الشاشة التي يفتحها بالنقر عليه يُفقد
+ * اللوحة كلها الثقة، فلا رقم يُحسب هنا محليًا.
  */
 
-import { el, cx, render } from "../../js/core/dom.js";
+import { el, cx, clear } from "../../js/core/dom.js";
 import { pageHeader } from "../../components/layout/breadcrumbs.js";
-import { card } from "../../components/common/card.js";
-import { badge } from "../../components/common/badge.js";
-import { icon } from "../../components/common/icon.js";
+import { card, statGrid, statTile, dataRow, dataList } from "../../components/common/card.js";
 import { button } from "../../components/common/button.js";
-import { kpiGrid, kpiTile } from "../../components/dashboard/kpi-tile.js";
-import { heroSearch } from "../../components/dashboard/hero-search.js";
+import { badge, statusBadge } from "../../components/common/badge.js";
+import { icon } from "../../components/common/icon.js";
 import { ref } from "../../components/common/value.js";
+import { alert } from "../../components/feedback/alert.js";
+import { loadingState, errorState } from "../../components/feedback/states.js";
+import { heroSearch } from "../../components/dashboard/hero-search.js";
 import { revenueChart } from "../../components/dashboard/revenue-chart.js";
-import { emptyState, errorState } from "../../components/feedback/states.js";
+import { currency, amount, integer, percent, date as formatDate, dateTime } from "../../js/core/format.js";
+import { navigate } from "../../js/core/router.js";
 import { getSummary } from "../../js/api/dashboard.api.js";
-import { getAlerts } from "../../js/api/inventory.api.js";
-import { toApiError } from "../../js/core/errors.js";
-import * as fmt from "../../js/core/format.js";
-import { currentUser } from "../../js/core/permissions.js";
-import { APP } from "../../js/core/config.js";
 
 export default async function dashboardPage() {
-  const host = el("div", {});
-  render(host, skeleton());
+  const container = el("div", { class: "space-y-4" });
+  const host = el("div", { class: "space-y-4" });
 
-  const [summaryResult, alertsResult] = await Promise.allSettled([getSummary(), getAlerts()]);
+  container.appendChild(
+    pageHeader({
+      title: "لوحة التحكم",
+      description: "نظرة موحَّدة على المحاسبة العامة والمالية والموارد البشرية والمخازن.",
+      actions: [
+        button({ label: "التقارير", variant: "secondary", icon: "reports", onClick: () => navigate("/reports") }),
+        button({ label: "قيد يومية جديد", variant: "primary", icon: "plus", permission: "gl.journal.create", onClick: () => navigate("/gl/journal/new") }),
+      ],
+    }),
+  );
 
-  if (summaryResult.status === "rejected") {
-    render(
-      host,
-      pageHeader({ title: "لوحة التحكم" }),
-      errorState({ error: toApiError(summaryResult.reason), onRetry: () => location.reload() }),
-    );
-    return host;
+  container.appendChild(host);
+  host.appendChild(loadingState({ message: "جاري تحميل المؤشرات…" }));
+
+  try {
+    const data = await getSummary();
+    clear(host);
+    render(host, data);
+  } catch (error) {
+    clear(host);
+    host.appendChild(errorState({ error, onRetry: () => window.location.reload() }));
   }
 
-  const summary = summaryResult.value;
-  const alerts =
-    alertsResult.status === "fulfilled"
-      ? alertsResult.value
-      : { lowStock: [], outOfStock: [], expired: [], nearExpiry: [], __failed: true };
-
-  render(host, buildPage(summary, alerts));
-  return host;
+  return container;
 }
 
-/* ============================================================================
-   التركيب
-   ============================================================================ */
-
-function buildPage(summary, alerts) {
-  return el(
-    "div",
-    { class: "space-y-4" },
-    welcomeHeroCard(summary, alerts),
-
-    kpiRow(summary),
-
-    heroSearch(),
-
-    quickActionCard(),
-
-    pendingApprovalsCollapsible(summary),
-
-    el(
-      "div",
-      { class: "grid grid-cols-1 xl:grid-cols-3 gap-4" },
-      el("div", { class: "xl:col-span-2" }, revenueSection(summary.revenueTrend)),
-      departmentSection(summary.departments),
-    ),
-
-    el(
-      "div",
-      { class: "grid grid-cols-1 lg:grid-cols-3 gap-4" },
-      approvalsCard(summary.approvals),
-      alertListCard({
-        title: "رصيد منخفض",
-        icon: "inventory",
-        tone: "warning",
-        rows: alerts.lowStock,
-        failed: alerts.__failed,
-        path: "/inventory/items?status=low_stock",
-        renderRow: (row) => itemAlertRow(row),
-      }),
-      alertListCard({
-        title: "قاربت انتهاء الصلاحية",
-        icon: "calendar",
+function render(host, data) {
+  /* --- تنبيهات صحة البيانات قبل أي رقم --- */
+  const broken = (data.reconciliation ?? []).filter((row) => !row.isReconciled);
+  if (broken.length) {
+    host.appendChild(
+      alert({
         tone: "danger",
-        rows: alerts.nearExpiry,
-        failed: alerts.__failed,
-        path: "/inventory/expiry?status=near_expiry",
-        renderRow: (row) => batchAlertRow(row),
+        title: "فرق بين الأستاذ المساعد والحساب الرقابي",
+        message: broken.map((row) => `${row.label}: فرق ${amount(row.difference)}`).join(" · "),
+        actions: button({ label: "شاشة المطابقة", variant: "danger", size: "sm", onClick: () => navigate("/fin/reconciliation") }),
       }),
-    ),
-
-    el(
-      "div",
-      { class: "grid grid-cols-1 lg:grid-cols-2 gap-4" },
-      recentActivityCard(summary.recentActivity),
-      recentPatientsCard(summary.recentPatients),
-    ),
-  );
-}
-
-/* ============================================================================
-   بطاقة الترحيب العلوية
-   ============================================================================ */
-
-function welcomeHeroCard(summary, alerts) {
-  const user = currentUser();
-  const alertCount = (alerts.lowStock?.length || 0) + (alerts.nearExpiry?.length || 0);
-
-  return el(
-    "section",
-    {
-      class:
-        "glass-card rounded-3xl p-5 sm:p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-card",
-    },
-    el(
-      "div",
-      { class: "flex items-center gap-4 min-w-0" },
-      el(
-        "div",
-        {
-          class:
-            "size-14 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white font-black text-xl " +
-            "shadow-lg shadow-blue-600/30 flex items-center justify-center shrink-0 border border-white/60",
-        },
-        fmt.initials(user.name),
-      ),
-      el(
-        "div",
-        { class: "space-y-1 min-w-0" },
-        el(
-          "div",
-          { class: "flex flex-wrap items-center gap-2.5" },
-          el("h1", { class: "text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight outline-none" }, `مساء الخير، ${user.name}`),
-          el(
-            "span",
-            { class: "inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/60 dark:border-emerald-800/40 px-3 py-1 rounded-full shadow-2xs" },
-            el("span", { class: "size-2 rounded-full bg-emerald-500 animate-pulse" }),
-            "النظام متصل • مباشر",
-          ),
-        ),
-        el(
-          "p",
-          { class: "text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400" },
-          `مرحباً بك في لوحة تحكم ${APP.organization} — ${summary.patients.total} مريضًا مسجَّلاً و ${summary.invoices.total} معاملة نشطة`,
-        ),
-      ),
-    ),
-    el(
-      "div",
-      { class: "flex items-center gap-2.5 shrink-0 self-end md:self-center" },
-      el(
-        "div",
-        {
-          class:
-            "flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/80 dark:bg-slate-800/80 border border-white/90 dark:border-white/10 shadow-xs " +
-            "text-xs font-bold text-slate-700 dark:text-slate-200",
-        },
-        icon("calendar", { size: 15, class: "text-blue-600" }),
-        el(
-          "span",
-          {},
-          new Intl.DateTimeFormat("ar-EG-u-nu-latn", {
-            weekday: "long",
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-          }).format(new Date()),
-        ),
-      ),
-      el(
-        "a",
-        {
-          href: "#/inventory/items?status=low_stock",
-          class:
-            "relative grid place-items-center size-10 rounded-xl bg-white/80 dark:bg-slate-800/80 border border-white/90 dark:border-white/10 shadow-xs " +
-            "text-slate-700 dark:text-slate-200 hover:bg-white hover:text-blue-600 transition-colors",
-          title: "التنبيهات",
-        },
-        icon("bell", { size: 18 }),
-        alertCount > 0
-          ? el(
-              "span",
-              {
-                class:
-                  "absolute -top-1 -start-1 grid place-items-center size-5 rounded-full bg-rose-600 text-white " +
-                  "text-[10px] font-extrabold shadow-sm tabular",
-              },
-              String(alertCount),
-            )
-          : null,
-      ),
-    ),
-  );
-}
-
-/* ============================================================================
-   شريط الإجراء السريع
-   ============================================================================ */
-
-function quickActionCard() {
-  return el(
-    "section",
-    {
-      class:
-        "glass rounded-[var(--radius-card)] border border-line shadow-card " +
-        "p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4",
-    },
-    el(
-      "div",
-      { class: "flex items-center gap-3.5" },
-      el(
-        "span",
-        {
-          class:
-            "grid place-items-center size-11 rounded-2xl bg-brand-50 text-brand-600 border border-brand-200/50 shrink-0 shadow-xs",
-        },
-        icon("patients", { size: 22 }),
-      ),
-      el(
-        "div",
-        {},
-        el("h3", { class: "text-sm sm:text-base font-bold text-ink" }, "بدء إضافة وإدخال حالة مريض جديدة"),
-        el(
-          "p",
-          { class: "text-xs text-muted mt-0.5" },
-          "الانتقال المباشر لنموذج التسجيل الطبي الشامل وسير العمل السريع للعيادات والطوارئ",
-        ),
-      ),
-    ),
-    el(
-      "a",
-      {
-        href: "#/patients/new",
-        class:
-          "hx-press shrink-0 inline-flex items-center gap-2 h-11 px-5 rounded-[var(--radius-pill)] " +
-          "bg-brand-600 text-white text-sm font-bold shadow-sm transition-[background-color,transform] " +
-          "hover:bg-brand-700 hover:-translate-y-px",
-      },
-      icon("plus", { size: 16 }),
-      el("span", {}, "إضافة حالة جديدة +"),
-    ),
-  );
-}
-
-/* ============================================================================
-   قسم الحالات بانتظار الاعتماد القابل للطي
-   ============================================================================ */
-
-function pendingApprovalsCollapsible(summary) {
-  const total =
-    (summary.approvals.stockAdjustments || 0) +
-    (summary.approvals.refunds || 0) +
-    (summary.approvals.creditNotes || 0) +
-    17;
-  let isOpen = true;
-
-  const contentHost = el("div", { class: "mt-3 space-y-2" });
-  const arrow = el(
-    "span",
-    { class: "grid place-items-center transition-transform duration-200" },
-    icon("chevronDown", { size: 16 }),
-  );
-
-  const toggleBtn = el(
-    "button",
-    {
-      type: "button",
-      class: "w-full flex items-center justify-between gap-2 p-1 text-start cursor-pointer",
-      onClick: () => {
-        isOpen = !isOpen;
-        arrow.style.transform = isOpen ? "rotate(0deg)" : "rotate(180deg)";
-        contentHost.style.display = isOpen ? "block" : "none";
-      },
-    },
-    el(
-      "div",
-      { class: "flex items-center gap-2.5" },
-      el(
-        "span",
-        { class: "grid place-items-center size-8 rounded-xl bg-amber-500/10 text-amber-600 shrink-0" },
-        icon("calendar", { size: 16 }),
-      ),
-      el("span", { class: "text-sm sm:text-base font-extrabold text-ink" }, "حالات بانتظار اعتمادك النهائي"),
-      badge(`${total} حالة`, { tone: "warning", size: "sm" }),
-    ),
-    arrow,
-  );
-
-  const sampleCases = [
-    {
-      name: "أحمد محمود السيد",
-      nationalId: "28809151201124",
-      fileCode: "P-1001",
-      clinic: "العيادات الخارجية — باطنة وتخصصي",
-      status: "قيد المتابعة",
-      tone: "info",
-    },
-    {
-      name: "سارة علي حسن",
-      nationalId: "29503120102456",
-      fileCode: "P-1002",
-      clinic: "الجراحة العامة — استشارة قبل التدخل",
-      status: "بانتظار الاعتماد",
-      tone: "warning",
-    },
-    {
-      name: "محمود إبراهيم خليل",
-      nationalId: "28206201403312",
-      fileCode: "P-1003",
-      clinic: "القلب والأوعية — تقرير فحص ومتابعة",
-      status: "بانتظار الاعتماد",
-      tone: "warning",
-    },
-  ];
-
-  render(
-    contentHost,
-    ...sampleCases.map((item) =>
-      el(
-        "div",
-        {
-          class:
-            "flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-2xl " +
-            "bg-white/60 border border-line hover:bg-white/90 transition-colors",
-        },
-        el(
-          "div",
-          { class: "flex items-center gap-3 min-w-0" },
-          el(
-            "span",
-            { class: "grid place-items-center size-9 rounded-xl bg-brand-50 text-brand-700 font-bold text-xs shrink-0" },
-            fmt.initials(item.name),
-          ),
-          el(
-            "div",
-            { class: "min-w-0" },
-            el("p", { class: "text-sm font-bold text-ink truncate-1" }, item.name),
-            el(
-              "p",
-              { class: "text-xs text-muted flex flex-wrap items-center gap-2 mt-0.5" },
-              el("span", {}, `الرقم القومي: ${item.nationalId}`),
-              el("span", { class: "text-faint" }, "•"),
-              el("span", {}, `الملف: ${item.fileCode}`),
-              el("span", { class: "text-faint" }, "•"),
-              el("span", { class: "text-brand-600 font-semibold" }, item.clinic),
-            ),
-          ),
-        ),
-        el(
-          "div",
-          { class: "flex items-center gap-2.5 shrink-0 self-end sm:self-center" },
-          badge(item.status, { tone: item.tone || "warning", size: "sm" }),
-          button({
-            label: "عرض الملف والتقرير",
-            size: "sm",
-            variant: "secondary",
-            href: `#/patients/case-report?code=${item.fileCode}`,
-          }),
-        ),
-      ),
-    ),
-  );
-
-  return el(
-    "section",
-    { class: "glass rounded-[var(--radius-card)] border border-line shadow-card p-4 sm:p-5" },
-    toggleBtn,
-    contentHost,
-  );
-}
-
-/* ============================================================================
-   صف المؤشرات (6 بطاقات حيوية مطابقة للمرجع البصري)
-   ============================================================================ */
-
-function kpiRow(summary) {
-  // إجمالي المعاملات المعلّقة فعليًا — تسويات مخزنية + مرتجعات + إشعارات
-  // دائن قيد المراجعة. لا رقمًا إضافيًا مكتوبًا يدويًا فوق هذا المجموع؛
-  // كل بند منها حقيقي من GET /dashboard/summary (راجع approvals في mock-adapter.js).
-  const pendingTotal =
-    (summary.approvals.stockAdjustments || 0) +
-    (summary.approvals.refunds || 0) +
-    (summary.approvals.creditNotes || 0);
-
-  return kpiGrid(
-    kpiTile({
-      label: "بانتظار الاعتماد",
-      value: pendingTotal,
-      format: (n) => fmt.integer(n),
-      icon: "inbox",
-      tone: "amber",
-      hint: "معاملات تتطلب المراجعة",
-      animateDelayMs: 0,
-    }),
-    kpiTile({
-      label: "إجمالي المرضى",
-      value: summary.patients.total,
-      format: (n) => fmt.integer(n),
-      icon: "users",
-      tone: "blue",
-      hint: "كافة السجلات المسجلة",
-      href: "#/patients",
-      animateDelayMs: 60,
-    }),
-    kpiTile({
-      label: "حالات مقبولة / منتهية",
-      value: summary.invoices.total,
-      format: (n) => fmt.integer(n),
-      icon: "check",
-      tone: "green",
-      hint: "تمت الموافقة وتقديم الخدمة",
-      href: "#/billing/invoices",
-      animateDelayMs: 120,
-    }),
-    kpiTile({
-      label: "الأرصدة المستحقة",
-      value: summary.revenue.outstanding,
-      format: (n) => fmt.amount(n),
-      icon: "cross",
-      tone: "red",
-      hint: `${fmt.integer(summary.invoices.overdue)} فاتورة متأخرة`,
-      href: "#/billing/outstanding",
-      animateDelayMs: 180,
-    }),
-    kpiTile({
-      label: "فريق العمل الطبي",
-      value: summary.workforce.medicalStaff,
-      format: (n) => fmt.integer(n),
-      icon: "users",
-      tone: "neutral",
-      hint: "أطباء وصيادلة وفنيو مختبر وأشعة",
-      animateDelayMs: 240,
-    }),
-    kpiTile({
-      label: "العيادات المعتمدة",
-      value: summary.clinics.active,
-      format: (n) => fmt.integer(n),
-      icon: "building",
-      tone: "neutral",
-      hint: "عيادات مسجَّلة ونشطة فعليًا",
-      animateDelayMs: 300,
-    }),
-  );
-}
-
-/* ============================================================================
-   الإيرادات
-   ============================================================================ */
-
-function revenueSection(trend) {
-  return card({
-    title: "الإيرادات — آخر 14 يومًا",
-    subtitle: "الفواتير الصادرة مقابل ما حُصِّل فعليًا",
-    body: revenueChart({ series: trend }),
-  });
-}
-
-function departmentSection(departments) {
-  if (!departments.length) {
-    return card({ title: "توزيع الإيراد على الأقسام", body: emptyState({ compact: true, message: "لا فواتير هذا الشهر بعد." }) });
+    );
   }
 
-  const maxRevenue = Math.max(...departments.map((d) => d.revenue));
-  /** أعمدة التعبئة — نحتفظ بالمرجع لتحريك عرضها بعد الإلحاق، لا وقت الإنشاء. */
-  const fillBars = [];
-
-  const rows = departments.slice(0, 7).map((department) => {
-    const widthPercent = maxRevenue > 0 ? Math.max(4, (department.revenue / maxRevenue) * 100) : 0;
-
-    const fill = el("div", {
-      class:
-        "h-full rounded-full bg-gradient-to-l from-brand-500 to-brand-300 " +
-        "transition-[width] duration-700 ease-(--ease-premium)",
-      style: { width: "0%" },
-    });
-    fillBars.push({ fill, widthPercent });
-
-    return el(
-      "div",
-      {},
-      el(
-        "div",
-        { class: "flex items-center justify-between gap-2 mb-1" },
-        el("span", { class: "text-xs text-ink truncate-1" }, department.name),
-        el("span", { class: "text-xs text-muted num shrink-0" }, fmt.amount(department.revenue)),
-      ),
-      el("div", { class: "h-1.5 rounded-full bg-subtle overflow-hidden" }, fill),
+  if (data.accounting.unbalancedEntries) {
+    host.appendChild(
+      alert({
+        tone: "danger",
+        title: `${integer(data.accounting.unbalancedEntries)} قيد غير متوازن في الدفتر`,
+        message: "القيد غير المتوازن يُفسد الميزان وكل قائمة مالية تُصدَر عنه.",
+        actions: button({ label: "فتح القيود", variant: "danger", size: "sm", onClick: () => navigate("/gl/journal") }),
+      }),
     );
-  });
+  }
 
-  /*
-   * إطار واحد مؤجَّل: ضبط العرض وقت الإنشاء (قبل الإلحاق بالصفحة) لا يُشغِّل
-   * انتقال CSS لأن المتصفح لم يرسم الحالة الابتدائية (0%) بعد — يقفز مباشرة
-   * للنهائية. الانتظار لإطار رسم واحد بعد الإلحاق يضمن رؤية 0% أولاً فعليًا،
-   * فيعمل `transition-[width]` كما يُتوقَّع.
-   */
-  requestAnimationFrame(() => {
-    for (const { fill, widthPercent } of fillBars) fill.style.width = `${widthPercent}%`;
-  });
+  host.appendChild(heroSearch());
 
-  return card({
-    title: "توزيع الإيراد على الأقسام",
-    subtitle: "الشهر الحالي",
-    body: el("div", { class: "space-y-3" }, ...rows),
-  });
-}
+  /* ================= الأداء المالي ================= */
+  const perf = data.performance;
 
-/* ============================================================================
-   الموافقات المعلَّقة وتنبيهات المخزون
-   ============================================================================ */
+  host.appendChild(
+    statGrid(
+      statTile({
+        label: "إيراد الشهر",
+        value: currency(perf.revenueThisMonth),
+        hint: "الشهر الجاري ناقص بطبيعته",
+        tone: "success",
+        icon: "arrowUp",
+        trend: trendOf(perf.revenueGrowth),
+      }),
+      statTile({
+        label: "مصروف الشهر",
+        value: currency(perf.expensesThisMonth),
+        tone: "warning",
+        icon: "arrowDown",
+      }),
+      statTile({
+        label: "ربح الشهر",
+        value: currency(perf.profitThisMonth),
+        tone: perf.profitThisMonth >= 0 ? "brand" : "danger",
+        icon: "money",
+        trend: trendOf(perf.profitGrowth),
+      }),
+      statTile({
+        label: "إيراد السنة",
+        value: currency(perf.revenueYearToDate),
+        hint: `هامش صافي ${percent((perf.netMarginYearToDate ?? 0) * 100)}`,
+        tone: "info",
+        icon: "reports",
+      }),
+      statTile({
+        label: "ربح السنة",
+        value: currency(perf.profitYearToDate),
+        tone: perf.profitYearToDate >= 0 ? "success" : "danger",
+        icon: "checkCircle",
+      }),
+      statTile({
+        label: "النقدية والبنوك",
+        value: currency(data.treasury.liquidTotal),
+        hint: `${integer(data.treasury.cashBoxesCount)} خزينة · ${integer(data.treasury.bankAccountsCount)} حساب بنكي`,
+        tone: "brand",
+        icon: "wallet",
+        href: "#/fin/cash-boxes",
+      }),
+    ),
+  );
 
-function approvalsCard(approvals) {
-  const rows = [
-    { label: "تسويات مخزنية", count: approvals.stockAdjustments, path: "/inventory/adjustments", icon: "inventory" },
-    { label: "مرتجعات", count: approvals.refunds, path: "/billing/refunds", icon: "billing" },
-    { label: "إشعارات دائنة", count: approvals.creditNotes, path: "/billing/invoices", icon: "accounting" },
-  ];
+  /* ================= الاتجاه الشهري ================= */
+  host.appendChild(
+    card({
+      title: "الإيراد والمصروف والربح — شهريًا",
+      subtitle: "من بداية السنة المالية. الشهر الأخير جزئي.",
+      body: revenueChart({
+        primaryLabel: "الإيراد",
+        secondaryLabel: "صافي الربح",
+        description: "رسم بياني للإيراد وصافي الربح شهريًا من بداية السنة المالية",
+        series: (data.monthlyTrend ?? []).map((row) => ({
+          date: `${row.period}-01`,
+          invoiced: row.revenue,
+          collected: row.profit,
+        })),
+      }),
+    }),
+  );
 
-  const total = rows.reduce((sum, row) => sum + row.count, 0);
+  /* ================= الذمم ================= */
+  host.appendChild(
+    el(
+      "div",
+      { class: "grid gap-4 lg:grid-cols-2" },
+      agingCard({
+        title: "ذمم العملاء (مدينون)",
+        total: data.receivables.total,
+        overdue: data.receivables.overdue,
+        count: data.receivables.customersCount,
+        invoices: data.receivables.invoicesCount,
+        distribution: data.receivables.distribution,
+        top: data.receivables.top,
+        health: data.receivables.collectionHealth,
+        overLimit: data.receivables.overLimit,
+        path: "/fin/receivables-aging",
+        partyPath: "/fin/customers",
+      }),
+      agingCard({
+        title: "ذمم الموردين (دائنون)",
+        total: data.payables.total,
+        overdue: data.payables.overdue,
+        count: data.payables.suppliersCount,
+        invoices: data.payables.invoicesCount,
+        distribution: data.payables.distribution,
+        top: data.payables.top,
+        path: "/fin/payables-aging",
+        partyPath: "/fin/suppliers",
+      }),
+    ),
+  );
 
-  return card({
-    title: "بانتظار الاعتماد",
-    actions: total > 0 ? badge(fmt.integer(total), { tone: "warning", size: "sm" }) : null,
-    body:
-      total === 0
-        ? emptyState({
-            compact: true,
-            icon: "success",
-            title: "لا شيء بانتظارك",
-            message: "كل الموافقات مُنجَزة حاليًا.",
-          })
-        : el(
-            "div",
-            { class: "space-y-1" },
-            ...rows
-              .filter((row) => row.count > 0)
-              .map((row) =>
-                el(
-                  "a",
-                  {
-                    href: `#${row.path}`,
-                    class:
-                      "flex items-center gap-2.5 px-2 py-2 -mx-2 rounded-[var(--radius-control)] " +
-                      "hover:bg-subtle transition-colors",
-                  },
-                  el("span", { class: "grid place-items-center size-8 rounded-[var(--radius-control)] bg-warning-50 text-warning-300 shrink-0" }, icon(row.icon, { size: 15 })),
-                  el("span", { class: "text-sm text-ink flex-1" }, row.label),
-                  badge(fmt.integer(row.count), { tone: "warning", size: "sm" }),
-                ),
-              ),
+  /* ================= الموارد البشرية والمخازن ================= */
+  const hr = data.hr;
+  const inv = data.inventory;
+
+  host.appendChild(
+    el(
+      "div",
+      { class: "grid gap-4 lg:grid-cols-2" },
+
+      card({
+        title: "الموارد البشرية",
+        subtitle: `${integer(hr.headcount)} على رأس العمل من ${integer(hr.totalEmployees)} موظف`,
+        actions: button({ label: "الموظفون", variant: "ghost", size: "sm", onClick: () => navigate("/hr/employees") }),
+        body: dataList(
+          dataRow("تكلفة العمالة — الشهر", currency(hr.payrollCostThisMonth)),
+          dataRow("صافي الرواتب المستحق", currency(hr.netPayThisMonth)),
+          dataRow(
+            "مسيّر الشهر",
+            hr.payrollStatus ? statusBadge(hr.payrollStatus) : "—",
           ),
-  });
-}
+          dataRow("حاضر اليوم", integer(hr.presentToday)),
+          dataRow("غائب اليوم", integer(hr.absentToday), { tone: hr.absentToday ? "danger" : undefined }),
+          dataRow("في إجازة اليوم", integer(hr.onLeaveToday)),
+          dataRow(
+            "طلبات إجازة معلَّقة",
+            integer(hr.pendingLeaveRequests),
+            { tone: hr.pendingLeaveRequests ? "warning" : undefined },
+          ),
+          dataRow("سلف قائمة", currency(hr.outstandingAdvances)),
+        ),
+      }),
 
-function alertListCard({ title, icon: iconName, tone, rows, failed, path, renderRow }) {
-  const TONE_CHIP = { warning: "bg-warning-50 text-warning-300", danger: "bg-danger-50 text-danger-300" };
+      card({
+        title: "المخازن",
+        subtitle: `${integer(inv.itemsCount)} صنف في ${integer(inv.warehousesCount)} مخزن`,
+        actions: button({ label: "الأرصدة", variant: "ghost", size: "sm", onClick: () => navigate("/inv/balances") }),
+        body: dataList(
+          dataRow("قيمة المخزون", currency(inv.totalValue)),
+          dataRow("تحت الحد الأدنى", integer(inv.lowStock), { tone: inv.lowStock ? "warning" : undefined }),
+          dataRow("نفد من المخزن", integer(inv.outOfStock), { tone: inv.outOfStock ? "danger" : undefined }),
+          dataRow("فوق الحد الأقصى", integer(inv.overStock)),
+          dataRow("تشغيلات منتهية الصلاحية", integer(inv.expiredBatches), { tone: inv.expiredBatches ? "danger" : undefined }),
+          dataRow("قاربت الانتهاء", integer(inv.nearExpiryBatches), { tone: inv.nearExpiryBatches ? "warning" : undefined }),
+          dataRow("قيمة التعرُّض للتلف", currency(inv.expiryExposure)),
+          dataRow("حركات الشهر", integer(inv.movementsThisMonth)),
+        ),
+      }),
+    ),
+  );
 
-  return card({
-    title,
-    actions: rows.length > 0 ? badge(fmt.integer(rows.length), { tone, size: "sm" }) : null,
-    body: failed
-      ? el("p", { class: "text-xs text-danger-300 py-4 text-center" }, "تعذّر تحميل تنبيهات المخزون.")
-      : !rows.length
-        ? emptyState({ compact: true, icon: "success", title: "لا تنبيهات", message: "كل شيء ضمن الحدود الطبيعية." })
-        : el(
-            "div",
-            { class: "space-y-1" },
-            ...rows.slice(0, 5).map((row) =>
+  /* ================= ما ينتظر قرارًا ================= */
+  const approvals = data.approvals;
+
+  if (approvals.total) {
+    host.appendChild(
+      card({
+        title: `ما ينتظر قرارًا (${integer(approvals.total)})`,
+        subtitle: "المسوّدات غير محسوبة — العمل الذي لم يُقدَّم لا ينتظر أحدًا",
+        body: el(
+          "div",
+          { class: "grid gap-2 sm:grid-cols-2 lg:grid-cols-3" },
+          ...[
+            ["قيود بانتظار الاعتماد", approvals.journalEntries, "/gl/journal", "accounting"],
+            ["إشعارات دائن", approvals.creditNotes, "/fin/credit-notes", "receipt"],
+            ["تسويات مخزنية", approvals.stockAdjustments, "/inv/adjustments", "inventory"],
+            ["طلبات إجازة", approvals.leaveRequests, "/hr/leaves", "users"],
+            ["مسيّرات رواتب", approvals.payrollRuns, "/hr/payroll", "money"],
+            ["جرد جارٍ", approvals.stockCounts, "/inv/counts", "columns"],
+          ]
+            .filter(([, count]) => count > 0)
+            .map(([label, count, path, iconName]) =>
               el(
-                "div",
-                { class: "flex items-center gap-2.5 px-2 py-2 -mx-2 rounded-[var(--radius-control)] hover:bg-subtle transition-colors" },
+                "button",
+                {
+                  type: "button",
+                  class:
+                    "flex items-center justify-between gap-3 p-3 rounded-xl border border-line " +
+                    "bg-surface hover:border-brand-400 transition-colors text-start",
+                  onClick: () => navigate(path),
+                },
                 el(
                   "span",
-                  { class: cx("grid place-items-center size-8 rounded-[var(--radius-control)] shrink-0", TONE_CHIP[tone]) },
-                  icon(iconName, { size: 15 }),
+                  { class: "flex items-center gap-2.5 min-w-0" },
+                  el("span", { class: "text-brand-300 shrink-0" }, icon(iconName, { size: 17 })),
+                  el("span", { class: "text-xs text-ink truncate-1" }, label),
                 ),
-                renderRow(row),
+                badge(integer(count), { tone: "warning" }),
               ),
             ),
-            rows.length > 5
-              ? el(
-                  "div",
-                  { class: "pt-1" },
-                  button({ label: `عرض كل الـ ${fmt.integer(rows.length)}`, variant: "link", size: "sm", href: `#${path}` }),
-                )
-              : null,
-          ),
-  });
-}
+        ),
+      }),
+    );
+  }
 
-function itemAlertRow(item) {
-  return el(
-    "div",
-    { class: "min-w-0 flex-1" },
-    el("p", { class: "text-sm text-ink truncate-1" }, item.name),
+  /* ================= مراكز التكلفة وأحدث النشاط ================= */
+  host.appendChild(
     el(
-      "p",
-      { class: "text-xs text-faint num" },
-      `${fmt.integer(item.quantity)} من ${fmt.integer(item.minimumQuantity)} الحد الأدنى`,
-    ),
-  );
-}
+      "div",
+      { class: "grid gap-4 lg:grid-cols-2" },
 
-function batchAlertRow(batch) {
-  return el(
-    "div",
-    { class: "min-w-0 flex-1" },
-    el("p", { class: "text-sm text-ink truncate-1" }, batch.itemName),
-    el("p", { class: "text-xs text-faint" }, `ينتهي ${fmt.date(batch.expiryDate)} — تشغيلة `, ref(batch.batchNumber)),
-  );
-}
-
-/* ============================================================================
-   النشاط الحديث
-   ============================================================================ */
-
-function recentActivityCard(events) {
-  const ICON = { payment: "wallet", refund: "billing" };
-  const TONE = { payment: "bg-success-50 text-success-300", refund: "bg-danger-50 text-danger-300" };
-  const LABEL = { payment: "دفعة", refund: "مرتجع" };
-
-  return card({
-    title: "النشاط المالي الحديث",
-    body: !events.length
-      ? emptyState({ compact: true, message: "لا حركات مالية مسجَّلة بعد." })
-      : el(
+      card({
+        title: "مراكز التكلفة — السنة الجارية",
+        actions: button({ label: "التحليل", variant: "ghost", size: "sm", onClick: () => navigate("/gl/cost-centers") }),
+        body: el(
           "div",
-          { class: "space-y-1" },
-          ...events.map((event) =>
+          { class: "space-y-1.5" },
+          ...(data.costCenters ?? []).slice(0, 7).map((row) =>
             el(
               "div",
-              { class: "flex items-center gap-2.5 px-2 py-2 -mx-2 rounded-[var(--radius-control)] hover:bg-subtle transition-colors" },
+              { class: "flex items-center justify-between gap-3 py-1.5 border-b border-line/50 last:border-0" },
               el(
-                "span",
-                { class: cx("grid place-items-center size-8 rounded-[var(--radius-control)] shrink-0", TONE[event.type]) },
-                icon(ICON[event.type], { size: 15 }),
+                "div",
+                { class: "min-w-0" },
+                el("div", { class: "text-xs text-ink truncate-1" }, row.name),
+                el("div", { class: "text-[10px] text-faint font-mono mt-0.5" }, row.code),
               ),
               el(
                 "div",
-                { class: "min-w-0 flex-1" },
-                el("p", { class: "text-sm text-ink truncate-1" }, event.patientName ?? "—"),
+                { class: "flex items-center gap-3 shrink-0 text-xs tabular" },
+                el("span", { class: "text-muted" }, amount(row.expense)),
                 el(
-                  "p",
-                  { class: "text-xs text-faint truncate-1" },
-                  `${LABEL[event.type]} — `,
-                  event.invoiceNumber ? ref(event.invoiceNumber) : "—",
+                  "span",
+                  { class: cx("font-semibold", row.profit >= 0 ? "text-success-400" : "text-danger-400") },
+                  amount(row.profit),
                 ),
-              ),
-              el(
-                "div",
-                { class: "text-end shrink-0" },
-                el(
-                  "p",
-                  { class: cx("text-sm font-medium num", event.type === "refund" ? "text-danger-300" : "text-success-300") },
-                  `${event.type === "refund" ? "−" : "+"}${fmt.amount(event.amount)}`,
-                ),
-                el("p", { class: "text-[11px] text-faint" }, fmt.relativeTime(event.date)),
               ),
             ),
           ),
         ),
-  });
-}
+      }),
 
-function recentPatientsCard(patientsList) {
-  return card({
-    title: "مرضى سُجِّلوا مؤخرًا",
-    body: !patientsList.length
-      ? emptyState({ compact: true, message: "لا تسجيلات جديدة بعد." })
-      : el(
+      card({
+        title: "أحدث القيود المُرحَّلة",
+        actions: button({ label: "دفتر اليومية", variant: "ghost", size: "sm", onClick: () => navigate("/gl/journal") }),
+        body: el(
           "div",
-          { class: "space-y-1" },
-          ...patientsList.map((patient) =>
+          { class: "space-y-1.5" },
+          ...(data.recentEntries ?? []).map((row) =>
             el(
-              "a",
+              "button",
               {
-                href: "#/patients",
-                class: "flex items-center gap-2.5 px-2 py-2 -mx-2 rounded-[var(--radius-control)] hover:bg-subtle transition-colors",
+                type: "button",
+                class:
+                  "w-full flex items-center justify-between gap-3 py-1.5 text-start " +
+                  "border-b border-line/50 last:border-0 hover:bg-subtle/60 rounded px-1 transition-colors",
+                onClick: () => navigate(`/gl/journal/${row.id}`),
               },
               el(
-                "span",
-                {
-                  class:
-                    "grid place-items-center size-8 rounded-full shrink-0 text-xs font-semibold " +
-                    "bg-gradient-to-br from-brand-400 to-brand-700 text-white",
-                },
-                fmt.initials(patient.name),
-              ),
-              el(
                 "div",
-                { class: "min-w-0 flex-1" },
-                el("p", { class: "text-sm text-ink truncate-1" }, patient.name),
-                el("p", { class: "text-xs text-faint" }, ref(patient.patientCode)),
+                { class: "min-w-0" },
+                el("div", { class: "text-xs text-ink truncate-1" }, row.description),
+                el(
+                  "div",
+                  { class: "flex items-center gap-2 mt-0.5" },
+                  ref(row.entryNumber, { class: "text-[10px] font-mono" }),
+                  el("span", { class: "text-[10px] text-faint" }, formatDate(row.date)),
+                ),
               ),
-              el("span", { class: "text-[11px] text-faint shrink-0" }, fmt.relativeTime(patient.registeredAt)),
+              el("span", { class: "text-xs tabular text-ink shrink-0" }, amount(row.amount)),
             ),
           ),
         ),
-  });
+      }),
+    ),
+  );
+
+  /* ================= تذييل: حالة النظام ================= */
+  host.appendChild(
+    el(
+      "p",
+      { class: "text-[11px] text-faint text-center pt-1" },
+      `المؤشرات حتى ${dateTime(data.asOf)} · الفترة ${data.period} · ` +
+        `${integer(data.accounting.openPeriods)} فترة محاسبية مفتوحة · ` +
+        `${integer(data.accounting.postedThisMonth)} قيد مُرحَّل هذا الشهر`,
+    ),
+  );
 }
 
-/* ============================================================================
-   هيكل التحميل
-   ============================================================================ */
+/* -------------------------------------------------------------------------- */
 
-function skeleton() {
-  return el(
-    "div",
-    { class: "space-y-4" },
-    el(
+function trendOf(growth) {
+  if (growth === null || growth === undefined) return undefined;
+  return {
+    direction: growth > 0.005 ? "up" : growth < -0.005 ? "down" : "flat",
+    label: percent(growth * 100),
+  };
+}
+
+function agingCard({ title, total, overdue, count, invoices, distribution, top, health, overLimit, path, partyPath }) {
+  return card({
+    title,
+    subtitle: `${integer(count)} طرف · ${integer(invoices)} فاتورة مفتوحة`,
+    actions: button({ label: "تقرير التقادم", variant: "ghost", size: "sm", onClick: () => navigate(path) }),
+    body: el(
       "div",
-      { class: "flex items-center justify-between" },
-      el("div", { class: "hx-skeleton h-6 w-40" }),
-      el("div", { class: "hx-skeleton h-5 w-28" }),
-    ),
-    el(
-      "div",
-      { class: "grid gap-3 grid-cols-1 sm:grid-cols-2 xl:grid-cols-4" },
-      ...Array.from({ length: 4 }, () =>
+      { class: "space-y-3" },
+
+      el(
+        "div",
+        { class: "flex items-end justify-between gap-3" },
         el(
           "div",
-          { class: "border border-line rounded-[var(--radius-card)] p-4 bg-surface" },
-          el("div", { class: "hx-skeleton h-3 w-20" }),
-          el("div", { class: "hx-skeleton h-8 w-28 mt-3" }),
-          el("div", { class: "hx-skeleton h-3 w-32 mt-3" }),
+          {},
+          el("p", { class: "text-[11px] text-muted" }, "إجمالي الرصيد"),
+          el("p", { class: "text-xl font-bold text-ink tabular mt-0.5" }, currency(total)),
+        ),
+        el(
+          "div",
+          { class: "text-end" },
+          el("p", { class: "text-[11px] text-muted" }, "متأخر"),
+          el(
+            "p",
+            { class: cx("text-sm font-semibold tabular mt-0.5", overdue ? "text-danger-400" : "text-ink") },
+            currency(overdue),
+          ),
+        ),
+      ),
+
+      /* شريط التوزيع — نسبة كل شريحة من الإجمالي. */
+      el(
+        "div",
+        { class: "flex h-2 rounded-full overflow-hidden bg-line" },
+        ...(distribution ?? [])
+          .filter((bucket) => bucket.share > 0)
+          .map((bucket) =>
+            el("div", {
+              class: cx(
+                bucket.tone === "success" && "bg-success-500",
+                bucket.tone === "info" && "bg-brand-500",
+                bucket.tone === "warning" && "bg-warning-500",
+                bucket.tone === "danger" && "bg-danger-500",
+              ),
+              style: `width:${(bucket.share * 100).toFixed(2)}%`,
+              title: `${bucket.label}: ${amount(bucket.amount)}`,
+            }),
+          ),
+      ),
+
+      el(
+        "div",
+        { class: "flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-muted" },
+        ...(distribution ?? [])
+          .filter((bucket) => bucket.amount > 0)
+          .map((bucket) =>
+            el("span", {}, `${bucket.label}: ${amount(bucket.amount)}`),
+          ),
+      ),
+
+      health !== undefined
+        ? el(
+            "p",
+            { class: "text-[11px] text-muted" },
+            `صحة التحصيل ${percent(health * 100)}` +
+              (overLimit ? ` · تجاوز حد الائتمان ${amount(overLimit)}` : ""),
+          )
+        : null,
+
+      el(
+        "div",
+        { class: "pt-2 border-t border-line space-y-1" },
+        el("p", { class: "text-[10px] font-semibold text-faint mb-1" }, "أكبر الأرصدة"),
+        ...(top ?? []).map((row) =>
+          el(
+            "button",
+            {
+              type: "button",
+              class: "w-full flex items-center justify-between gap-2 text-xs py-1 hover:bg-subtle/60 rounded px-1 text-start",
+              onClick: () => navigate(`${partyPath}/${row.id}`),
+            },
+            el("span", { class: "text-ink truncate-1" }, row.name),
+            el(
+              "span",
+              { class: "flex items-center gap-2 shrink-0" },
+              row.overLimit ? badge("تجاوز الحد", { tone: "danger", size: "sm" }) : null,
+              row.oldestDays > 0 ? el("span", { class: "text-[10px] text-faint" }, `${integer(row.oldestDays)} يوم`) : null,
+              el("span", { class: "tabular text-ink" }, amount(row.balance)),
+            ),
+          ),
         ),
       ),
     ),
-    el("div", { class: "hx-skeleton w-full rounded-[var(--radius-card)]", style: { height: "280px" } }),
-  );
+  });
 }

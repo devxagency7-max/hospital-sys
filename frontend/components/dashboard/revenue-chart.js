@@ -31,7 +31,18 @@ const PAD_END = 8;
  * @param {Array<{date:string, invoiced:number, collected:number}>} options.series
  * @param {boolean} [options.loading]
  */
-export function revenueChart({ series = [], loading = false } = {}) {
+export function revenueChart({
+  series = [],
+  loading = false,
+  /**
+   * تسميات السلسلتين. قابلة للتغيير لأن نفس الرسم يخدم «إيراد مقابل ربح»
+   * في لوحة التحكم و«مفوتر مقابل محصَّل» في تقارير الذمم — تثبيتها في الكود
+   * يجعل الرسم يكذب على قارئه في أحد الاستخدامين.
+   */
+  primaryLabel = "القيمة الأولى",
+  secondaryLabel = "القيمة الثانية",
+  description = "رسم بياني لسلسلتين زمنيتين",
+} = {}) {
   if (loading) return chartSkeleton();
   if (!series.length) return chartEmpty();
 
@@ -134,14 +145,14 @@ export function revenueChart({ series = [], loading = false } = {}) {
             "div",
             { class: "flex items-center gap-1.5 text-muted" },
             el("span", { class: "size-1.5 rounded-full bg-brand-400 shrink-0" }),
-            el("span", {}, "مفوتر"),
+            el("span", {}, primaryLabel),
             el("span", { class: "ms-auto num text-ink" }, fmt.amount(point.invoiced)),
           ),
           el(
             "div",
             { class: "flex items-center gap-1.5 text-muted mt-0.5" },
             el("span", { class: "size-1.5 rounded-full bg-success-300 shrink-0" }),
-            el("span", {}, "محصَّل"),
+            el("span", {}, secondaryLabel),
             el("span", { class: "ms-auto num text-ink" }, fmt.amount(point.collected)),
           ),
         ),
@@ -163,7 +174,7 @@ export function revenueChart({ series = [], loading = false } = {}) {
       viewBox: `0 0 ${WIDTH} ${HEIGHT}`,
       class: "w-full h-auto overflow-visible",
       role: "img",
-      "aria-label": "رسم بياني لإجمالي الفواتير والمبالغ المحصَّلة خلال آخر أسبوعين",
+      "aria-label": description,
     },
     svg(
       "defs",
@@ -216,8 +227,8 @@ export function revenueChart({ series = [], loading = false } = {}) {
     el(
       "div",
       { class: "flex items-center gap-4 mb-3 text-xs" },
-      legendDot("bg-brand-400", "الفواتير"),
-      legendDot("bg-success-300", "المحصَّل", "border-dashed"),
+      legendDot("bg-brand-400", primaryLabel),
+      legendDot("bg-success-300", secondaryLabel, "border-dashed"),
     ),
     el("div", { class: "relative" }, chart, tooltip),
   );

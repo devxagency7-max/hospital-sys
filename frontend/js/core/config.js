@@ -6,13 +6,24 @@
  */
 
 export const APP = {
-  name: "Hospital ERP",
-  /** اسم المستشفى — يظهر في الهيدر وترويسة كل تقرير مطبوع. */
-  organization: "مستشفى أمان الحياة",
-  version: "0.1.0",
-  /** مرحلة التنفيذ الحالية حسب docs/08-IMPLEMENTATION-PLAN.md. */
-  phase: 1,
+  name: "ADVANCED ERP",
+  nameAr: "النظام المتقدم للإدارة المالية والأعمال",
+  tagline: "Financial & Business Management System",
+  /** اسم المنشأة — يظهر في الهيدر وترويسة كل تقرير مطبوع. */
+  organization: "شركة الأعمال المتقدمة",
+  version: "1.0.0",
 };
+
+/**
+ * موديولات النظام الأربعة. مصدر الحقيقة لتسمية النطاقات في التنقل
+ * والصلاحيات وترويسات التقارير.
+ */
+export const MODULES = Object.freeze({
+  ACCOUNTING: "accounting",
+  FINANCE: "finance",
+  HR: "hr",
+  INVENTORY: "inventory",
+});
 
 export const API = {
   /**
@@ -46,6 +57,22 @@ export const LOCALE = {
   currency: "EGP",
   currencyLabel: "ج.م",
   timeZone: "Africa/Cairo",
+};
+
+/**
+ * ثوابت محاسبية عامة.
+ *
+ * `decimalPlaces` للعرض فقط — الحساب الداخلي كله بالقروش كأعداد صحيحة في
+ * js/core/money.js. و`balanceTolerance` هو الفرق المقبول بين المدين والدائن
+ * في قيد اليومية: صفر بالقرش، لا هامش. القيد غير المتوازن يُرفض.
+ */
+export const ACCOUNTING = {
+  decimalPlaces: 2,
+  balanceTolerance: 0,
+  /** طول كود الحساب لكل مستوى في الدليل — يحكم توليد أكواد الأبناء. */
+  accountCodeSegments: [1, 2, 3, 4],
+  /** طرق تقييم المخزون المدعومة فعليًا في js/domain/valuation.js. */
+  costingMethods: ["fifo", "weighted_average"],
 };
 
 export const TABLE = {

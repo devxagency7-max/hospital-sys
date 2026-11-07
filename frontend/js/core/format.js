@@ -150,7 +150,7 @@ export function toISODate(value) {
   return `${year}-${month}-${day}`;
 }
 
-/** العمر بالسنوات من تاريخ الميلاد — يُعرض بجانب اسم المريض. */
+/** العمر بالسنوات من تاريخ الميلاد — يُعرض في ملف الموظف. */
 export function age(dateOfBirth) {
   const born = parseDate(dateOfBirth);
   if (!born) return EMPTY;
