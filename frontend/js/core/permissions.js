@@ -2,174 +2,298 @@
  * الصلاحيات — وحدة مركزية واحدة.
  *
  * قاعدة من docs/07-FRONTEND-RULES.md: «ممنوع كتابة الصلاحيات داخل الصفحات».
- * لا تكتب أبدًا `if (user.role === 'admin')` في شاشة. اسأل `can('patients.create')`
+ * لا تكتب أبدًا `if (user.role === 'admin')` في شاشة. اسأل `can("gl.journal.post")`
  * وأضف المفتاح إلى `PERMISSIONS` أدناه.
  *
  * هذه طبقة تجربة مستخدم فقط. إخفاء زر ليس أمانًا — التحقق الفعلي مسؤولية
- * الباك-إند في Phase 7.
+ * الباك-إند.
+ *
+ * بنية المفاتيح تتبع نطاقات النظام:
+ *   gl.*        المحاسبة العامة  (الدليل، القيود، الأستاذ، الميزان، الفترات)
+ *   fin.*       المحاسبة المالية (العملاء، الموردون، الخزينة، البنوك، الأصول، الضرائب)
+ *   hr.*        الموارد البشرية  (الموظفون، الحضور، الإجازات، الرواتب)
+ *   inv.*       المخازن          (الأصناف، المخازن، الحركات، الجرد، التقييم)
+ *   reports.*   التقارير والتصدير
+ *   admin.*     المستخدمون والأدوار والإعدادات وسجل التدقيق
  */
 
 import { emit } from "./events.js";
 
 /**
  * كتالوج الصلاحيات.
- * الصيغة: `<module>.<action>` — والنص العربي للعرض في شاشة إدارة الأدوار.
+ * الصيغة: `<domain>.<entity>.<action>` — والنص العربي للعرض في شاشة إدارة الأدوار.
  */
 export const PERMISSIONS = {
   "dashboard.view": "عرض لوحة التحكم",
 
-  "patients.view": "عرض المرضى",
-  "patients.create": "إضافة مريض",
-  "patients.edit": "تعديل بيانات مريض",
-  "patients.delete": "أرشفة مريض",
-  "patients.account.view": "عرض حساب المريض المالي",
+  /* ===================== المحاسبة العامة ===================== */
+  "gl.view": "عرض المحاسبة العامة",
+  "gl.account.manage": "إدارة دليل الحسابات",
+  "gl.journal.create": "إنشاء قيد يومية",
+  "gl.journal.approve": "اعتماد قيد يومية",
+  "gl.journal.post": "ترحيل قيد يومية",
+  "gl.journal.reverse": "عكس قيد مُرحَّل",
+  "gl.ledger.view": "عرض دفتر الأستاذ العام",
+  "gl.trialbalance.view": "عرض ميزان المراجعة",
+  "gl.period.manage": "إدارة الفترات المحاسبية",
+  "gl.period.close": "إغلاق فترة محاسبية",
+  "gl.year.close": "إغلاق السنة المالية",
 
-  "appointments.view": "عرض المواعيد",
-  "appointments.create": "حجز موعد",
-  "appointments.edit": "تعديل موعد",
-  "appointments.cancel": "إلغاء موعد",
+  /* ===================== المحاسبة المالية ===================== */
+  "fin.view": "عرض المحاسبة المالية",
+  "fin.customer.manage": "إدارة حسابات العملاء",
+  "fin.customer.invoice": "إصدار فاتورة عميل",
+  "fin.customer.receipt": "تسجيل تحصيل من عميل",
+  "fin.supplier.manage": "إدارة حسابات الموردين",
+  "fin.supplier.invoice": "تسجيل فاتورة مورد",
+  "fin.supplier.payment": "تسجيل دفعة لمورد",
+  "fin.cashbox.manage": "إدارة الصناديق النقدية",
+  "fin.cashbox.transact": "تسجيل حركة نقدية",
+  "fin.cashbox.reconcile": "جرد ومطابقة الصندوق",
+  "fin.bank.manage": "إدارة الحسابات البنكية",
+  "fin.bank.transact": "تسجيل حركة بنكية",
+  "fin.bank.reconcile": "مطابقة كشف حساب بنكي",
+  "fin.asset.manage": "إدارة الأصول الثابتة",
+  "fin.asset.depreciate": "تشغيل الإهلاك الدوري",
+  "fin.asset.dispose": "استبعاد أصل ثابت",
+  "fin.costcenter.manage": "إدارة مراكز التكلفة",
+  "fin.tax.manage": "إدارة الضرائب ونسبها",
+  "fin.statements.view": "عرض القوائم المالية",
 
-  "billing.view": "عرض الفواتير",
-  "billing.invoice.create": "إنشاء فاتورة",
-  "billing.invoice.edit": "تعديل فاتورة",
-  "billing.payment.record": "تسجيل دفعة",
-  "billing.refund.create": "تسجيل مرتجع",
-  "billing.discount.approve": "اعتماد خصم",
+  /* ===================== الموارد البشرية ===================== */
+  "hr.view": "عرض الموارد البشرية",
+  "hr.employee.manage": "إدارة ملفات الموظفين",
+  "hr.employee.document": "إدارة مستندات الموظفين",
+  "hr.org.manage": "إدارة الهيكل التنظيمي والوظائف",
+  "hr.attendance.view": "عرض الحضور والانصراف",
+  "hr.attendance.manage": "تسجيل وتعديل الحضور",
+  "hr.leave.request": "تقديم طلب إجازة",
+  "hr.leave.approve": "اعتماد طلبات الإجازات",
+  "hr.payroll.view": "عرض مسيّرات الرواتب",
+  "hr.payroll.process": "تشغيل مسيّر رواتب",
+  "hr.payroll.approve": "اعتماد مسيّر رواتب وترحيله محاسبيًا",
+  "hr.payroll.pay": "صرف الرواتب",
+  "hr.advance.manage": "إدارة سلف الموظفين",
 
-  "accounting.view": "عرض الحسابات",
-  "accounting.journal.create": "إنشاء قيد يومية",
-  "accounting.journal.post": "ترحيل قيد",
-  "accounting.period.close": "إغلاق فترة محاسبية",
+  /* ===================== المخازن ===================== */
+  "inv.view": "عرض المخازن",
+  "inv.item.manage": "إدارة الأصناف والتصنيفات",
+  "inv.warehouse.manage": "إدارة المخازن",
+  "inv.receipt.create": "تسجيل إذن إضافة",
+  "inv.issue.create": "تسجيل إذن صرف",
+  "inv.transfer.create": "تسجيل تحويل مخزني",
+  "inv.adjustment.create": "تسجيل تسوية مخزنية",
+  "inv.adjustment.approve": "اعتماد تسوية مخزنية",
+  "inv.return.create": "تسجيل مرتجع مخزني",
+  "inv.count.manage": "إدارة الجرد الفعلي",
+  "inv.valuation.view": "عرض تقييم المخزون",
 
-  "inventory.view": "عرض المخزون",
-  "inventory.item.manage": "إدارة الأصناف",
-  "inventory.movement.create": "تسجيل حركة مخزنية",
-  "inventory.adjustment.approve": "اعتماد تسوية مخزنية",
-
-  "purchasing.view": "عرض المشتريات",
-  "purchasing.request.create": "إنشاء طلب شراء",
-  "purchasing.order.approve": "اعتماد أمر شراء",
-  "purchasing.receive": "استلام أصناف",
-
-  "pharmacy.view": "عرض الصيدلية",
-  "pharmacy.dispense": "صرف دواء",
-
-  "laboratory.view": "عرض المختبر",
-  "laboratory.sample.collect": "سحب عيّنة",
-  "laboratory.result.enter": "إدخال نتيجة",
-  "laboratory.result.approve": "اعتماد نتيجة",
-
-  "radiology.view": "عرض الأشعة",
-  "radiology.report.write": "كتابة تقرير أشعة",
-
+  /* ===================== التقارير ===================== */
   "reports.view": "عرض التقارير",
   "reports.financial.view": "عرض التقارير المالية",
+  "reports.hr.view": "عرض تقارير الموارد البشرية",
+  "reports.inventory.view": "عرض تقارير المخازن",
   "reports.export": "تصدير التقارير",
 
-  "users.view": "عرض المستخدمين",
-  "users.manage": "إدارة المستخدمين",
-  "roles.manage": "إدارة الأدوار والصلاحيات",
-
-  "audit.view": "عرض سجل التدقيق",
-
-  "settings.view": "عرض الإعدادات",
-  "settings.manage": "تعديل الإعدادات",
+  /* ===================== الإدارة والنظام ===================== */
+  "admin.users.view": "عرض المستخدمين",
+  "admin.users.manage": "إدارة المستخدمين",
+  "admin.roles.manage": "إدارة الأدوار والصلاحيات",
+  "admin.audit.view": "عرض سجل التدقيق",
+  "admin.settings.view": "عرض الإعدادات",
+  "admin.settings.manage": "تعديل الإعدادات",
 };
 
 /**
- * الأدوار. `*` = كل الصلاحيات، و `patients.*` = كل صلاحيات موديول المرضى.
- * الأدوار النهائية يحددها العميل؛ هذه نقطة بداية واقعية للمستشفيات.
+ * الأدوار. `*` = كل الصلاحيات، و `gl.*` = كل صلاحيات نطاق المحاسبة العامة.
+ *
+ * الأدوار النهائية يحددها العميل؛ هذه نقطة بداية واقعية لمنشأة تجارية.
+ *
+ * ملاحظة على الفصل بين المهام (segregation of duties): `gl.journal.create`
+ * و`gl.journal.post` مفصولتان عن قصد، و`hr.payroll.process` مفصولة عن
+ * `hr.payroll.approve` — فمن يُجهّز المسيّر لا يعتمده، ومن يُنشئ القيد لا
+ * يُرحّله. دمجهما في مفتاح واحد يُفقد النظام أهم ضابط رقابي فيه.
  */
 export const ROLES = {
   admin: {
     label: "مدير النظام",
     permissions: ["*"],
   },
-  manager: {
-    label: "مدير المستشفى",
+
+  gm: {
+    label: "المدير العام",
     permissions: [
       "dashboard.view",
-      "patients.view",
-      "appointments.view",
-      "billing.view",
-      "billing.discount.approve",
-      "accounting.view",
-      "inventory.view",
-      "purchasing.*",
+      "gl.view",
+      "gl.ledger.view",
+      "gl.trialbalance.view",
+      "fin.view",
+      "fin.statements.view",
+      "hr.view",
+      "hr.payroll.view",
+      "hr.payroll.approve",
+      "hr.leave.approve",
+      "inv.view",
+      "inv.valuation.view",
+      "inv.adjustment.approve",
       "reports.*",
-      "audit.view",
-      "settings.view",
+      "admin.audit.view",
+      "admin.settings.view",
     ],
   },
+
+  financial_manager: {
+    label: "المدير المالي",
+    permissions: [
+      "dashboard.view",
+      "gl.*",
+      "fin.*",
+      "inv.view",
+      "inv.valuation.view",
+      "hr.view",
+      "hr.payroll.view",
+      "hr.payroll.approve",
+      "reports.*",
+      "admin.audit.view",
+      "admin.settings.view",
+    ],
+  },
+
+  chief_accountant: {
+    label: "رئيس الحسابات",
+    permissions: [
+      "dashboard.view",
+      "gl.view",
+      "gl.account.manage",
+      "gl.journal.create",
+      "gl.journal.approve",
+      "gl.journal.post",
+      "gl.journal.reverse",
+      "gl.ledger.view",
+      "gl.trialbalance.view",
+      "gl.period.manage",
+      "fin.*",
+      "inv.view",
+      "inv.valuation.view",
+      "reports.view",
+      "reports.financial.view",
+      "reports.inventory.view",
+      "reports.export",
+    ],
+  },
+
   accountant: {
     label: "محاسب",
     permissions: [
       "dashboard.view",
-      "patients.view",
-      "patients.account.view",
-      "billing.*",
-      "accounting.*",
+      "gl.view",
+      "gl.journal.create",
+      "gl.ledger.view",
+      "gl.trialbalance.view",
+      "fin.view",
+      "fin.customer.manage",
+      "fin.customer.invoice",
+      "fin.customer.receipt",
+      "fin.supplier.manage",
+      "fin.supplier.invoice",
+      "fin.supplier.payment",
+      "fin.statements.view",
+      "inv.view",
       "reports.view",
       "reports.financial.view",
       "reports.export",
     ],
   },
-  receptionist: {
-    label: "موظف استقبال",
+
+  treasurer: {
+    label: "أمين الخزينة",
     permissions: [
       "dashboard.view",
-      "patients.view",
-      "patients.create",
-      "patients.edit",
-      "appointments.*",
-      "billing.view",
-      "billing.invoice.create",
-      "billing.payment.record",
+      "fin.view",
+      "fin.cashbox.manage",
+      "fin.cashbox.transact",
+      "fin.cashbox.reconcile",
+      "fin.bank.transact",
+      "fin.customer.receipt",
+      "fin.supplier.payment",
+      "hr.payroll.pay",
       "reports.view",
+      "reports.financial.view",
     ],
   },
-  doctor: {
-    label: "طبيب",
+
+  hr_manager: {
+    label: "مدير الموارد البشرية",
     permissions: [
       "dashboard.view",
-      "patients.view",
-      "appointments.view",
-      "laboratory.view",
-      "laboratory.result.approve",
-      "radiology.view",
-      "radiology.report.write",
+      "hr.*",
       "reports.view",
+      "reports.hr.view",
+      "reports.export",
+      "admin.settings.view",
     ],
   },
-  pharmacist: {
-    label: "صيدلي",
+
+  hr_officer: {
+    label: "موظف موارد بشرية",
     permissions: [
       "dashboard.view",
-      "patients.view",
-      "pharmacy.*",
-      "inventory.view",
+      "hr.view",
+      "hr.employee.manage",
+      "hr.employee.document",
+      "hr.attendance.view",
+      "hr.attendance.manage",
+      "hr.leave.request",
+      "hr.payroll.view",
+      "hr.payroll.process",
       "reports.view",
+      "reports.hr.view",
     ],
   },
-  lab_technician: {
-    label: "فني مختبر",
+
+  warehouse_manager: {
+    label: "مدير المخازن",
     permissions: [
       "dashboard.view",
-      "patients.view",
-      "laboratory.view",
-      "laboratory.sample.collect",
-      "laboratory.result.enter",
+      "inv.*",
+      "fin.supplier.manage",
+      "reports.view",
+      "reports.inventory.view",
+      "reports.export",
     ],
   },
+
   storekeeper: {
     label: "أمين مخزن",
     permissions: [
       "dashboard.view",
-      "inventory.*",
-      "purchasing.view",
-      "purchasing.request.create",
-      "purchasing.receive",
+      "inv.view",
+      "inv.receipt.create",
+      "inv.issue.create",
+      "inv.transfer.create",
+      "inv.adjustment.create",
+      "inv.return.create",
+      "inv.count.manage",
       "reports.view",
+      "reports.inventory.view",
+    ],
+  },
+
+  auditor: {
+    label: "مراجع داخلي",
+    permissions: [
+      "dashboard.view",
+      "gl.view",
+      "gl.ledger.view",
+      "gl.trialbalance.view",
+      "fin.view",
+      "fin.statements.view",
+      "hr.view",
+      "hr.payroll.view",
+      "inv.view",
+      "inv.valuation.view",
+      "reports.*",
+      "admin.audit.view",
     ],
   },
 };
@@ -177,7 +301,7 @@ export const ROLES = {
 /**
  * المستخدم الحالي.
  *
- * نائب عن المصادقة الحقيقية (Phase 7). عند تنفيذها يملأ `session` من التوكن
+ * نائب عن المصادقة الحقيقية. عند تنفيذها يملأ `session` من التوكن
  * ولا يتغير شيء آخر في التطبيق.
  */
 let session = {
@@ -225,7 +349,7 @@ export function can(permission) {
   if (granted.has("*")) return true;
   if (granted.has(permission)) return true;
 
-  // تطابق بالبادئة: `patients.*` يمنح `patients.create`.
+  // تطابق بالبادئة: `gl.*` يمنح `gl.journal.post`.
   const segments = permission.split(".");
   for (let i = segments.length - 1; i > 0; i -= 1) {
     if (granted.has(`${segments.slice(0, i).join(".")}.*`)) return true;
@@ -267,7 +391,7 @@ export function setRole(roleKey) {
   emit("session:changed", { role: roleKey });
 }
 
-/** يستدعيها طبقة المصادقة في Phase 7. */
+/** يستدعيها طبقة المصادقة عند ربط الباك-إند. */
 export function setSession(next) {
   session = next;
   rebuild();

@@ -82,7 +82,7 @@ export function createStore(initialState = {}) {
    كانتا كلتاهما "false" في معظم الاختبارات اليدوية).
    -------------------------------------------------------------------------- */
 
-const STORAGE_PREFIX = "hospital-erp:";
+const STORAGE_PREFIX = "advanced-erp:";
 
 export function readPreference(key, fallback = null) {
   try {

@@ -11,46 +11,87 @@
 /** @typedef {"neutral"|"info"|"success"|"warning"|"danger"|"muted"} Tone */
 
 export const STATUSES = {
-  /* --- الحالات الأساسية المطلوبة في المواصفات --- */
+  /* --- حالات عامة للمستندات --- */
   draft: { label: "مسوّدة", tone: "neutral" },
   pending: { label: "قيد الانتظار", tone: "warning" },
+  pending_approval: { label: "بانتظار الاعتماد", tone: "warning" },
   approved: { label: "معتمد", tone: "success" },
   rejected: { label: "مرفوض", tone: "danger" },
-  paid: { label: "مدفوعة", tone: "success" },
-  partially_paid: { label: "مدفوعة جزئيًا", tone: "warning" },
-  unpaid: { label: "غير مدفوعة", tone: "danger" },
-  /** صافي المدفوع تجاوز الإجمالي — رصيد لصالح المريض، تشتقها `deriveInvoiceStatus`. */
-  overpaid: { label: "دفع زائد", tone: "info" },
-  cancelled: { label: "ملغاة", tone: "muted" },
+  cancelled: { label: "ملغى", tone: "muted" },
+  archived: { label: "مؤرشف", tone: "muted" },
   active: { label: "نشط", tone: "success" },
   inactive: { label: "غير نشط", tone: "muted" },
-  expired: { label: "منتهي الصلاحية", tone: "danger" },
-
-  /* --- حالات تشغيلية --- */
-  scheduled: { label: "مجدول", tone: "info" },
-  in_progress: { label: "جاري التنفيذ", tone: "info" },
   completed: { label: "مكتمل", tone: "success" },
-  no_show: { label: "لم يحضر", tone: "muted" },
-  waiting: { label: "في الانتظار", tone: "warning" },
+  in_progress: { label: "جاري التنفيذ", tone: "info" },
+  scheduled: { label: "مجدول", tone: "info" },
 
-  /* --- حالات المخزون --- */
+  /* --- التسوية المالية (فواتير العملاء والموردين) --- */
+  paid: { label: "مسدَّدة", tone: "success" },
+  partially_paid: { label: "مسدَّدة جزئيًا", tone: "warning" },
+  unpaid: { label: "غير مسدَّدة", tone: "danger" },
+  /** صافي المسدَّد تجاوز الإجمالي — رصيد لصالح الطرف الآخر، تُشتق لا تُكتب. */
+  overpaid: { label: "سداد زائد", tone: "info" },
+  overdue: { label: "متأخرة", tone: "danger" },
+  due_soon: { label: "تستحق قريبًا", tone: "warning" },
+  settled: { label: "مُسوّاة", tone: "success" },
+
+  /* --- قيود اليومية ودورة الترحيل --- */
+  posted: { label: "مُرحَّل", tone: "success" },
+  unposted: { label: "غير مُرحَّل", tone: "neutral" },
+  reversed: { label: "مُعكَّس", tone: "muted" },
+  reversal: { label: "قيد عكسي", tone: "info" },
+  balanced: { label: "متوازن", tone: "success" },
+  unbalanced: { label: "غير متوازن", tone: "danger" },
+
+  /* --- الفترات والسنوات المالية --- */
+  open: { label: "مفتوحة", tone: "info" },
+  closing: { label: "قيد الإغلاق", tone: "warning" },
+  closed: { label: "مغلقة", tone: "muted" },
+  locked: { label: "مُقفلة", tone: "danger" },
+
+  /* --- الخزينة والبنوك --- */
+  reconciled: { label: "مُطابَق", tone: "success" },
+  unreconciled: { label: "غير مُطابَق", tone: "warning" },
+  cleared: { label: "محصَّل بنكيًا", tone: "success" },
+  outstanding: { label: "معلَّق", tone: "warning" },
+  bounced: { label: "مرتجع", tone: "danger" },
+
+  /* --- الأصول الثابتة --- */
+  in_service: { label: "في الخدمة", tone: "success" },
+  fully_depreciated: { label: "مُستهلك بالكامل", tone: "muted" },
+  disposed: { label: "مُستبعد", tone: "muted" },
+  under_maintenance: { label: "تحت الصيانة", tone: "warning" },
+
+  /* --- المخازن --- */
   available: { label: "متاح", tone: "success" },
   low_stock: { label: "رصيد منخفض", tone: "warning" },
   out_of_stock: { label: "نفد", tone: "danger" },
+  over_stock: { label: "فوق الحد الأقصى", tone: "info" },
+  reserved: { label: "محجوز", tone: "info" },
   near_expiry: { label: "قارب الانتهاء", tone: "warning" },
+  expired: { label: "منتهي الصلاحية", tone: "danger" },
+  counting: { label: "جرد جارٍ", tone: "info" },
+  counted: { label: "تم الجرد", tone: "success" },
 
-  /* --- حالات محاسبية --- */
-  posted: { label: "مُرحَّل", tone: "success" },
-  unposted: { label: "غير مُرحَّل", tone: "neutral" },
-  overdue: { label: "متأخرة", tone: "danger" },
-  closed: { label: "مغلقة", tone: "muted" },
-  open: { label: "مفتوحة", tone: "info" },
+  /* --- الموارد البشرية: التوظيف والحضور --- */
+  probation: { label: "تحت التجربة", tone: "warning" },
+  employed: { label: "على رأس العمل", tone: "success" },
+  suspended: { label: "موقوف", tone: "warning" },
+  terminated: { label: "منتهية خدمته", tone: "muted" },
+  resigned: { label: "مستقيل", tone: "muted" },
+  present: { label: "حاضر", tone: "success" },
+  late: { label: "متأخر", tone: "warning" },
+  absent: { label: "غائب", tone: "danger" },
+  on_leave: { label: "في إجازة", tone: "info" },
+  half_day: { label: "نصف يوم", tone: "warning" },
+  day_off: { label: "راحة أسبوعية", tone: "muted" },
+  holiday: { label: "عطلة رسمية", tone: "muted" },
 
-  /* --- حالات الفاتورة الإلكترونية (ETA) --- */
-  not_submitted: { label: "لم تُرسل", tone: "neutral" },
-  submitted: { label: "مُرسلة", tone: "info" },
-  accepted: { label: "مقبولة", tone: "success" },
-  invalid: { label: "مرفوضة من المنظومة", tone: "danger" },
+  /* --- الموارد البشرية: الرواتب --- */
+  calculated: { label: "محسوب", tone: "info" },
+  paid_out: { label: "مصروف", tone: "success" },
+  partially_recovered: { label: "مُستردّ جزئيًا", tone: "warning" },
+  recovered: { label: "مُستردّ بالكامل", tone: "success" },
 };
 
 /** @returns {{ label: string, tone: Tone, known: boolean }} */
