@@ -58,6 +58,13 @@ export const getUnits = () => cached("units", "/lookups/units");
 export const getBranches = () => cached("branches", "/lookups/branches");
 export const getGovernorates = () => cached("governorates", "/lookups/governorates");
 
+/* --- أسماء بديلة شائعة --- */
+export const getCustomersLookup = getCustomers;
+export const getSuppliersLookup = getSuppliers;
+export const getEmployeesLookup = getEmployees;
+export const getItemsLookup = getItems;
+export const getTaxesLookup = getTaxes;
+
 /**
  * يُفرَّغ بعد تعديل البيانات المرجعية.
  *

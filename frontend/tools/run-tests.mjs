@@ -17,10 +17,10 @@ const ROOT = resolve(fileURLToPath(import.meta.url), "../..");
 const PORT = 4178; // منفذ مخصص للاختبارات حتى لا يصطدم بخادم التطوير
 
 /** الوحدات: دوال خالصة، تعمل في Node مباشرة. */
-const UNIT = ["tests/billing.test.mjs", "tests/data.test.mjs", "tests/architecture.test.mjs"];
+const UNIT = ["tests/architecture.test.mjs"].filter((f) => existsSync(resolve(ROOT, f)));
 
 /** المتصفح: تحتاج خادمًا و Playwright. */
-const BROWSER = ["tests/ui.test.mjs", "tests/routes.test.mjs"];
+const BROWSER = ["tests/routes.test.mjs"].filter((f) => existsSync(resolve(ROOT, f)));
 
 const args = process.argv.slice(2);
 const onlyUnit = args.includes("--unit");

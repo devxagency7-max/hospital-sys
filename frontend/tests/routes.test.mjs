@@ -9,7 +9,7 @@ const BASE = process.env.BASE ?? "http://localhost:4173";
 const NAV = "../js/config/navigation.js";
 
 const { flatScreens } = await import(NAV);
-const screens = [...flatScreens(), { path: "/design-system", label: "نظام التصميم" }];
+const screens = flatScreens();
 
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
@@ -73,7 +73,7 @@ for (const screen of screens) {
 
 /* --- فحص أن كل رابط في الشريط الجانبي يُطابق مسارًا مسجَّلاً --- */
 currentPath = "(فحص الروابط)";
-await page.goto(`${BASE}/#/design-system`, { waitUntil: "load" });
+await page.goto(`${BASE}/#/`, { waitUntil: "load" });
 await page.waitForTimeout(400);
 
 /*

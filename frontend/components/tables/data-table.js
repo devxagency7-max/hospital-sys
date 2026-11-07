@@ -124,7 +124,7 @@ export function dataTable({
   /* ---------------------------------------------------------------- مساعدات */
 
   function visibleColumns() {
-    return columns.filter((column) => !hiddenColumns.has(column.key));
+    return columns.filter((column) => column && !hiddenColumns.has(column.key));
   }
 
   function readUrlParams() {
@@ -365,7 +365,11 @@ export function dataTable({
     clear(tableFoot);
     if (summaryRow && rows.length) {
       const summary = summaryRow(rows);
-      if (summary) tableFoot.appendChild(summary);
+      if (summary instanceof Node) {
+        tableFoot.appendChild(summary);
+      } else if (Array.isArray(summary)) {
+        tableFoot.appendChild(summaryCells(summary));
+      }
     }
   }
 

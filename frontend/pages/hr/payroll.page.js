@@ -20,7 +20,7 @@ import { navigate } from "../../js/core/router.js";
 import { statusOptions } from "../../js/core/statuses.js";
 import * as money from "../../js/core/money.js";
 import { listPage, runAction, confirmThenRun } from "../_shared/list-page.js";
-import { moneyColumn, dateColumn, statusColumn, codeColumn, textColumn, countColumn } from "../_shared/cells.js";
+import { moneyColumn, dateColumn, statusColumn, codeColumn, textColumn, countColumn, totalCell } from "../_shared/cells.js";
 import { formModal, selectField, dateFieldWithLabel, value } from "../_shared/forms.js";
 import { listPayrollRuns, processPayroll, approvePayroll, payPayroll } from "../../js/api/hr.api.js";
 import { getBankAccounts } from "../../js/api/lookups.api.js";
@@ -114,6 +114,17 @@ export default async function payrollPage() {
       },
       statusColumn(),
     ],
+
+    summaryRow: (rows) =>
+      rows.length
+        ? [
+            { value: `مجموع الصفحة (${integer(rows.length)})`, colspan: 3 },
+            { value: totalCell(money.sum(rows.map((r) => r.totals?.gross ?? 0))), numeric: true },
+            { value: totalCell(money.sum(rows.map((r) => r.totals?.totalDeductions ?? 0))), numeric: true },
+            { value: totalCell(money.sum(rows.map((r) => r.totals?.netPay ?? 0))), numeric: true },
+            { value: "", colspan: 3 },
+          ]
+        : null,
 
     onRowClick: (row) => navigate(`/hr/payroll/${row.id}`),
 
