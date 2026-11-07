@@ -19,6 +19,7 @@ import {
   AccountType,
   natureOf,
   signedBalance,
+  statementAmount,
   indexChildren,
   leafAccounts,
   isIncomeStatementAccount,
@@ -389,7 +390,8 @@ export function incomeStatement(accounts = [], movements = [], { dateFrom, dateT
           accountId: account.id,
           code: account.code,
           name: account.name,
-          amount: signedBalance(account, bucket),
+          /** التوقيع بحسب النوع — حسابات المقابلة تخرج سالبة فتُخصم. */
+          amount: statementAmount(account, bucket),
         };
       })
       .filter((row) => !money.isZero(row.amount))
@@ -434,7 +436,8 @@ export function balanceSheet(accounts = [], movements = [], { asOf, fiscalYearSt
           accountId: account.id,
           code: account.code,
           name: account.name,
-          amount: signedBalance(account, bucket),
+          /** التوقيع بحسب النوع — حسابات المقابلة تخرج سالبة فتُخصم. */
+          amount: statementAmount(account, bucket),
         };
       })
       .filter((row) => !money.isZero(row.amount))
@@ -601,7 +604,7 @@ export function costCenterAnalysis(accounts = [], movements = [], costCenters = 
     if (!account || !isIncomeStatementAccount(account)) continue;
 
     const bucket = bucketFor(movement.costCenterId ?? "__unassigned__");
-    const amount = signedBalance(account, { debit: movement.debit, credit: movement.credit });
+    const amount = statementAmount(account, { debit: movement.debit, credit: movement.credit });
 
     if (account.type === AccountType.REVENUE) bucket.revenue = money.add(bucket.revenue, amount);
     else bucket.expense = money.add(bucket.expense, amount);
