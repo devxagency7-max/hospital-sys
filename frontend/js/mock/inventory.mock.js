@@ -464,6 +464,13 @@ export const stockBalances = (() => {
       : 0;
 
     rows.push({
+      /**
+       * المعرّف إلزامي: `update` في js/mock/db.js يُطابق بـ
+       * `String(row.id) === String(id)`، و`String(undefined)` تساوي نفسها —
+       * فصف بلا معرّف يجعل أي تحديث يُصيب أول صف بلا معرّف في المجموعة، لا
+       * الصف المقصود. باگ فعلي: إذن إضافة على صنف حدّث رصيد صنف آخر.
+       */
+      id: rows.length + 1,
       itemId: item.id,
       itemCode: item.code,
       itemName: item.name,

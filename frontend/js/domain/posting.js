@@ -406,10 +406,15 @@ export function approveEntry(entry, { approvedBy, approvedAt = new Date().toISOS
 /**
  * معتمد → مُرحَّل. من هذه اللحظة يدخل القيد الأرصدة ولا يُعدَّل.
  *
- * `openPeriods` اختيارية لكن تمريرها مطلوب في مسار التطبيق الفعلي: الترحيل
- * إلى فترة مغلقة يُفسد أرصدة ختامية سبق اعتمادها وإصدار قوائم مالية عنها.
+ * `periods` اختيارية لكن تمريرها مطلوب في مسار التطبيق الفعلي: الترحيل إلى
+ * فترة مغلقة يُفسد أرصدة ختامية سبق اعتمادها وإصدار قوائم مالية عنها.
+ *
+ * تُمرَّر **كل** الفترات لا المفتوحة وحدها: `assertPeriodOpen` تحتاج أن تميّز
+ * «لا فترة معرَّفة بهذا التاريخ» من «الفترة معرَّفة لكنها مغلقة»، وهما خطآن
+ * مختلفان بإصلاحين مختلفين. تمرير المفتوحة وحدها يجعل كل ترحيل إلى فترة
+ * مغلقة يُبلِّغ خطأً مُضلِّلًا بأن الفترة غير موجودة.
  */
-export function postEntry(entry, { postedBy, postedAt = new Date().toISOString(), openPeriods } = {}) {
+export function postEntry(entry, { postedBy, postedAt = new Date().toISOString(), periods } = {}) {
   assertEntryMutable(entry);
 
   if (entry?.status !== EntryStatus.APPROVED) {
@@ -420,8 +425,8 @@ export function postEntry(entry, { postedBy, postedAt = new Date().toISOString()
 
   assertBalanced(entry.lines ?? []);
 
-  if (Array.isArray(openPeriods)) {
-    assertPeriodOpen(entry.date, openPeriods);
+  if (Array.isArray(periods)) {
+    assertPeriodOpen(entry.date, periods);
   }
 
   return { ...entry, status: EntryStatus.POSTED, postedBy, postedAt };
