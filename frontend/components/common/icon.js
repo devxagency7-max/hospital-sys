@@ -21,10 +21,6 @@ const PATHS = {
     ["polyline", { points: "22 12 16 12 14 15 10 15 8 12 2 12" }],
     ["path", { d: "M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" }],
   ],
-  cross: [
-    ["circle", { cx: 12, cy: 12, r: 10 }],
-    ["path", { d: "M15 9l-6 6M9 9l6 6" }],
-  ],
   people: [
     ["path", { d: "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" }],
     ["circle", { cx: 9, cy: 7, r: 4 }],
@@ -51,18 +47,6 @@ const PATHS = {
     ["circle", { cx: 9, cy: 20, r: 1.5 }],
     ["circle", { cx: 18, cy: 20, r: 1.5 }],
     ["path", { d: "M2 3h3l2.4 12.2a2 2 0 0 0 2 1.6h8.2a2 2 0 0 0 2-1.6L21 7H6" }],
-  ],
-  pharmacy: [
-    ["rect", { x: 2.5, y: 8.5, width: 19, height: 11, rx: 5.5 }],
-    ["path", { d: "M12 8.5v11M2.5 14h19" }],
-  ],
-  laboratory: [
-    ["path", { d: "M9 2h6M10 2v6.5L5.5 17A3 3 0 0 0 8.2 21.5h7.6A3 3 0 0 0 18.5 17L14 8.5V2" }],
-    ["path", { d: "M7 15h10" }],
-  ],
-  radiology: [
-    ["circle", { cx: 12, cy: 12, r: 9 }],
-    ["path", { d: "M12 3v18M3 12h18" }],
   ],
   reports: [
     ["path", { d: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" }],

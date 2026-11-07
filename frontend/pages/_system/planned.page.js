@@ -16,7 +16,12 @@ import { pageHeader } from "../../components/layout/breadcrumbs.js";
 import { findScreen, navigation } from "../../js/config/navigation.js";
 
 export default function plannedPage({ path, route }) {
-  const screen = findScreen(path);
+  /*
+   * `findScreen` يُطابق مسارات خريطة التنقل الثابتة. شاشات التفاصيل مسارها
+   * ديناميكي (`/fin/customers/3`) فلا يُطابق شيئًا — ولذلك يحمل المسار
+   * وصفه في `route.meta.screen`. القراءة من الاثنين تُغطي الحالتين.
+   */
+  const screen = findScreen(path) ?? route?.meta?.screen;
   const moduleEntry = navigation.find((entry) => entry.key === screen?.module);
 
   /** شاشات أخرى في نفس الموديول — تساعد على التنقل بدل الطريق المسدود. */
@@ -59,7 +64,6 @@ export default function plannedPage({ path, route }) {
         "div",
         { class: "flex flex-wrap items-center justify-center gap-2 mt-6" },
         button({ label: "لوحة التحكم", icon: "dashboard", variant: "primary", size: "sm", href: "#/" }),
-        button({ label: "نظام التصميم والمكوّنات", icon: "palette", variant: "secondary", size: "sm", href: "#/design-system" }),
       ),
 
       siblings.length

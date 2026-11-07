@@ -17,7 +17,7 @@
 import { el, clear } from "../../js/core/dom.js";
 import { pageHeader } from "../../components/layout/breadcrumbs.js";
 import { card, statGrid } from "../../components/common/card.js";
-import { dataTable } from "../../components/tables/data-table.js";
+import { dataTable, summaryCells } from "../../components/tables/data-table.js";
 import { errorState } from "../../components/feedback/states.js";
 import { toast } from "../../components/feedback/toast.js";
 import { confirmAction } from "../../components/modals/overlay.js";
@@ -149,7 +149,21 @@ export async function listPage(definition) {
     rowActions: rowActions ? (row) => rowActions(row, context) : undefined,
     onRowClick,
     initialParams,
-    summaryRow,
+    /*
+     * `dataTable` يتوقع **عنصرًا** في صف المجاميع (`<tr>`)، و`summaryCells`
+     * هو ما يبنيه من أوصاف الخلايا. تمرير المصفوفة مباشرة يرمي
+     * «appendChild: parameter 1 is not of type Node» عند أول صفحة نتائج.
+     *
+     * السماح بالاثنين هنا يجعل الشاشة تُصرّح بالخلايا وحدها — وهو الشكل
+     * الأوضح — دون أن تتذكر كل شاشة أن تُغلّفها بنفسها.
+     */
+    summaryRow: summaryRow
+      ? (rows) => {
+          const built = summaryRow(rows);
+          if (!built) return null;
+          return Array.isArray(built) ? summaryCells(built) : built;
+        }
+      : undefined,
     emptyMessage,
     selectable,
     bulkActions: bulkActions ? (rows, clearSelection) => bulkActions(rows, clearSelection, context) : undefined,
