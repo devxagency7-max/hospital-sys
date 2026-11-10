@@ -29,7 +29,6 @@ export const accounts = [
 
   { id: 111, code: "111", name: "النقدية وما في حكمها", nameEn: "Cash & Cash Equivalents", type: "asset", parentId: 11, level: 3, nature: "debit", status: "active" },
   { id: 1111, code: "1111", name: "الخزينة الرئيسية", nameEn: "Main Cashbox", type: "asset", parentId: 111, level: 4, nature: "debit", status: "active", cashFlowSection: "operating" },
-  { id: 1112, code: "1112", name: "خزينة فرع الإسكندرية", nameEn: "Alexandria Branch Cashbox", type: "asset", parentId: 111, level: 4, nature: "debit", status: "active" },
   { id: 1113, code: "1113", name: "خزينة المصروفات النثرية", nameEn: "Petty Cash", type: "asset", parentId: 111, level: 4, nature: "debit", status: "active" },
   { id: 1114, code: "1114", name: "نقدية تحت التحويل", nameEn: "Cash in Transit", type: "asset", parentId: 111, level: 4, nature: "debit", status: "active" },
 
@@ -50,7 +49,6 @@ export const accounts = [
   { id: 11412, code: "11412", name: "مخزون أدوية", nameEn: "Medications Inventory", type: "asset", parentId: 114, level: 4, nature: "debit", status: "active" },
   { id: 11413, code: "11413", name: "مخزون مستلزمات العمليات", nameEn: "Surgical Supplies Inventory", type: "asset", parentId: 114, level: 4, nature: "debit", status: "active" },
   { id: 11414, code: "11414", name: "مخزون قطع غيار الأجهزة الطبية", nameEn: "Medical Equipment Spares Inventory", type: "asset", parentId: 114, level: 4, nature: "debit", status: "active" },
-  { id: 11415, code: "11415", name: "مخزون فرع الإسكندرية", nameEn: "Alexandria Branch Inventory", type: "asset", parentId: 114, level: 4, nature: "debit", status: "active" },
 
   { id: 115, code: "115", name: "مدينون متنوعون وأرصدة مدينة أخرى", nameEn: "Other Receivables", type: "asset", parentId: 11, level: 3, nature: "debit", status: "active" },
   { id: 1151, code: "1151", name: "سلف وعهد الموظفين", nameEn: "Employee Advances", type: "asset", parentId: 115, level: 4, nature: "debit", status: "active" },
@@ -384,8 +382,7 @@ const openingEntry = entry({
   createdBy: "رئيس الحسابات / هالة منصور",
   lines: [
     /* الأصول — مدين */
-    D(1111, 185_000, "الخزينة الرئيسية — رصيد افتتاحي"),
-    D(1112, 42_000, "خزينة الإسكندرية — رصيد افتتاحي"),
+    D(1111, 227_000, "الخزينة الرئيسية — رصيد افتتاحي"),
     D(1113, 15_000, "النثرية — رصيد افتتاحي"),
     D(1121, 1_840_000, "البنك الأهلي — رصيد افتتاحي"),
     D(1122, 960_000, "بنك مصر — رصيد افتتاحي"),
@@ -402,7 +399,6 @@ const openingEntry = entry({
     D(11412, 0, "مخزون أدوية — رصيد افتتاحي"),
     D(11413, 0, "مخزون مستلزمات عمليات — رصيد افتتاحي"),
     D(11414, 0, "مخزون قطع غيار أجهزة — رصيد افتتاحي"),
-    D(11415, 0, "مخزون فرع الإسكندرية — رصيد افتتاحي"),
     D(1151, 96_000, "سلف الموظفين القائمة"),
     D(1152, 240_000, "دفعات مقدمة للموردين"),
     D(1153, 180_000, "مصروفات مدفوعة مقدمًا (إيجار وتأمين)"),
@@ -598,16 +594,6 @@ const activityEntries = [
     lines: [
       D(1151, 18_000, "سلفة للموظف محمود عادل النجار"),
       C(1111, 18_000, "صرف سلفة من الخزينة الرئيسية"),
-    ],
-  }),
-  entry({
-    id: 18, number: 18, date: "2026-11-06",
-    description: "تحويل مخزني من المخزن الرئيسي إلى مخزن الإسكندرية",
-    sourceType: "inventory_transfer", sourceId: 5, reference: "TRN-2026-0005",
-    notes: "تحويل داخلي — لا إيراد ولا مشتريات. نقل قيمة بين حسابي مخزون.",
-    lines: [
-      D(11415, 94_500, "تحويل وارد إلى مخزن الإسكندرية"),
-      C(11411, 94_500, "تحويل صادر من المخزن الرئيسي"),
     ],
   }),
   entry({
@@ -1007,7 +993,7 @@ activityEntries.push(...monthlyEntries);
    ============================================================================ */
 
 (() => {
-  const INVENTORY_ACCOUNTS = [11411, 11412, 11413, 11414, 11415];
+  const INVENTORY_ACCOUNTS = [11411, 11412, 11413, 11414];
 
   /* صافي حركة كل حساب مخزون في قيود النشاط (مدين − دائن). */
   const activityNet = new Map(INVENTORY_ACCOUNTS.map((accountId) => [accountId, 0]));

@@ -397,7 +397,6 @@ const ROUTES = {
   "GET /admin/roles": ({ params }) => query("roles", params),
   "GET /admin/permissions": () => ({ data: permissionCatalog() }),
   "GET /admin/audit": ({ params }) => query("auditLogs", params),
-  "GET /admin/branches": ({ params }) => query("branches", params),
 
   /* --- الإعدادات --- */
   "GET /settings/company": () => ({ data: singleton("companyInfo") }),
@@ -443,7 +442,6 @@ const ROUTES = {
   "GET /lookups/units": () => ({ data: all("units") }),
   "GET /lookups/payment-methods": () => ({ data: all("paymentMethods") }),
   "GET /lookups/governorates": () => ({ data: all("governorates") }),
-  "GET /lookups/branches": () => ({ data: activeOnly("branches") }),
   "GET /lookups/periods": () => ({ data: all("accountingPeriods") }),
   "GET /lookups/document-sources": () => ({ data: all("documentSources") }),
   "GET /lookups/asset-categories": () => ({ data: all("assetCategories") }),

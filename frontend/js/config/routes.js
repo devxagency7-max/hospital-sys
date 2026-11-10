@@ -400,12 +400,6 @@ const IMPLEMENTED = [
     load: () => import("../../pages/settings/posting-map.page.js"),
   },
   {
-    path: "/settings/branches",
-    title: "الفروع",
-    permission: "admin.settings.view",
-    load: () => import("../../pages/settings/branches.page.js"),
-  },
-  {
     path: "/settings/preferences",
     title: "تفضيلات النظام",
     permission: "admin.settings.manage",

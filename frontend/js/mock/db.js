@@ -77,7 +77,6 @@ import {
   roles,
   auditLogs,
   companyInfo,
-  branches,
   systemPreferences,
   notificationPreferences,
   documentSources,
@@ -146,7 +145,6 @@ export const db = {
   users: [...users],
   roles: [...roles],
   auditLogs: [...auditLogs],
-  branches: [...branches],
   documentSources: [...documentSources],
   notificationPreferences: [...notificationPreferences],
 
@@ -212,7 +210,6 @@ const SEARCHABLE = {
   users: ["code", "name", "username", "email", "phone", "roleName", "jobTitle"],
   roles: ["code", "name", "description"],
   auditLogs: ["user", "actionLabel", "action", "module", "entity", "ip", "details"],
-  branches: ["code", "name", "governorate", "address"],
 };
 
 /** حقل التاريخ الذي يستهدفه فلتر `dateFrom` / `dateTo` لكل مجموعة. */

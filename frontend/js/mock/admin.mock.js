@@ -3,7 +3,7 @@
  * المستخدمون والأدوار، سجل التدقيق، بيانات المنشأة، والتفضيلات.
  */
 
-import { createRandom, REFERENCE_DATE, BRANCHES, addDays } from "./seed.js";
+import { createRandom, REFERENCE_DATE, addDays } from "./seed.js";
 import { ROLES, PERMISSIONS } from "../core/permissions.js";
 import { SOURCE_LABELS } from "../domain/posting.js";
 
@@ -20,17 +20,17 @@ export const companyInfo = {
   legalForm: "شركة مساهمة مصرية — منشأة طبية خاصة",
   commercialRegister: "128470",
   taxId: "204-851-963",
-  taxOffice: "مأمورية ضرائب مدينة نصر — الشركات",
+  taxOffice: "مأمورية ضرائب بني سويف",
   vatRegistration: "VAT-204851963",
   industrialRegister: "LIC-77410",
   establishedAt: "2014-03-18",
   capital: 12_000_000,
 
-  address: "القاهرة — مدينة نصر، شارع عباس العقاد، مبنى المستشفى الرئيسي",
-  governorate: "القاهرة",
-  postalCode: "11765",
-  phone: "0224011234",
-  fax: "0224011235",
+  address: "بني سويف — شارع سعد زغلول، مبنى المستشفى الرئيسي",
+  governorate: "بني سويف",
+  postalCode: "62511",
+  phone: "0822401234",
+  fax: "0822401235",
   email: "info@alhayah-hospital.example",
   website: "www.alhayah-hospital.example",
 
@@ -44,8 +44,6 @@ export const companyInfo = {
   /** يظهر في تذييل كل تقرير مطبوع. */
   reportFooter: "مستشفى الحياة التخصصي — س.ت 128470 — ب.ض 204-851-963",
 };
-
-export const branches = BRANCHES;
 
 /* ============================================================================
    2. المستخدمون
@@ -68,7 +66,7 @@ const USER_SEEDS = [
   { id: 9, name: "دعاء سامح شلبي", username: "d.shalaby", role: "hr", employeeId: 12, departmentId: 3, jobTitle: "أخصائي موارد بشرية" },
   { id: 10, name: "نادر طارق سليمان", username: "n.soliman", role: "inv", employeeId: 28, departmentId: 6, jobTitle: "مدير المخازن" },
   { id: 11, name: "وليد حسن البحيري", username: "w.behairy", role: "inv", employeeId: 29, departmentId: 6, jobTitle: "أمين مخزن" },
-  { id: 12, name: "ماجد فادي عطية", username: "m.atya", role: "inv", employeeId: 30, departmentId: 6, jobTitle: "أمين مخزن — الإسكندرية" },
+  { id: 12, name: "ماجد فادي عطية", username: "m.atya", role: "inv", employeeId: 30, departmentId: 6, jobTitle: "أمين مخزن — الصيدلية المركزية" },
   { id: 13, name: "نادر إسلام الفقي", username: "n.fakey", role: "gl", employeeId: null, departmentId: 1, jobTitle: "مراجع داخلي" },
   { id: 14, name: "رامي عادل خليل", username: "r.khalil", role: "fin", employeeId: 21, departmentId: 4, jobTitle: "مسؤول تعاقدات ومطالبات أول" },
   { id: 15, name: "شيماء باسم النجار", username: "s.naggar", role: "hr", employeeId: 13, departmentId: 3, jobTitle: "أخصائي موارد بشرية" },
@@ -84,7 +82,6 @@ export const users = USER_SEEDS.map((seed, index) => {
     email: `${seed.username}@alhayah-hospital.example`,
     phone: random.phone(),
     roleName: ROLES[seed.role]?.label ?? seed.role,
-    branchId: seed.username === "m.atya" ? 2 : 1,
     /** صلاحيات إضافية فوق الدور — استثناء مُعلَن لا تعديل صامت على الدور. */
     extraPermissions: seed.id === 5 ? ["gl.journal.approve"] : [],
     twoFactorEnabled: ["admin", "fin"].includes(seed.role),
@@ -97,7 +94,7 @@ export const users = USER_SEEDS.map((seed, index) => {
     createdAt: random.date(1400, 120),
     createdBy: "مدير النظام",
     status: inactive ? "inactive" : "active",
-    notes: inactive ? "مُعطَّل — انتقل إلى فرع آخر." : null,
+    notes: inactive ? "مُعطَّل — ترك العمل." : null,
   };
 });
 

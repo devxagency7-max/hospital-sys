@@ -55,7 +55,6 @@ export const getItemCategories = () => cached("categories", "/lookups/categories
 export const getUnits = () => cached("units", "/lookups/units");
 
 /* --- عام --- */
-export const getBranches = () => cached("branches", "/lookups/branches");
 export const getGovernorates = () => cached("governorates", "/lookups/governorates");
 
 /* --- أسماء بديلة شائعة --- */

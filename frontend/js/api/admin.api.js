@@ -1,5 +1,5 @@
 /**
- * واجهة بيانات الإدارة والنظام: المستخدمون، الأدوار، سجل التدقيق، الفروع.
+ * واجهة بيانات الإدارة والنظام: المستخدمون، الأدوار، سجل التدقيق.
  */
 
 import { http, fetchList } from "./http.js";
@@ -35,8 +35,4 @@ export async function getPermissionCatalog() {
 
 export function listAuditLogs(params = {}) {
   return fetchList("/admin/audit", params);
-}
-
-export function listBranches(params = {}) {
-  return fetchList("/admin/branches", params);
 }

@@ -68,7 +68,6 @@ const GL = {
   notesReceivable: controlBalance(1133),
   ap: controlBalance(2111),
   cashMain: controlBalance(1111),
-  cashAlex: controlBalance(1112),
   cashPetty: controlBalance(1113),
   bankNbe: controlBalance(1121),
   bankMisr: controlBalance(1122),
@@ -486,10 +485,8 @@ export const supplierPayments = (() => {
    ============================================================================ */
 
 export const cashBoxes = [
-  { id: 1, code: "CB-MAIN", name: "الخزينة الرئيسية", accountId: 1111, branchId: 1, custodianId: 6, custodian: "أمين الخزينة / سامح زكي", location: "المقر الرئيسي — الدور الأول", currency: "EGP", openingBalance: 185_000, balance: GL.cashMain, maxLimit: 1_200_000, lastReconciledAt: "2026-10-31", status: "active" },
-  { id: 2, code: "CB-ALX", name: "خزينة فرع الإسكندرية", accountId: 1112, branchId: 2, custodianId: 6, custodian: "أمين خزينة الفرع / ماجد عطية", location: "فرع سموحة", currency: "EGP", openingBalance: 42_000, balance: GL.cashAlex, maxLimit: 300_000, lastReconciledAt: "2026-10-31", status: "active" },
-  { id: 3, code: "CB-PETTY", name: "خزينة المصروفات النثرية", accountId: 1113, branchId: 1, custodianId: 23, custodian: "سكرتير تنفيذي / هند درويش", location: "المقر الرئيسي — الاستقبال", currency: "EGP", openingBalance: 15_000, balance: GL.cashPetty, maxLimit: 50_000, lastReconciledAt: "2026-11-01", status: "active" },
-  { id: 4, code: "CB-GIZ", name: "خزينة معرض الجيزة", accountId: 1111, branchId: 3, custodianId: 6, custodian: "أمين معرض / فادي شاكر", location: "معرض الهرم", currency: "EGP", openingBalance: 0, balance: 0, maxLimit: 150_000, lastReconciledAt: null, status: "inactive" },
+  { id: 1, code: "CB-MAIN", name: "الخزينة الرئيسية", accountId: 1111, custodianId: 6, custodian: "أمين الخزينة / سامح زكي", location: "المقر الرئيسي — الدور الأول", currency: "EGP", openingBalance: 227_000, balance: GL.cashMain, maxLimit: 1_200_000, lastReconciledAt: "2026-10-31", status: "active" },
+  { id: 3, code: "CB-PETTY", name: "خزينة المصروفات النثرية", accountId: 1113, custodianId: 23, custodian: "سكرتير تنفيذي / هند درويش", location: "المقر الرئيسي — الاستقبال", currency: "EGP", openingBalance: 15_000, balance: GL.cashPetty, maxLimit: 50_000, lastReconciledAt: "2026-11-01", status: "active" },
 ];
 
 /**
@@ -608,7 +605,6 @@ export const cashMovements = (() => {
 /** جرد الخزائن — المطابقة بين الرصيد الدفتري والفعلي. */
 export const cashReconciliations = [
   { id: 1, cashBoxId: 1, date: "2026-10-31", bookBalance: 1_228_300, countedBalance: 1_228_300, difference: 0, status: "reconciled", countedBy: "المراجع الداخلي / نادر الفقي", notes: "مطابقة تامة." },
-  { id: 2, cashBoxId: 2, date: "2026-10-31", bookBalance: 42_000, countedBalance: 41_850, difference: -150, status: "reconciled", countedBy: "المراجع الداخلي / نادر الفقي", notes: "فرق 150 ج.م سُوّي بإذن صرف نثري." },
   { id: 3, cashBoxId: 3, date: "2026-11-01", bookBalance: 15_000, countedBalance: 15_000, difference: 0, status: "reconciled", countedBy: "مدير الحسابات", notes: null },
   { id: 4, cashBoxId: 1, date: "2026-11-07", bookBalance: GL.cashMain, countedBalance: null, difference: null, status: "counting", countedBy: null, notes: "جرد جارٍ — بانتظار العدّ الفعلي." },
 ];
@@ -618,10 +614,10 @@ export const cashReconciliations = [
    ============================================================================ */
 
 export const bankAccounts = [
-  { id: 1, code: "BNK-NBE-01", bankName: "البنك الأهلي المصري", branch: "فرع مدينة نصر", accountName: "مستشفى الحياة التخصصي", accountNumber: "4521003876091", iban: "EG380003004521003876091123", swift: "NBEGEGCX", accountId: 1121, currency: "EGP", type: "current", openingBalance: 1_840_000, balance: GL.bankNbe, overdraftLimit: 2_000_000, lastReconciledAt: "2026-10-31", status: "active" },
-  { id: 2, code: "BNK-BM-01", bankName: "بنك مصر", branch: "فرع عباس العقاد", accountName: "مستشفى الحياة التخصصي", accountNumber: "1100294517003", iban: "EG120002001100294517003456", swift: "BMISEGCX", accountId: 1122, currency: "EGP", type: "current", openingBalance: 960_000, balance: GL.bankMisr, overdraftLimit: 500_000, lastReconciledAt: "2026-10-31", status: "active" },
-  { id: 3, code: "BNK-CIB-01", bankName: "البنك التجاري الدولي", branch: "فرع سموحة", accountName: "مستشفى الحياة التخصصي — فرع الإسكندرية", accountNumber: "100078452100", iban: "EG450010000100078452100789", swift: "CIBEEGCX", accountId: 1123, currency: "EGP", type: "current", openingBalance: 420_000, balance: GL.bankCib, overdraftLimit: 0, lastReconciledAt: "2026-10-31", status: "active" },
-  { id: 4, code: "BNK-CAI-PR", bankName: "بنك القاهرة", branch: "فرع مصر الجديدة", accountName: "مستشفى الحياة التخصصي — حساب الرواتب", accountNumber: "7700458120036", iban: "EG770007007700458120036012", swift: "CAIREGCX", accountId: 1124, currency: "EGP", type: "payroll", openingBalance: 180_000, balance: GL.bankCairo, overdraftLimit: 0, lastReconciledAt: "2026-10-31", status: "active" },
+  { id: 1, code: "BNK-NBE-01", bankName: "البنك الأهلي المصري", branch: "فرع بني سويف الرئيسي", accountName: "مستشفى الحياة التخصصي", accountNumber: "4521003876091", iban: "EG380003004521003876091123", swift: "NBEGEGCX", accountId: 1121, currency: "EGP", type: "current", openingBalance: 1_840_000, balance: GL.bankNbe, overdraftLimit: 2_000_000, lastReconciledAt: "2026-10-31", status: "active" },
+  { id: 2, code: "BNK-BM-01", bankName: "بنك مصر", branch: "فرع بني سويف", accountName: "مستشفى الحياة التخصصي", accountNumber: "1100294517003", iban: "EG120002001100294517003456", swift: "BMISEGCX", accountId: 1122, currency: "EGP", type: "current", openingBalance: 960_000, balance: GL.bankMisr, overdraftLimit: 500_000, lastReconciledAt: "2026-10-31", status: "active" },
+  { id: 3, code: "BNK-CIB-01", bankName: "البنك التجاري الدولي", branch: "فرع بني سويف", accountName: "مستشفى الحياة التخصصي", accountNumber: "100078452100", iban: "EG450010000100078452100789", swift: "CIBEEGCX", accountId: 1123, currency: "EGP", type: "current", openingBalance: 420_000, balance: GL.bankCib, overdraftLimit: 0, lastReconciledAt: "2026-10-31", status: "active" },
+  { id: 4, code: "BNK-CAI-PR", bankName: "بنك القاهرة", branch: "فرع بني سويف", accountName: "مستشفى الحياة التخصصي — حساب الرواتب", accountNumber: "7700458120036", iban: "EG770007007700458120036012", swift: "CAIREGCX", accountId: 1124, currency: "EGP", type: "payroll", openingBalance: 180_000, balance: GL.bankCairo, overdraftLimit: 0, lastReconciledAt: "2026-10-31", status: "active" },
 ];
 
 /**
@@ -775,11 +771,11 @@ export const fixedAssets = (() => {
    * كلاهما من الحساب الرقابي، موزَّعًا على الأصول.
    */
   const plan = [
-    { categoryId: 1, cost: GL.costBuildings, accumulated: GL.accDepBuildings, names: ["مبنى المستشفى الرئيسي — مدينة نصر", "مبنى العيادات الخارجية", "أرض المستشفى", "مخزن الإسكندرية — سموحة"], costCenterId: 1 },
+    { categoryId: 1, cost: GL.costBuildings, accumulated: GL.accDepBuildings, names: ["مبنى المستشفى الرئيسي — بني سويف", "مبنى العيادات الخارجية", "أرض المستشفى", "مبنى المخازن الملحق"], costCenterId: 1 },
     { categoryId: 2, cost: GL.costMachinery, accumulated: GL.accDepMachinery, names: ["جهاز أشعة مقطعية", "جهاز رنين مغناطيسي", "جهاز أشعة سينية رقمي", "ماكينات غسيل كلوي — وحدة كاملة", "أجهزة تعقيم مركزي (أوتوكلاف)", "مولد كهربائي 500 ك.ف.أ", "أجهزة تنفس صناعي — العناية المركزة", "أجهزة مراقبة مرضى — الأقسام"], costCenterId: 7 },
     { categoryId: 3, cost: GL.costFurniture, accumulated: GL.accDepFurniture, names: ["أثاث مكاتب الإدارة العليا", "أثاث قاعة الاجتماعات", "تجهيزات الاستقبال والعيادات", "أثاث مكاتب الإدارة المالية", "أسرّة طبية وتجهيزات الغرف", "تكييفات مركزية — المستشفى"], costCenterId: 1 },
     { categoryId: 4, cost: GL.costComputers, accumulated: GL.accDepComputers, names: ["سيرفر التطبيقات الرئيسي", "سيرفر قواعد البيانات", "شبكة ومُبدّلات المستشفى", "أجهزة حاسب — الإدارة المالية", "أجهزة حاسب — التعاقدات", "طابعات وماسحات ضوئية", "نظام كاميرات المراقبة"], costCenterId: 8 },
-    { categoryId: 5, cost: GL.costVehicles, accumulated: GL.accDepVehicles, names: ["سيارة إسعاف مجهزة — رقم 1", "سيارة إسعاف مجهزة — رقم 2", "سيارة إسعاف — فرع الإسكندرية", "سيارة نقل خفيف — المشتريات", "سيارة إدارية — المدير العام", "سيارة إدارية — المدير المالي", "ميكروباص نقل العاملين"], costCenterId: 6 },
+    { categoryId: 5, cost: GL.costVehicles, accumulated: GL.accDepVehicles, names: ["سيارة إسعاف مجهزة — رقم 1", "سيارة إسعاف مجهزة — رقم 2", "سيارة إسعاف مجهزة — رقم 3", "سيارة نقل خفيف — المشتريات", "سيارة إدارية — المدير العام", "سيارة إدارية — المدير المالي", "ميكروباص نقل العاملين"], costCenterId: 6 },
   ];
 
   const out = [];
@@ -813,7 +809,6 @@ export const fixedAssets = (() => {
         accumulatedAccountId: category.accumulatedAccountId,
         expenseAccountId: category.expenseAccountId,
         costCenterId: group.costCenterId,
-        branchId: random.pick([1, 1, 1, 2]),
         custodianId: random.int(1, 25),
         serialNumber: `SN-${random.int(100000, 999999)}`,
         supplierId: random.int(1, 12),
@@ -852,7 +847,6 @@ export const fixedAssets = (() => {
     accumulatedAccountId: 1225,
     expenseAccountId: 5241,
     costCenterId: 6,
-    branchId: 1,
     custodianId: 1,
     serialNumber: "SN-204517",
     supplierId: 12,
@@ -956,8 +950,8 @@ export const subsidiaryReconciliation = [
   {
     key: "cash",
     label: "الخزائن النقدية",
-    controlAccounts: [1111, 1112, 1113],
-    controlBalance: money.sum([GL.cashMain, GL.cashAlex, GL.cashPetty]),
+    controlAccounts: [1111, 1113],
+    controlBalance: money.sum([GL.cashMain, GL.cashPetty]),
     subsidiaryBalance: money.sumBy(cashBoxes, "balance"),
   },
   {

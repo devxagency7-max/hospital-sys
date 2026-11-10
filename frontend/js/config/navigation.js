@@ -171,7 +171,6 @@ export const navigation = [
     children: [
       { label: "بيانات المنشأة", path: "/settings/company", permission: "admin.settings.view" },
       { label: "الربط المحاسبي", path: "/settings/posting-map", permission: "admin.settings.manage" },
-      { label: "الفروع", path: "/settings/branches", permission: "admin.settings.view" },
       { label: "تفضيلات النظام", path: "/settings/preferences", permission: "admin.settings.manage" },
       { label: "تفضيلات الإشعارات", path: "/settings/notifications", permission: "admin.settings.view" },
       { label: "تخصيص المظهر", path: "/settings/appearance", permission: "admin.settings.view" },

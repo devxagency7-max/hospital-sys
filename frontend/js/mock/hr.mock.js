@@ -20,7 +20,6 @@ import {
   DEPARTMENTS,
   POSITIONS,
   SHIFTS,
-  BRANCHES,
   BANKS,
   GOVERNORATES,
   buildName,
@@ -38,7 +37,6 @@ const TODAY = REFERENCE_DATE.toISOString().slice(0, 10);
 export const departments = DEPARTMENTS;
 export const positions = POSITIONS;
 export const shifts = SHIFTS;
-export const branches = BRANCHES;
 export const leaveTypes = Object.entries(LEAVE_TYPES).map(([key, value]) => ({ id: key, ...value }));
 
 /* ============================================================================
@@ -127,7 +125,6 @@ export const employees = (() => {
         departmentId: position.departmentId,
         departmentName: department?.name ?? "—",
         costCenterId: department?.costCenterId ?? null,
-        branchId: random.pick([1, 1, 1, 1, 2, 3]),
         managerId: department?.managerId === id ? null : department?.managerId ?? null,
         gradeLevel: position.gradeLevel,
         shiftId: position.departmentId === 7 ? random.pick([2, 2, 3, 4]) : 1,

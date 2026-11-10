@@ -230,26 +230,15 @@ export const COST_CENTERS = [
 ];
 
 /* --------------------------------------------------------------------------
-   الفروع
-   -------------------------------------------------------------------------- */
-
-export const BRANCHES = [
-  { id: 1, code: "BR-MAIN", name: "المستشفى الرئيسي — القاهرة", governorate: "القاهرة", address: "مدينة نصر، شارع عباس العقاد", phone: "0224011234", isMain: true, status: "active" },
-  { id: 2, code: "BR-ALX", name: "فرع الإسكندرية — المركز الطبي", governorate: "الإسكندرية", address: "سموحة، طريق الحرية", phone: "0334567890", isMain: false, status: "active" },
-  { id: 3, code: "BR-GIZ", name: "فرع الجيزة — العيادات الخارجية", governorate: "الجيزة", address: "الهرم، شارع الملك فيصل", phone: "0235551122", isMain: false, status: "active" },
-];
-
-/* --------------------------------------------------------------------------
    المخازن ووحدات القياس
    -------------------------------------------------------------------------- */
 
 export const WAREHOUSES = [
-  { id: 1, code: "WH-MAIN", name: "المخزن الرئيسي — مستلزمات طبية", nameEn: "Main Medical Supplies Store", branchId: 1, managerId: 13, location: "المستشفى الرئيسي — البدروم", inventoryAccountId: 11411, costingMethod: "weighted_average", allowNegative: false, status: "active" },
-  { id: 2, code: "WH-RAW", name: "مخزن الصيدلية المركزية", nameEn: "Central Pharmacy Store", branchId: 1, managerId: 14, location: "المستشفى الرئيسي — الصيدلية المركزية", inventoryAccountId: 11412, costingMethod: "fifo", allowNegative: false, status: "active" },
-  { id: 3, code: "WH-FIN", name: "مخزن مستلزمات العمليات", nameEn: "Operating Theatre Supplies", branchId: 1, managerId: 14, location: "المستشفى الرئيسي — مبنى العمليات", inventoryAccountId: 11413, costingMethod: "fifo", allowNegative: false, status: "active" },
-  { id: 4, code: "WH-SPR", name: "مخزن قطع غيار الأجهزة الطبية", nameEn: "Medical Equipment Spares", branchId: 1, managerId: 24, location: "المستشفى الرئيسي — ورشة الصيانة", inventoryAccountId: 11414, costingMethod: "weighted_average", allowNegative: false, status: "active" },
-  { id: 5, code: "WH-ALX", name: "مخزن فرع الإسكندرية", nameEn: "Alexandria Branch Store", branchId: 2, managerId: 14, location: "سموحة", inventoryAccountId: 11415, costingMethod: "weighted_average", allowNegative: false, status: "active" },
-  { id: 6, code: "WH-OFF", name: "مخزن المستلزمات المكتبية", nameEn: "Office Supplies", branchId: 1, managerId: 23, location: "المستشفى الرئيسي — الدور الأرضي", inventoryAccountId: 11411, costingMethod: "weighted_average", allowNegative: false, status: "active" },
+  { id: 1, code: "WH-MAIN", name: "المخزن الرئيسي — مستلزمات طبية", nameEn: "Main Medical Supplies Store", managerId: 13, location: "المستشفى الرئيسي — البدروم", inventoryAccountId: 11411, costingMethod: "weighted_average", allowNegative: false, status: "active" },
+  { id: 2, code: "WH-RAW", name: "مخزن الصيدلية المركزية", nameEn: "Central Pharmacy Store", managerId: 14, location: "المستشفى الرئيسي — الصيدلية المركزية", inventoryAccountId: 11412, costingMethod: "fifo", allowNegative: false, status: "active" },
+  { id: 3, code: "WH-FIN", name: "مخزن مستلزمات العمليات", nameEn: "Operating Theatre Supplies", managerId: 14, location: "المستشفى الرئيسي — مبنى العمليات", inventoryAccountId: 11413, costingMethod: "fifo", allowNegative: false, status: "active" },
+  { id: 4, code: "WH-SPR", name: "مخزن قطع غيار الأجهزة الطبية", nameEn: "Medical Equipment Spares", managerId: 24, location: "المستشفى الرئيسي — ورشة الصيانة", inventoryAccountId: 11414, costingMethod: "weighted_average", allowNegative: false, status: "active" },
+  { id: 6, code: "WH-OFF", name: "مخزن المستلزمات المكتبية", nameEn: "Office Supplies", managerId: 23, location: "المستشفى الرئيسي — الدور الأرضي", inventoryAccountId: 11411, costingMethod: "weighted_average", allowNegative: false, status: "active" },
 ];
 
 export const UNITS = [

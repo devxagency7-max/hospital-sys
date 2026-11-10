@@ -129,7 +129,7 @@ function openTransferModal(context, { items, warehouses }) {
     toWarehouseId: warehouses[1]?.id ?? 2,
     quantity: 5,
     date: new Date().toISOString().slice(0, 10),
-    notes: "تحويل داخلي لتغذية رصيد الفرع",
+    notes: "تحويل داخلي لتغذية رصيد المخزن",
   };
 
   formModal({
