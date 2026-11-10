@@ -1,7 +1,7 @@
 /**
  * تقارير المخازن والمخزون السلعي.
  *
- * تقييم المخزون (FIFO / متوسط مرجح)، ركود الأصناف، حدود إعادة الطلب، وتتبع تواريخ الصلاحية.
+ * قيمة المخزون، ركود الأصناف، حدود إعادة الطلب، وتتبع تواريخ الصلاحية.
  */
 
 import { el, clear } from "../../js/core/dom.js";
@@ -35,7 +35,7 @@ export default async function inventoryReportsPage() {
       "div",
       null,
       el("h1", { class: "page-title", style: "font-size: 1.5rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.25rem;" }, "تقارير المخازن والمخزون"),
-      el("p", { class: "page-description", style: "color: var(--text-secondary); font-size: 0.875rem;" }, "التقييم المحاسبي للمخزون، مراقبة مستويات إعادة الطلب، وتتبع الصلاحية والتشغيلات.")
+      el("p", { class: "page-description", style: "color: var(--text-secondary); font-size: 0.875rem;" }, "قيمة المخزون بالمخازن، مراقبة مستويات إعادة الطلب، وتتبع الصلاحية والتشغيلات.")
     ),
     el(
       "div",
@@ -68,7 +68,7 @@ export default async function inventoryReportsPage() {
   function renderTabs() {
     clear(tabsBar);
     [
-      { id: "valuation", label: "تقييم المخزون (FIFO / متوسط مرجح)" },
+      { id: "valuation", label: "قيمة المخزون" },
       { id: "low_stock", label: "الأصناف تحت حد الطلب" },
       { id: "expiry", label: "تتبع الصلاحية والانتهاء" },
     ].forEach((t) => {
@@ -132,18 +132,13 @@ export default async function inventoryReportsPage() {
       statTile({
         label: "إجمالي قيمة المخزون",
         value: amount(res.totalValue ?? 0),
-        hint: `وفق طريقة: ${res.method === "fifo" ? "الوارد أولاً صادر أولاً (FIFO)" : "المتوسط المرجح (WAC)"}`,
+        hint: "الكمية × تكلفة الشراء لكل صنف",
         trend: "positive",
       }),
       statTile({
         label: "عدد الأصناف المقيمة",
         value: integer(rows.length),
         hint: "أصناف ذات رصيد",
-      }),
-      statTile({
-        label: "طريقة التقييم المعتمدة",
-        value: res.method === "fifo" ? "FIFO" : "WAC",
-        hint: "مطابقة لخريطة الربط المحاسبي",
       })
     );
     contentHost.appendChild(stats);
@@ -154,7 +149,7 @@ export default async function inventoryReportsPage() {
         class: "surface-card",
         style: "background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 0.5rem; padding: 1.5rem;",
       },
-      el("h3", { style: "font-size: 1.0625rem; font-weight: 700; margin-bottom: 1rem;" }, "جدول تقييم أرصدة الأصناف بالمخازن")
+      el("h3", { style: "font-size: 1.0625rem; font-weight: 700; margin-bottom: 1rem;" }, "جدول قيمة أرصدة الأصناف بالمخازن")
     );
 
     const table = el("table", { class: "data-table", style: "width: 100%; border-collapse: collapse;" });
@@ -315,7 +310,7 @@ export default async function inventoryReportsPage() {
     if (!currentReportData) return;
     printReport({
       company,
-      title: activeTab === "valuation" ? "تقرير تقييم المخزون السلعي" : activeTab === "low_stock" ? "تقرير الأصناف تحت حد الطلب" : "تقرير تتبع الصلاحية",
+      title: activeTab === "valuation" ? "تقرير قيمة المخزون" : activeTab === "low_stock" ? "تقرير الأصناف تحت حد الطلب" : "تقرير تتبع الصلاحية",
       period: "2026",
       headers: [
         { label: "كود الصنف", align: "right" },

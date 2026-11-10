@@ -268,12 +268,6 @@ const IMPLEMENTED = [
     load: () => import("../../pages/inv/movements.page.js"),
   },
   {
-    path: "/inv/valuation",
-    title: "تقييم المخزون",
-    permission: "inv.valuation.view",
-    load: () => import("../../pages/inv/valuation.page.js"),
-  },
-  {
     path: "/inv/categories",
     title: "التصنيفات",
     permission: "inv.item.manage",

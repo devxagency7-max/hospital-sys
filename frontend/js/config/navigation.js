@@ -119,7 +119,6 @@ export const navigation = [
 
       { label: "التشغيلات", path: "/inv/batches", permission: "inv.view" },
       { label: "تتبّع الصلاحية", path: "/inv/expiry", permission: "inv.view" },
-      { label: "تقييم المخزون", path: "/inv/valuation", permission: "inv.valuation.view" },
       { label: "الجرد الفعلي", path: "/inv/counts", permission: "inv.count.manage" },
     ],
   },

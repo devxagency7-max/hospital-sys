@@ -50,14 +50,8 @@ export default async function itemsPage() {
         onClick: () => openItemModal(context, { categories, units, warehouses }),
       }),
       button({
-        label: "تقييم المخزون",
-        variant: "secondary",
-        icon: "reports",
-        onClick: () => navigate("/inv/valuation"),
-      }),
-      button({
         label: "أرصدة المخازن",
-        variant: "ghost",
+        variant: "secondary",
         icon: "inventory",
         onClick: () => navigate("/inv/balances"),
       }),
