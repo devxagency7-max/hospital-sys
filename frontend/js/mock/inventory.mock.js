@@ -45,55 +45,55 @@ export const itemCategories = ITEM_CATEGORIES;
  * `tracking` يحدد ما يحتاجه الصنف: تشغيلات، صلاحية، أو أرقام تسلسلية.
  */
 const ITEM_SEEDS = [
-  /* --- خامات معدنية --- */
-  { name: "صفائح حديد مجلفن 1.5 مم", nameEn: "Galvanized Steel Sheet 1.5mm", categoryId: 2, unitId: 4, cost: [38, 46], tracking: ["batch"] },
-  { name: "صفائح حديد مجلفن 2 مم", nameEn: "Galvanized Steel Sheet 2mm", categoryId: 2, unitId: 4, cost: [40, 48], tracking: ["batch"] },
-  { name: "أنابيب ألومنيوم 40 مم", nameEn: "Aluminium Tube 40mm", categoryId: 2, unitId: 7, cost: [85, 105], tracking: ["batch"] },
-  { name: "قضبان نحاس 10 مم", nameEn: "Copper Rod 10mm", categoryId: 2, unitId: 4, cost: [420, 480], tracking: ["batch"] },
-  { name: "زوايا حديد 50×50", nameEn: "Steel Angle 50x50", categoryId: 2, unitId: 7, cost: [62, 74], tracking: [] },
-  { name: "أسلاك لحام معدني", nameEn: "Welding Wire", categoryId: 2, unitId: 4, cost: [96, 118], tracking: ["batch"] },
+  /* --- أدوية أقراص وكبسولات --- */
+  { name: "أموكسيسيلين 500 مج — علبة 30 كبسولة", nameEn: "Amoxicillin 500mg — 30 Caps", categoryId: 2, unitId: 1, cost: [38, 46], tracking: ["batch"] },
+  { name: "باراسيتامول 500 مج — علبة 20 قرصًا", nameEn: "Paracetamol 500mg — 20 Tabs", categoryId: 2, unitId: 1, cost: [40, 48], tracking: ["batch"] },
+  { name: "أوميبرازول 20 مج — علبة", nameEn: "Omeprazole 20mg Pack", categoryId: 2, unitId: 1, cost: [85, 105], tracking: ["batch"] },
+  { name: "مضاد فيروسات — علبة أقراص", nameEn: "Antiviral Tablets Pack", categoryId: 2, unitId: 1, cost: [420, 480], tracking: ["batch"] },
+  { name: "مكمل غذائي كالسيوم — علبة", nameEn: "Calcium Supplement Pack", categoryId: 2, unitId: 1, cost: [62, 74], tracking: [] },
+  { name: "إيبوبروفين 400 مج — علبة", nameEn: "Ibuprofen 400mg Pack", categoryId: 2, unitId: 1, cost: [96, 118], tracking: ["batch"] },
 
-  /* --- خامات بلاستيكية --- */
-  { name: "حبيبات بوليبروبيلين PP", nameEn: "PP Granules", categoryId: 3, unitId: 4, cost: [52, 62], tracking: ["batch", "expiry"] },
-  { name: "حبيبات بولي إيثيلين HDPE", nameEn: "HDPE Granules", categoryId: 3, unitId: 4, cost: [48, 58], tracking: ["batch", "expiry"] },
-  { name: "مركّز ألوان صناعي — أزرق", nameEn: "Masterbatch Blue", categoryId: 3, unitId: 4, cost: [180, 220], tracking: ["batch", "expiry"] },
-  { name: "مركّز ألوان صناعي — أحمر", nameEn: "Masterbatch Red", categoryId: 3, unitId: 4, cost: [185, 225], tracking: ["batch", "expiry"] },
-  { name: "مادة مانعة للأكسدة", nameEn: "Antioxidant Additive", categoryId: 3, unitId: 4, cost: [310, 380], tracking: ["batch", "expiry"] },
+  /* --- حقن ومحاليل وريدية --- */
+  { name: "محلول ملح 0.9% — كيس 500 مل", nameEn: "Normal Saline 0.9% 500ml", categoryId: 3, unitId: 1, cost: [52, 62], tracking: ["batch", "expiry"] },
+  { name: "محلول جلوكوز 5% — كيس 500 مل", nameEn: "Dextrose 5% 500ml", categoryId: 3, unitId: 1, cost: [48, 58], tracking: ["batch", "expiry"] },
+  { name: "حقن سيفترياكسون 1 جم", nameEn: "Ceftriaxone 1g Vial", categoryId: 3, unitId: 1, cost: [180, 220], tracking: ["batch", "expiry"] },
+  { name: "حقن مسكّن — أمبول", nameEn: "Analgesic Ampoule", categoryId: 3, unitId: 1, cost: [185, 225], tracking: ["batch", "expiry"] },
+  { name: "أنسولين سريع المفعول — فيال", nameEn: "Rapid Insulin Vial", categoryId: 3, unitId: 1, cost: [310, 380], tracking: ["batch", "expiry"] },
 
-  /* --- تعبئة وتغليف --- */
-  { name: "كراتين تغليف مقاس كبير", nameEn: "Carton Box — Large", categoryId: 4, unitId: 1, cost: [14, 19], tracking: [] },
-  { name: "كراتين تغليف مقاس وسط", nameEn: "Carton Box — Medium", categoryId: 4, unitId: 1, cost: [9, 13], tracking: [] },
-  { name: "شرائط لاصقة صناعية", nameEn: "Industrial Tape", categoryId: 4, unitId: 10, cost: [22, 30], tracking: [] },
-  { name: "أكياس بلاستيك شفافة", nameEn: "Clear Poly Bags", categoryId: 4, unitId: 4, cost: [58, 70], tracking: [] },
-  { name: "ملصقات باركود حرارية", nameEn: "Thermal Barcode Labels", categoryId: 4, unitId: 10, cost: [34, 44], tracking: [] },
-  { name: "طبليات خشبية قياسية", nameEn: "Wooden Pallets", categoryId: 4, unitId: 1, cost: [160, 200], tracking: [] },
+  /* --- تعقيم وضمادات --- */
+  { name: "شاش طبي معقم — لفة", nameEn: "Sterile Gauze Roll", categoryId: 4, unitId: 10, cost: [14, 19], tracking: [] },
+  { name: "ضمادات جروح متنوعة — علبة", nameEn: "Assorted Wound Dressings", categoryId: 4, unitId: 1, cost: [9, 13], tracking: [] },
+  { name: "بلاستر طبي لاصق — لفة", nameEn: "Medical Adhesive Tape", categoryId: 4, unitId: 10, cost: [22, 30], tracking: [] },
+  { name: "قطن طبي — عبوة", nameEn: "Medical Cotton Pack", categoryId: 4, unitId: 4, cost: [58, 70], tracking: [] },
+  { name: "أغلفة تعقيم للأدوات — لفة", nameEn: "Sterilization Wrap Roll", categoryId: 4, unitId: 10, cost: [34, 44], tracking: [] },
+  { name: "صناديق تعقيم ستانلس", nameEn: "Stainless Sterilization Box", categoryId: 4, unitId: 1, cost: [160, 200], tracking: [] },
 
-  /* --- منتجات تامة --- */
-  { name: "وحدة تكييف هواء 1.5 حصان", nameEn: "AC Unit 1.5HP", categoryId: 5, unitId: 1, cost: [8_400, 9_800], tracking: ["serial"] },
-  { name: "وحدة تكييف هواء 3 حصان", nameEn: "AC Unit 3HP", categoryId: 5, unitId: 1, cost: [14_500, 16_800], tracking: ["serial"] },
-  { name: "خزان مياه بلاستيك 1000 لتر", nameEn: "Water Tank 1000L", categoryId: 5, unitId: 1, cost: [1_850, 2_200], tracking: ["batch"] },
-  { name: "خزان مياه بلاستيك 500 لتر", nameEn: "Water Tank 500L", categoryId: 5, unitId: 1, cost: [980, 1_200], tracking: ["batch"] },
-  { name: "مواسير بلاستيك PPR 25 مم", nameEn: "PPR Pipe 25mm", categoryId: 5, unitId: 7, cost: [46, 58], tracking: ["batch"] },
-  { name: "لوح معدني مُشكَّل — موديل A", nameEn: "Formed Metal Panel A", categoryId: 5, unitId: 1, cost: [620, 760], tracking: [] },
+  /* --- مستلزمات العمليات والرعاية الحرجة --- */
+  { name: "جهاز مراقبة مؤشرات حيوية", nameEn: "Vital Signs Monitor", categoryId: 5, unitId: 1, cost: [8_400, 9_800], tracking: ["serial"] },
+  { name: "جهاز تنفس صناعي محمول", nameEn: "Portable Ventilator", categoryId: 5, unitId: 1, cost: [14_500, 16_800], tracking: ["serial"] },
+  { name: "طقم أدوات جراحة عامة", nameEn: "General Surgery Instrument Set", categoryId: 5, unitId: 1, cost: [1_850, 2_200], tracking: ["batch"] },
+  { name: "خيوط جراحية ماصة — عبوة", nameEn: "Absorbable Sutures Pack", categoryId: 5, unitId: 1, cost: [980, 1_200], tracking: ["batch"] },
+  { name: "أنابيب تخدير وتنفس — عبوة", nameEn: "Anesthesia Breathing Tubes", categoryId: 5, unitId: 1, cost: [46, 58], tracking: ["batch"] },
+  { name: "مشارط جراحية معقمة — عبوة", nameEn: "Sterile Scalpels Pack", categoryId: 5, unitId: 1, cost: [620, 760], tracking: [] },
 
-  /* --- أصناف تجارية --- */
-  { name: "مضخة مياه 1 حصان", nameEn: "Water Pump 1HP", categoryId: 6, unitId: 1, cost: [2_400, 2_900], tracking: ["serial"] },
-  { name: "مضخة مياه 2 حصان", nameEn: "Water Pump 2HP", categoryId: 6, unitId: 1, cost: [3_900, 4_600], tracking: ["serial"] },
-  { name: "كابل كهربائي 3×2.5 مم", nameEn: "Electric Cable 3x2.5", categoryId: 6, unitId: 7, cost: [52, 64], tracking: ["batch"] },
-  { name: "كابل كهربائي 3×4 مم", nameEn: "Electric Cable 3x4", categoryId: 6, unitId: 7, cost: [78, 94], tracking: ["batch"] },
-  { name: "لوحة توزيع كهربائي 12 خط", nameEn: "Distribution Board 12-way", categoryId: 6, unitId: 1, cost: [740, 920], tracking: [] },
-  { name: "قاطع كهربائي 32 أمبير", nameEn: "Circuit Breaker 32A", categoryId: 6, unitId: 1, cost: [118, 145], tracking: [] },
-  { name: "مفاتيح وبرايز — طقم", nameEn: "Switches & Sockets Set", categoryId: 6, unitId: 9, cost: [240, 310], tracking: [] },
-  { name: "لمبات LED 12 وات", nameEn: "LED Bulb 12W", categoryId: 6, unitId: 1, cost: [38, 48], tracking: [] },
-  { name: "كشاف LED خارجي 100 وات", nameEn: "LED Floodlight 100W", categoryId: 6, unitId: 1, cost: [420, 520], tracking: [] },
+  /* --- مستهلكات طبية عامة --- */
+  { name: "جهاز قياس ضغط رقمي", nameEn: "Digital BP Monitor", categoryId: 6, unitId: 1, cost: [2_400, 2_900], tracking: ["serial"] },
+  { name: "جهاز قياس سكر الدم", nameEn: "Glucometer", categoryId: 6, unitId: 1, cost: [3_900, 4_600], tracking: ["serial"] },
+  { name: "سرنجات 5 مل — كرتونة", nameEn: "Syringes 5ml — Box", categoryId: 6, unitId: 2, cost: [52, 64], tracking: ["batch"] },
+  { name: "سرنجات 10 مل — كرتونة", nameEn: "Syringes 10ml — Box", categoryId: 6, unitId: 2, cost: [78, 94], tracking: ["batch"] },
+  { name: "كانيولا وريدية — علبة", nameEn: "IV Cannula Box", categoryId: 6, unitId: 1, cost: [740, 920], tracking: [] },
+  { name: "قسطرة بولية — علبة", nameEn: "Urinary Catheter Box", categoryId: 6, unitId: 1, cost: [118, 145], tracking: [] },
+  { name: "أطقم محاليل وريدية — طقم", nameEn: "IV Administration Sets", categoryId: 6, unitId: 9, cost: [240, 310], tracking: [] },
+  { name: "كمامات طبية — علبة 50", nameEn: "Medical Masks 50-pack", categoryId: 6, unitId: 1, cost: [38, 48], tracking: [] },
+  { name: "واقيات وجه طبية", nameEn: "Medical Face Shields", categoryId: 6, unitId: 1, cost: [420, 520], tracking: [] },
 
-  /* --- قطع غيار ومستهلكات --- */
-  { name: "سير ماكينة مقاس 1200", nameEn: "Machine Belt 1200", categoryId: 7, unitId: 1, cost: [380, 460], tracking: [] },
-  { name: "رولمان بلي 6205", nameEn: "Bearing 6205", categoryId: 7, unitId: 1, cost: [95, 125], tracking: [] },
-  { name: "فلتر زيت صناعي", nameEn: "Industrial Oil Filter", categoryId: 7, unitId: 1, cost: [210, 265], tracking: ["expiry"] },
-  { name: "زيت تشحيم صناعي", nameEn: "Industrial Lubricant", categoryId: 7, unitId: 6, cost: [92, 118], tracking: ["batch", "expiry"] },
-  { name: "جوانات مطاطية — طقم", nameEn: "Rubber Gaskets Set", categoryId: 7, unitId: 9, cost: [140, 180], tracking: [] },
-  { name: "صواميل ومسامير — عبوة", nameEn: "Nuts & Bolts Pack", categoryId: 7, unitId: 1, cost: [68, 88], tracking: [] },
+  /* --- قطع غيار الأجهزة الطبية --- */
+  { name: "حساس أكسجين لجهاز تنفس", nameEn: "Ventilator O2 Sensor", categoryId: 7, unitId: 1, cost: [380, 460], tracking: [] },
+  { name: "بطارية جهاز مراقبة", nameEn: "Monitor Battery", categoryId: 7, unitId: 1, cost: [95, 125], tracking: [] },
+  { name: "فلتر جهاز غسيل كلوي", nameEn: "Dialysis Filter", categoryId: 7, unitId: 1, cost: [210, 265], tracking: ["expiry"] },
+  { name: "جل الموجات فوق الصوتية", nameEn: "Ultrasound Gel", categoryId: 7, unitId: 6, cost: [92, 118], tracking: ["batch", "expiry"] },
+  { name: "وصلات وأسلاك أجهزة — طقم", nameEn: "Device Cables Set", categoryId: 7, unitId: 9, cost: [140, 180], tracking: [] },
+  { name: "إلكترودات رسم قلب — عبوة", nameEn: "ECG Electrodes Pack", categoryId: 7, unitId: 1, cost: [68, 88], tracking: [] },
 
   /* --- مستلزمات مكتبية --- */
   { name: "ورق طباعة A4 — رزمة", nameEn: "A4 Paper Ream", categoryId: 8, unitId: 1, cost: [128, 155], tracking: [] },
@@ -102,16 +102,16 @@ const ITEM_SEEDS = [
   { name: "ملفات وحوافظ مستندات", nameEn: "File Folders", categoryId: 8, unitId: 1, cost: [16, 22], tracking: [] },
   { name: "دباسات ومشابك", nameEn: "Staplers & Clips", categoryId: 8, unitId: 9, cost: [110, 140], tracking: [] },
 
-  /* --- نظافة وصيانة --- */
-  { name: "منظّف أرضيات صناعي", nameEn: "Industrial Floor Cleaner", categoryId: 9, unitId: 6, cost: [42, 54], tracking: ["expiry"] },
-  { name: "مطهّر أسطح", nameEn: "Surface Disinfectant", categoryId: 9, unitId: 6, cost: [58, 72], tracking: ["expiry"] },
-  { name: "أكياس قمامة كبيرة", nameEn: "Large Garbage Bags", categoryId: 9, unitId: 10, cost: [36, 46], tracking: [] },
-  { name: "قفازات عمل صناعية", nameEn: "Work Gloves", categoryId: 9, unitId: 9, cost: [52, 66], tracking: [] },
-  { name: "خوذات أمان", nameEn: "Safety Helmets", categoryId: 9, unitId: 1, cost: [180, 230], tracking: [] },
+  /* --- نظافة وتطهير --- */
+  { name: "منظّف أرضيات طبي", nameEn: "Hospital Floor Cleaner", categoryId: 9, unitId: 6, cost: [42, 54], tracking: ["expiry"] },
+  { name: "مطهّر أسطح طبي", nameEn: "Medical Surface Disinfectant", categoryId: 9, unitId: 6, cost: [58, 72], tracking: ["expiry"] },
+  { name: "أكياس نفايات طبية حمراء", nameEn: "Red Biohazard Bags", categoryId: 9, unitId: 10, cost: [36, 46], tracking: [] },
+  { name: "قفازات نيتريل — كرتونة", nameEn: "Nitrile Gloves Box", categoryId: 9, unitId: 2, cost: [52, 66], tracking: [] },
+  { name: "أغطية أحذية ورؤوس — عبوة", nameEn: "Shoe & Head Covers Pack", categoryId: 9, unitId: 1, cost: [180, 230], tracking: [] },
 
-  /* --- أجهزة كهربائية --- */
-  { name: "مولد كهربائي محمول 3 ك.و", nameEn: "Portable Generator 3kW", categoryId: 10, unitId: 1, cost: [18_500, 22_000], tracking: ["serial"] },
-  { name: "منظّم جهد 5 ك.ف.أ", nameEn: "Voltage Stabilizer 5kVA", categoryId: 10, unitId: 1, cost: [4_200, 5_100], tracking: ["serial"] },
+  /* --- أجهزة ومعدات طبية --- */
+  { name: "جهاز أشعة محمول", nameEn: "Portable X-Ray Unit", categoryId: 10, unitId: 1, cost: [18_500, 22_000], tracking: ["serial"] },
+  { name: "جهاز تعقيم بالبخار (أوتوكلاف)", nameEn: "Steam Autoclave", categoryId: 10, unitId: 1, cost: [4_200, 5_100], tracking: ["serial"] },
 ];
 
 /**
@@ -288,11 +288,11 @@ export const stockMovements = (() => {
           reference: `ISS-2026-${String(documentSequence.issue).padStart(4, "0")}`,
           documentType: "goods_issue",
           reason: random.pick([
-            "صرف للإنتاج",
-            "صرف لأمر بيع",
-            "صرف للصيانة",
+            "صرف للأقسام الداخلية",
+            "صرف للعيادات الخارجية",
+            "صرف لغرف العمليات",
             "استهلاك إداري",
-            "صرف لمشروع",
+            "صرف للصيانة",
           ]),
           costCenterId: random.pick([4, 6, 7, 7, 1]),
           performedBy: "أمين مخزن / وليد البحيري",

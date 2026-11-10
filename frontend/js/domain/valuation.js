@@ -59,7 +59,7 @@ export const MOVEMENT_LABELS = Object.freeze({
   return_in: "مرتجع وارد",
   adjustment_in: "تسوية بالزيادة",
   transfer_in: "تحويل وارد",
-  production_in: "إنتاج تام",
+  production_in: "تجهيز مستلزمات",
   issue: "إذن صرف",
   sale: "بيع",
   consumption: "استهلاك",

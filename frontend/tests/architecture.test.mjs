@@ -518,26 +518,13 @@ assert("أداة ltr-isolate مُعرَّفة في CSS", css.includes("@utility 
 assert("أداة num مُعرَّفة في CSS", css.includes("@utility num"));
 
 /* ==========================================================================
-   خلو الكود من نطاق المستشفى
+   هوية النظام: محاسبة مستشفى
+
+   قرار المالك (10 نوفمبر 2026): النظام سيستم محاسبة لمستشفى. النطاق يبقى
+   محاسبيًا (GL/Fin/HR/Inv) — لا موديولات ملفات طبية للمرضى — لكن الهوية
+   والبيانات التجريبية بطابع المستشفى، فالمصطلحات الطبية في الأسماء والبيانات
+   مسموحة ومتوقَّعة. الفحص القديم الذي كان يمنعها أُزيل عمدًا.
    ========================================================================== */
-
-section("اكتمال التحويل");
-
-const CLINICAL_TERMS = /\b(patient|doctor|clinic|pharmacy|prescription|radiolog|laborator)\w*/i;
-const clinicalLeftovers = files.filter((file) => CLINICAL_TERMS.test(file.code));
-assert(
-  "لا مصطلح إكلينيكي في الكود الفعّال",
-  clinicalLeftovers.length === 0,
-  clinicalLeftovers.map((f) => f.rel).join("، "),
-);
-
-const ARABIC_CLINICAL = /مريض|مرضى|طبيب|عيادة|صيدلية|روشتة|أشعة|مستشفى/;
-const arabicLeftovers = files.filter((file) => ARABIC_CLINICAL.test(file.src));
-assert(
-  "لا مصطلح إكلينيكي عربي في أي ملف",
-  arabicLeftovers.length === 0,
-  arabicLeftovers.map((f) => f.rel).join("، "),
-);
 
 /* ==========================================================================
    جاهزية استبدال الباك-إند

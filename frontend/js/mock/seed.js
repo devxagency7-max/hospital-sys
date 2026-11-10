@@ -166,10 +166,10 @@ export const DEPARTMENTS = [
   { id: 1, code: "DEP-ADM", name: "الإدارة العليا", nameEn: "Executive Management", managerId: 1, costCenterId: 1, parentId: null },
   { id: 2, code: "DEP-FIN", name: "الإدارة المالية والحسابات", nameEn: "Finance & Accounting", managerId: 2, costCenterId: 2, parentId: 1 },
   { id: 3, code: "DEP-HR", name: "الموارد البشرية", nameEn: "Human Resources", managerId: 5, costCenterId: 3, parentId: 1 },
-  { id: 4, code: "DEP-SAL", name: "المبيعات والتسويق", nameEn: "Sales & Marketing", managerId: 8, costCenterId: 4, parentId: 1 },
+  { id: 4, code: "DEP-SAL", name: "التعاقدات والتأمين الطبي", nameEn: "Contracts & Medical Insurance", managerId: 8, costCenterId: 4, parentId: 1 },
   { id: 5, code: "DEP-PRC", name: "المشتريات", nameEn: "Procurement", managerId: 11, costCenterId: 5, parentId: 1 },
-  { id: 6, code: "DEP-WHS", name: "المخازن واللوجستيات", nameEn: "Warehousing & Logistics", managerId: 13, costCenterId: 6, parentId: 1 },
-  { id: 7, code: "DEP-OPS", name: "التشغيل والإنتاج", nameEn: "Operations", managerId: 16, costCenterId: 7, parentId: 1 },
+  { id: 6, code: "DEP-WHS", name: "المخازن والصيدلية المركزية", nameEn: "Warehousing & Central Pharmacy", managerId: 13, costCenterId: 6, parentId: 1 },
+  { id: 7, code: "DEP-OPS", name: "الخدمات الطبية والتمريض", nameEn: "Medical Services & Nursing", managerId: 16, costCenterId: 7, parentId: 1 },
   { id: 8, code: "DEP-IT", name: "تقنية المعلومات", nameEn: "Information Technology", managerId: 20, costCenterId: 8, parentId: 1 },
   { id: 9, code: "DEP-LEG", name: "الشؤون القانونية", nameEn: "Legal Affairs", managerId: 22, costCenterId: 2, parentId: 1 },
   { id: 10, code: "DEP-MNT", name: "الصيانة والخدمات", nameEn: "Maintenance & Facilities", managerId: 24, costCenterId: 7, parentId: 1 },
@@ -185,17 +185,17 @@ export const POSITIONS = [
   { id: 6, code: "POS-006", title: "أمين خزينة", departmentId: 2, gradeLevel: 4, basicSalaryFrom: 8500, basicSalaryTo: 13000 },
   { id: 7, code: "POS-007", title: "مدير الموارد البشرية", departmentId: 3, gradeLevel: 8, basicSalaryFrom: 30000, basicSalaryTo: 48000 },
   { id: 8, code: "POS-008", title: "أخصائي موارد بشرية", departmentId: 3, gradeLevel: 4, basicSalaryFrom: 9000, basicSalaryTo: 14000 },
-  { id: 9, code: "POS-009", title: "مدير المبيعات", departmentId: 4, gradeLevel: 8, basicSalaryFrom: 28000, basicSalaryTo: 45000 },
-  { id: 10, code: "POS-010", title: "مندوب مبيعات", departmentId: 4, gradeLevel: 3, basicSalaryFrom: 7000, basicSalaryTo: 12000 },
+  { id: 9, code: "POS-009", title: "مدير التعاقدات والتأمين الطبي", departmentId: 4, gradeLevel: 8, basicSalaryFrom: 28000, basicSalaryTo: 45000 },
+  { id: 10, code: "POS-010", title: "مسؤول تعاقدات ومطالبات", departmentId: 4, gradeLevel: 3, basicSalaryFrom: 7000, basicSalaryTo: 12000 },
   { id: 11, code: "POS-011", title: "مدير المشتريات", departmentId: 5, gradeLevel: 8, basicSalaryFrom: 27000, basicSalaryTo: 42000 },
   { id: 12, code: "POS-012", title: "مسؤول مشتريات", departmentId: 5, gradeLevel: 4, basicSalaryFrom: 9500, basicSalaryTo: 15000 },
   { id: 13, code: "POS-013", title: "مدير المخازن", departmentId: 6, gradeLevel: 7, basicSalaryFrom: 22000, basicSalaryTo: 34000 },
   { id: 14, code: "POS-014", title: "أمين مخزن", departmentId: 6, gradeLevel: 3, basicSalaryFrom: 7500, basicSalaryTo: 12000 },
   { id: 15, code: "POS-015", title: "سائق ومناوب توصيل", departmentId: 6, gradeLevel: 2, basicSalaryFrom: 6000, basicSalaryTo: 9000 },
-  { id: 16, code: "POS-016", title: "مدير التشغيل", departmentId: 7, gradeLevel: 8, basicSalaryFrom: 29000, basicSalaryTo: 46000 },
-  { id: 17, code: "POS-017", title: "مشرف خط إنتاج", departmentId: 7, gradeLevel: 5, basicSalaryFrom: 13000, basicSalaryTo: 20000 },
-  { id: 18, code: "POS-018", title: "فني تشغيل", departmentId: 7, gradeLevel: 3, basicSalaryFrom: 7000, basicSalaryTo: 11500 },
-  { id: 19, code: "POS-019", title: "أخصائي مراقبة جودة", departmentId: 7, gradeLevel: 5, basicSalaryFrom: 12000, basicSalaryTo: 18000 },
+  { id: 16, code: "POS-016", title: "مدير الخدمات الطبية", departmentId: 7, gradeLevel: 8, basicSalaryFrom: 29000, basicSalaryTo: 46000 },
+  { id: 17, code: "POS-017", title: "رئيس هيئة التمريض", departmentId: 7, gradeLevel: 5, basicSalaryFrom: 13000, basicSalaryTo: 20000 },
+  { id: 18, code: "POS-018", title: "ممرض", departmentId: 7, gradeLevel: 3, basicSalaryFrom: 7000, basicSalaryTo: 11500 },
+  { id: 19, code: "POS-019", title: "أخصائي جودة ومكافحة عدوى", departmentId: 7, gradeLevel: 5, basicSalaryFrom: 12000, basicSalaryTo: 18000 },
   { id: 20, code: "POS-020", title: "مدير تقنية المعلومات", departmentId: 8, gradeLevel: 8, basicSalaryFrom: 32000, basicSalaryTo: 50000 },
   { id: 21, code: "POS-021", title: "مهندس نظم", departmentId: 8, gradeLevel: 6, basicSalaryFrom: 18000, basicSalaryTo: 28000 },
   { id: 22, code: "POS-022", title: "مستشار قانوني", departmentId: 9, gradeLevel: 7, basicSalaryFrom: 24000, basicSalaryTo: 36000 },
@@ -220,12 +220,12 @@ export const COST_CENTERS = [
   { id: 1, code: "CC-100", name: "الإدارة العامة", nameEn: "General Administration", type: "administrative", managerId: 1, parentId: null, status: "active" },
   { id: 2, code: "CC-200", name: "الإدارة المالية", nameEn: "Finance", type: "administrative", managerId: 2, parentId: 1, status: "active" },
   { id: 3, code: "CC-300", name: "الموارد البشرية", nameEn: "Human Resources", type: "administrative", managerId: 5, parentId: 1, status: "active" },
-  { id: 4, code: "CC-400", name: "المبيعات والتسويق", nameEn: "Sales & Marketing", type: "revenue", managerId: 8, parentId: null, status: "active" },
+  { id: 4, code: "CC-400", name: "العيادات الخارجية", nameEn: "Outpatient Clinics", type: "revenue", managerId: 8, parentId: null, status: "active" },
   { id: 5, code: "CC-500", name: "المشتريات", nameEn: "Procurement", type: "support", managerId: 11, parentId: 1, status: "active" },
-  { id: 6, code: "CC-600", name: "المخازن واللوجستيات", nameEn: "Logistics", type: "support", managerId: 13, parentId: null, status: "active" },
-  { id: 7, code: "CC-700", name: "التشغيل والإنتاج", nameEn: "Operations", type: "production", managerId: 16, parentId: null, status: "active" },
+  { id: 6, code: "CC-600", name: "المخازن والصيدلية", nameEn: "Warehousing & Pharmacy", type: "support", managerId: 13, parentId: null, status: "active" },
+  { id: 7, code: "CC-700", name: "الأقسام الداخلية والرعاية", nameEn: "Inpatient & Critical Care", type: "production", managerId: 16, parentId: null, status: "active" },
   { id: 8, code: "CC-800", name: "تقنية المعلومات", nameEn: "IT", type: "support", managerId: 20, parentId: 1, status: "active" },
-  { id: 9, code: "CC-910", name: "مشروع توسعة الفرع الثاني", nameEn: "Branch 2 Expansion", type: "project", managerId: 1, parentId: null, status: "active" },
+  { id: 9, code: "CC-910", name: "مشروع توسعة مبنى العيادات", nameEn: "Clinics Building Expansion", type: "project", managerId: 1, parentId: null, status: "active" },
   { id: 10, code: "CC-920", name: "مشروع تحديث الأنظمة", nameEn: "Systems Upgrade", type: "project", managerId: 20, parentId: null, status: "inactive" },
 ];
 
@@ -234,9 +234,9 @@ export const COST_CENTERS = [
    -------------------------------------------------------------------------- */
 
 export const BRANCHES = [
-  { id: 1, code: "BR-MAIN", name: "المركز الرئيسي — القاهرة", governorate: "القاهرة", address: "مدينة نصر، شارع عباس العقاد", phone: "0224011234", isMain: true, status: "active" },
-  { id: 2, code: "BR-ALX", name: "فرع الإسكندرية", governorate: "الإسكندرية", address: "سموحة، طريق الحرية", phone: "0334567890", isMain: false, status: "active" },
-  { id: 3, code: "BR-GIZ", name: "فرع الجيزة — المعرض", governorate: "الجيزة", address: "الهرم، شارع الملك فيصل", phone: "0235551122", isMain: false, status: "active" },
+  { id: 1, code: "BR-MAIN", name: "المستشفى الرئيسي — القاهرة", governorate: "القاهرة", address: "مدينة نصر، شارع عباس العقاد", phone: "0224011234", isMain: true, status: "active" },
+  { id: 2, code: "BR-ALX", name: "فرع الإسكندرية — المركز الطبي", governorate: "الإسكندرية", address: "سموحة، طريق الحرية", phone: "0334567890", isMain: false, status: "active" },
+  { id: 3, code: "BR-GIZ", name: "فرع الجيزة — العيادات الخارجية", governorate: "الجيزة", address: "الهرم، شارع الملك فيصل", phone: "0235551122", isMain: false, status: "active" },
 ];
 
 /* --------------------------------------------------------------------------
@@ -244,12 +244,12 @@ export const BRANCHES = [
    -------------------------------------------------------------------------- */
 
 export const WAREHOUSES = [
-  { id: 1, code: "WH-MAIN", name: "المخزن الرئيسي", nameEn: "Main Warehouse", branchId: 1, managerId: 13, location: "مدينة نصر — المقر الرئيسي", inventoryAccountId: 11411, costingMethod: "weighted_average", allowNegative: false, status: "active" },
-  { id: 2, code: "WH-RAW", name: "مخزن المواد الخام", nameEn: "Raw Materials", branchId: 1, managerId: 14, location: "العاشر من رمضان — المصنع", inventoryAccountId: 11412, costingMethod: "fifo", allowNegative: false, status: "active" },
-  { id: 3, code: "WH-FIN", name: "مخزن الإنتاج التام", nameEn: "Finished Goods", branchId: 1, managerId: 14, location: "العاشر من رمضان — المصنع", inventoryAccountId: 11413, costingMethod: "fifo", allowNegative: false, status: "active" },
-  { id: 4, code: "WH-SPR", name: "مخزن قطع الغيار", nameEn: "Spare Parts", branchId: 1, managerId: 24, location: "مدينة نصر — ورشة الصيانة", inventoryAccountId: 11414, costingMethod: "weighted_average", allowNegative: false, status: "active" },
+  { id: 1, code: "WH-MAIN", name: "المخزن الرئيسي — مستلزمات طبية", nameEn: "Main Medical Supplies Store", branchId: 1, managerId: 13, location: "المستشفى الرئيسي — البدروم", inventoryAccountId: 11411, costingMethod: "weighted_average", allowNegative: false, status: "active" },
+  { id: 2, code: "WH-RAW", name: "مخزن الصيدلية المركزية", nameEn: "Central Pharmacy Store", branchId: 1, managerId: 14, location: "المستشفى الرئيسي — الصيدلية المركزية", inventoryAccountId: 11412, costingMethod: "fifo", allowNegative: false, status: "active" },
+  { id: 3, code: "WH-FIN", name: "مخزن مستلزمات العمليات", nameEn: "Operating Theatre Supplies", branchId: 1, managerId: 14, location: "المستشفى الرئيسي — مبنى العمليات", inventoryAccountId: 11413, costingMethod: "fifo", allowNegative: false, status: "active" },
+  { id: 4, code: "WH-SPR", name: "مخزن قطع غيار الأجهزة الطبية", nameEn: "Medical Equipment Spares", branchId: 1, managerId: 24, location: "المستشفى الرئيسي — ورشة الصيانة", inventoryAccountId: 11414, costingMethod: "weighted_average", allowNegative: false, status: "active" },
   { id: 5, code: "WH-ALX", name: "مخزن فرع الإسكندرية", nameEn: "Alexandria Branch Store", branchId: 2, managerId: 14, location: "سموحة", inventoryAccountId: 11415, costingMethod: "weighted_average", allowNegative: false, status: "active" },
-  { id: 6, code: "WH-OFF", name: "مخزن المستلزمات المكتبية", nameEn: "Office Supplies", branchId: 1, managerId: 23, location: "مدينة نصر — الدور الأرضي", inventoryAccountId: 11411, costingMethod: "weighted_average", allowNegative: false, status: "active" },
+  { id: 6, code: "WH-OFF", name: "مخزن المستلزمات المكتبية", nameEn: "Office Supplies", branchId: 1, managerId: 23, location: "المستشفى الرئيسي — الدور الأرضي", inventoryAccountId: 11411, costingMethod: "weighted_average", allowNegative: false, status: "active" },
 ];
 
 export const UNITS = [
@@ -266,16 +266,16 @@ export const UNITS = [
 ];
 
 export const ITEM_CATEGORIES = [
-  { id: 1, code: "CAT-RAW", name: "مواد خام", nameEn: "Raw Materials", parentId: null, inventoryAccountId: 11412, status: "active" },
-  { id: 2, code: "CAT-RAW-MTL", name: "خامات معدنية", nameEn: "Metal Stock", parentId: 1, inventoryAccountId: 11412, status: "active" },
-  { id: 3, code: "CAT-RAW-PLS", name: "خامات بلاستيكية", nameEn: "Plastic Stock", parentId: 1, inventoryAccountId: 11412, status: "active" },
-  { id: 4, code: "CAT-PKG", name: "مواد تعبئة وتغليف", nameEn: "Packaging", parentId: null, inventoryAccountId: 11412, status: "active" },
-  { id: 5, code: "CAT-FIN", name: "منتجات تامة", nameEn: "Finished Goods", parentId: null, inventoryAccountId: 11413, status: "active" },
-  { id: 6, code: "CAT-TRD", name: "أصناف تجارية للبيع", nameEn: "Trading Goods", parentId: null, inventoryAccountId: 11411, status: "active" },
-  { id: 7, code: "CAT-SPR", name: "قطع غيار ومستهلكات", nameEn: "Spare Parts", parentId: null, inventoryAccountId: 11414, status: "active" },
+  { id: 1, code: "CAT-RAW", name: "الأدوية", nameEn: "Medications", parentId: null, inventoryAccountId: 11412, status: "active" },
+  { id: 2, code: "CAT-RAW-MTL", name: "أدوية أقراص وكبسولات", nameEn: "Oral Medications", parentId: 1, inventoryAccountId: 11412, status: "active" },
+  { id: 3, code: "CAT-RAW-PLS", name: "حقن ومحاليل وريدية", nameEn: "Injectables & IV Fluids", parentId: 1, inventoryAccountId: 11412, status: "active" },
+  { id: 4, code: "CAT-PKG", name: "مستلزمات تعقيم وضمادات", nameEn: "Sterilization & Dressings", parentId: null, inventoryAccountId: 11412, status: "active" },
+  { id: 5, code: "CAT-FIN", name: "مستلزمات العمليات والرعاية الحرجة", nameEn: "Surgical & Critical Care Supplies", parentId: null, inventoryAccountId: 11413, status: "active" },
+  { id: 6, code: "CAT-TRD", name: "مستهلكات طبية عامة", nameEn: "General Medical Consumables", parentId: null, inventoryAccountId: 11411, status: "active" },
+  { id: 7, code: "CAT-SPR", name: "قطع غيار الأجهزة الطبية", nameEn: "Medical Equipment Spares", parentId: null, inventoryAccountId: 11414, status: "active" },
   { id: 8, code: "CAT-OFF", name: "مستلزمات مكتبية", nameEn: "Office Supplies", parentId: null, inventoryAccountId: 11411, status: "active" },
-  { id: 9, code: "CAT-CLN", name: "مواد نظافة وصيانة", nameEn: "Cleaning & Maintenance", parentId: null, inventoryAccountId: 11411, status: "active" },
-  { id: 10, code: "CAT-ELC", name: "أجهزة ومعدات كهربائية", nameEn: "Electrical Equipment", parentId: null, inventoryAccountId: 11411, status: "active" },
+  { id: 9, code: "CAT-CLN", name: "مواد نظافة وتطهير", nameEn: "Cleaning & Disinfection", parentId: null, inventoryAccountId: 11411, status: "active" },
+  { id: 10, code: "CAT-ELC", name: "أجهزة ومعدات طبية", nameEn: "Medical Equipment", parentId: null, inventoryAccountId: 11411, status: "active" },
 ];
 
 /* --------------------------------------------------------------------------
@@ -283,36 +283,36 @@ export const ITEM_CATEGORIES = [
    -------------------------------------------------------------------------- */
 
 export const SUPPLIER_SEEDS = [
-  { name: "شركة الدلتا للصناعات المعدنية", activity: "خامات معدنية", governorate: "الشرقية" },
-  { name: "النيل الأزرق للبلاستيك", activity: "خامات بلاستيكية", governorate: "القاهرة" },
-  { name: "مجموعة الأهرام للتغليف", activity: "مواد تعبئة وتغليف", governorate: "الجيزة" },
-  { name: "الشرق الأوسط للتوريدات العمومية", activity: "توريدات عمومية", governorate: "القاهرة" },
-  { name: "المصرية لقطع الغيار الصناعية", activity: "قطع غيار", governorate: "الإسكندرية" },
+  { name: "الشركة العربية لتوزيع الأدوية", activity: "أدوية", governorate: "الشرقية" },
+  { name: "النيل فارما للمستحضرات الطبية", activity: "أدوية ومحاليل", governorate: "القاهرة" },
+  { name: "مجموعة الأهرام للمستلزمات الطبية", activity: "مستلزمات تعقيم وضمادات", governorate: "الجيزة" },
+  { name: "الشرق الأوسط للتوريدات الطبية", activity: "توريدات طبية عمومية", governorate: "القاهرة" },
+  { name: "المصرية لصيانة الأجهزة الطبية", activity: "قطع غيار أجهزة طبية", governorate: "الإسكندرية" },
   { name: "دلتا تك للأنظمة والحاسبات", activity: "تقنية معلومات", governorate: "القاهرة" },
   { name: "شركة الوفاء للمستلزمات المكتبية", activity: "مستلزمات مكتبية", governorate: "القليوبية" },
   { name: "الصفا للنقل والشحن", activity: "خدمات لوجستية", governorate: "القاهرة" },
-  { name: "ميتال برو للسبائك", activity: "خامات معدنية", governorate: "السويس" },
-  { name: "البركة للكيماويات الصناعية", activity: "كيماويات", governorate: "الإسكندرية" },
+  { name: "ميديكال برو للأجهزة الطبية", activity: "أجهزة ومعدات طبية", governorate: "السويس" },
+  { name: "البركة للمطهرات الطبية", activity: "مطهرات ومواد تعقيم", governorate: "الإسكندرية" },
   { name: "شركة اليسر للمقاولات والصيانة", activity: "صيانة ومقاولات", governorate: "الجيزة" },
-  { name: "الحرية للأجهزة الكهربائية", activity: "أجهزة كهربائية", governorate: "القاهرة" },
+  { name: "الحرية لتجهيزات المستشفيات", activity: "تجهيزات طبية", governorate: "القاهرة" },
 ];
 
 export const CUSTOMER_SEEDS = [
-  { name: "شركة النور للتجارة والتوزيع", activity: "تجارة وتوزيع", governorate: "القاهرة", segment: "wholesale" },
-  { name: "مجموعة الفتح التجارية", activity: "تجارة تجزئة", governorate: "الجيزة", segment: "retail" },
-  { name: "الشركة المتحدة للمقاولات", activity: "مقاولات", governorate: "القاهرة", segment: "corporate" },
-  { name: "مؤسسة الأمل للتوريدات", activity: "توريدات", governorate: "الإسكندرية", segment: "wholesale" },
-  { name: "شركة الهدى للصناعات الغذائية", activity: "صناعات غذائية", governorate: "المنوفية", segment: "corporate" },
-  { name: "سلسلة أسواق الخير", activity: "تجارة تجزئة", governorate: "القاهرة", segment: "retail" },
-  { name: "شركة الصفوة للتجارة الدولية", activity: "تصدير واستيراد", governorate: "بورسعيد", segment: "export" },
-  { name: "مجموعة الريادة للاستثمار الصناعي", activity: "صناعة", governorate: "الشرقية", segment: "corporate" },
-  { name: "مؤسسة البناء الحديث", activity: "مواد بناء", governorate: "الدقهلية", segment: "wholesale" },
-  { name: "شركة المستقبل للتوزيع", activity: "توزيع", governorate: "أسيوط", segment: "wholesale" },
-  { name: "أسواق النخبة", activity: "تجارة تجزئة", governorate: "الإسكندرية", segment: "retail" },
-  { name: "الشركة العربية للتجهيزات", activity: "تجهيزات", governorate: "القاهرة", segment: "corporate" },
-  { name: "مجموعة طيبة التجارية", activity: "تجارة عامة", governorate: "الأقصر", segment: "wholesale" },
-  { name: "شركة الواحة للتصدير", activity: "تصدير", governorate: "الإسماعيلية", segment: "export" },
-  { name: "مؤسسة الإتقان للخدمات", activity: "خدمات", governorate: "الغربية", segment: "corporate" },
+  { name: "شركة النور للتأمين الطبي", activity: "تأمين طبي خاص", governorate: "القاهرة", segment: "wholesale" },
+  { name: "حسابات مرضى النقدي — العيادات الخارجية", activity: "مرضى نقدي", governorate: "الجيزة", segment: "retail" },
+  { name: "الشركة المتحدة للرعاية الصحية", activity: "عقود رعاية شركات", governorate: "القاهرة", segment: "corporate" },
+  { name: "مؤسسة الأمل الخيرية للعلاج", activity: "جهة خيرية — علاج مدعوم", governorate: "الإسكندرية", segment: "wholesale" },
+  { name: "شركة الهدى للصناعات الغذائية", activity: "عقد رعاية موظفين", governorate: "المنوفية", segment: "corporate" },
+  { name: "حسابات مرضى النقدي — الطوارئ", activity: "مرضى نقدي", governorate: "القاهرة", segment: "retail" },
+  { name: "شركة الصفوة للسياحة العلاجية", activity: "سياحة علاجية", governorate: "بورسعيد", segment: "export" },
+  { name: "مجموعة الريادة للاستثمار الصناعي", activity: "عقد رعاية موظفين", governorate: "الشرقية", segment: "corporate" },
+  { name: "صندوق الرعاية الصحية للعاملين بالبنوك", activity: "صندوق رعاية مهني", governorate: "الدقهلية", segment: "wholesale" },
+  { name: "الهيئة العامة للتأمين الصحي", activity: "تأمين صحي حكومي", governorate: "أسيوط", segment: "wholesale" },
+  { name: "حسابات مرضى النقدي — الأقسام الداخلية", activity: "مرضى نقدي", governorate: "الإسكندرية", segment: "retail" },
+  { name: "الشركة العربية للتجهيزات", activity: "عقد رعاية موظفين", governorate: "القاهرة", segment: "corporate" },
+  { name: "شركة طيبة للتأمين الطبي", activity: "تأمين طبي خاص", governorate: "الأقصر", segment: "wholesale" },
+  { name: "وكالة الواحة للسياحة العلاجية", activity: "سياحة علاجية", governorate: "الإسماعيلية", segment: "export" },
+  { name: "مؤسسة الإتقان لإدارة المنشآت", activity: "عقد رعاية موظفين", governorate: "الغربية", segment: "corporate" },
 ];
 
 /* --------------------------------------------------------------------------

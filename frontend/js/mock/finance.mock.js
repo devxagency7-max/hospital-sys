@@ -1,4 +1,4 @@
-/**
+﻿/**
  * بيانات المحاسبة المالية التجريبية:
  * العملاء والموردون ومستنداتهم، الخزائن والبنوك وحركاتها، الأصول الثابتة، والضرائب.
  *
@@ -322,10 +322,10 @@ export const customerInvoiceLines = customerInvoices.flatMap((invoice) => {
       lineNumber: index + 1,
       itemId: random.int(1, 40),
       description: random.pick([
-        "توريد أصناف تجارية حسب أمر التوريد",
-        "توريد منتجات تامة الصنع",
-        "خدمات تجهيز وتغليف",
-        "توريد قطع غيار",
+        "توريد مستلزمات طبية حسب أمر التوريد",
+        "توريد أدوية ومحاليل",
+        "خدمات تعقيم وتجهيز",
+        "توريد قطع غيار أجهزة طبية",
         "توريد مستلزمات تشغيل",
       ]),
       quantity,
@@ -411,7 +411,7 @@ export const customerCreditNotes = Array.from({ length: 9 }, (_unused, index) =>
       "تسوية فرق وزن عند التسليم",
     ]),
     status: random.pickWeighted([["approved", 6], ["pending", 2], ["rejected", 1]]),
-    requestedBy: "مندوب مبيعات / رامي خليل",
+    requestedBy: "مسؤول تعاقدات / رامي خليل",
     approvedBy: "المدير المالي / هشام البحيري",
     notes: null,
   };
@@ -618,10 +618,10 @@ export const cashReconciliations = [
    ============================================================================ */
 
 export const bankAccounts = [
-  { id: 1, code: "BNK-NBE-01", bankName: "البنك الأهلي المصري", branch: "فرع مدينة نصر", accountName: "شركة الأعمال المتقدمة", accountNumber: "4521003876091", iban: "EG380003004521003876091123", swift: "NBEGEGCX", accountId: 1121, currency: "EGP", type: "current", openingBalance: 1_840_000, balance: GL.bankNbe, overdraftLimit: 2_000_000, lastReconciledAt: "2026-10-31", status: "active" },
-  { id: 2, code: "BNK-BM-01", bankName: "بنك مصر", branch: "فرع عباس العقاد", accountName: "شركة الأعمال المتقدمة", accountNumber: "1100294517003", iban: "EG120002001100294517003456", swift: "BMISEGCX", accountId: 1122, currency: "EGP", type: "current", openingBalance: 960_000, balance: GL.bankMisr, overdraftLimit: 500_000, lastReconciledAt: "2026-10-31", status: "active" },
-  { id: 3, code: "BNK-CIB-01", bankName: "البنك التجاري الدولي", branch: "فرع سموحة", accountName: "شركة الأعمال المتقدمة — فرع الإسكندرية", accountNumber: "100078452100", iban: "EG450010000100078452100789", swift: "CIBEEGCX", accountId: 1123, currency: "EGP", type: "current", openingBalance: 420_000, balance: GL.bankCib, overdraftLimit: 0, lastReconciledAt: "2026-10-31", status: "active" },
-  { id: 4, code: "BNK-CAI-PR", bankName: "بنك القاهرة", branch: "فرع مصر الجديدة", accountName: "شركة الأعمال المتقدمة — حساب الرواتب", accountNumber: "7700458120036", iban: "EG770007007700458120036012", swift: "CAIREGCX", accountId: 1124, currency: "EGP", type: "payroll", openingBalance: 180_000, balance: GL.bankCairo, overdraftLimit: 0, lastReconciledAt: "2026-10-31", status: "active" },
+  { id: 1, code: "BNK-NBE-01", bankName: "البنك الأهلي المصري", branch: "فرع مدينة نصر", accountName: "مستشفى الحياة التخصصي", accountNumber: "4521003876091", iban: "EG380003004521003876091123", swift: "NBEGEGCX", accountId: 1121, currency: "EGP", type: "current", openingBalance: 1_840_000, balance: GL.bankNbe, overdraftLimit: 2_000_000, lastReconciledAt: "2026-10-31", status: "active" },
+  { id: 2, code: "BNK-BM-01", bankName: "بنك مصر", branch: "فرع عباس العقاد", accountName: "مستشفى الحياة التخصصي", accountNumber: "1100294517003", iban: "EG120002001100294517003456", swift: "BMISEGCX", accountId: 1122, currency: "EGP", type: "current", openingBalance: 960_000, balance: GL.bankMisr, overdraftLimit: 500_000, lastReconciledAt: "2026-10-31", status: "active" },
+  { id: 3, code: "BNK-CIB-01", bankName: "البنك التجاري الدولي", branch: "فرع سموحة", accountName: "مستشفى الحياة التخصصي — فرع الإسكندرية", accountNumber: "100078452100", iban: "EG450010000100078452100789", swift: "CIBEEGCX", accountId: 1123, currency: "EGP", type: "current", openingBalance: 420_000, balance: GL.bankCib, overdraftLimit: 0, lastReconciledAt: "2026-10-31", status: "active" },
+  { id: 4, code: "BNK-CAI-PR", bankName: "بنك القاهرة", branch: "فرع مصر الجديدة", accountName: "مستشفى الحياة التخصصي — حساب الرواتب", accountNumber: "7700458120036", iban: "EG770007007700458120036012", swift: "CAIREGCX", accountId: 1124, currency: "EGP", type: "payroll", openingBalance: 180_000, balance: GL.bankCairo, overdraftLimit: 0, lastReconciledAt: "2026-10-31", status: "active" },
 ];
 
 /**
@@ -763,7 +763,7 @@ export const bankReconciliations = bankAccounts.map((bank, index) => {
 
 export const assetCategories = [
   { id: 1, code: "FAC-BLD", name: "أراضٍ ومبانٍ", assetAccountId: 1211, accumulatedAccountId: 1221, expenseAccountId: 5241, defaultMethod: "straight_line", defaultLifeYears: 30, defaultSalvageRate: 0.1 },
-  { id: 2, code: "FAC-MCH", name: "آلات ومعدات إنتاج", assetAccountId: 1212, accumulatedAccountId: 1222, expenseAccountId: 5241, defaultMethod: "straight_line", defaultLifeYears: 7, defaultSalvageRate: 0.08 },
+  { id: 2, code: "FAC-MCH", name: "أجهزة ومعدات طبية", assetAccountId: 1212, accumulatedAccountId: 1222, expenseAccountId: 5241, defaultMethod: "straight_line", defaultLifeYears: 7, defaultSalvageRate: 0.08 },
   { id: 3, code: "FAC-FRN", name: "أثاث وتجهيزات مكتبية", assetAccountId: 1213, accumulatedAccountId: 1223, expenseAccountId: 5241, defaultMethod: "straight_line", defaultLifeYears: 8, defaultSalvageRate: 0.05 },
   { id: 4, code: "FAC-ICT", name: "أجهزة حاسب وشبكات", assetAccountId: 1214, accumulatedAccountId: 1224, expenseAccountId: 5241, defaultMethod: "double_declining", defaultLifeYears: 4, defaultSalvageRate: 0.05 },
   { id: 5, code: "FAC-VEH", name: "سيارات ووسائل نقل", assetAccountId: 1215, accumulatedAccountId: 1225, expenseAccountId: 5241, defaultMethod: "straight_line", defaultLifeYears: 6, defaultSalvageRate: 0.15 },
@@ -775,11 +775,11 @@ export const fixedAssets = (() => {
    * كلاهما من الحساب الرقابي، موزَّعًا على الأصول.
    */
   const plan = [
-    { categoryId: 1, cost: GL.costBuildings, accumulated: GL.accDepBuildings, names: ["مبنى المقر الرئيسي — مدينة نصر", "مبنى المصنع — العاشر من رمضان", "أرض المصنع", "مخزن الإسكندرية — سموحة"], costCenterId: 1 },
-    { categoryId: 2, cost: GL.costMachinery, accumulated: GL.accDepMachinery, names: ["خط إنتاج رقم 1", "خط إنتاج رقم 2", "ماكينة تغليف أوتوماتيك", "ماكينة قص وتشكيل", "كومبرسور هواء صناعي", "مولد كهربائي 500 ك.ف.أ", "رافعة شوكية 3 طن", "ماكينة حقن بلاستيك"], costCenterId: 7 },
-    { categoryId: 3, cost: GL.costFurniture, accumulated: GL.accDepFurniture, names: ["أثاث مكاتب الإدارة العليا", "أثاث قاعة الاجتماعات", "تجهيزات الاستقبال", "أثاث مكاتب الإدارة المالية", "أرفف ومخزنيات المخزن الرئيسي", "تكييفات مركزية — المقر"], costCenterId: 1 },
-    { categoryId: 4, cost: GL.costComputers, accumulated: GL.accDepComputers, names: ["سيرفر التطبيقات الرئيسي", "سيرفر قواعد البيانات", "شبكة ومُبدّلات المقر الرئيسي", "أجهزة حاسب — الإدارة المالية", "أجهزة حاسب — المبيعات", "طابعات وماسحات ضوئية", "نظام كاميرات المراقبة"], costCenterId: 8 },
-    { categoryId: 5, cost: GL.costVehicles, accumulated: GL.accDepVehicles, names: ["شاحنة توزيع 5 طن — رقم 1", "شاحنة توزيع 5 طن — رقم 2", "شاحنة توزيع 3 طن", "سيارة نقل خفيف — المشتريات", "سيارة إدارية — المدير العام", "سيارة إدارية — المدير المالي", "ميكروباص نقل العاملين"], costCenterId: 6 },
+    { categoryId: 1, cost: GL.costBuildings, accumulated: GL.accDepBuildings, names: ["مبنى المستشفى الرئيسي — مدينة نصر", "مبنى العيادات الخارجية", "أرض المستشفى", "مخزن الإسكندرية — سموحة"], costCenterId: 1 },
+    { categoryId: 2, cost: GL.costMachinery, accumulated: GL.accDepMachinery, names: ["جهاز أشعة مقطعية", "جهاز رنين مغناطيسي", "جهاز أشعة سينية رقمي", "ماكينات غسيل كلوي — وحدة كاملة", "أجهزة تعقيم مركزي (أوتوكلاف)", "مولد كهربائي 500 ك.ف.أ", "أجهزة تنفس صناعي — العناية المركزة", "أجهزة مراقبة مرضى — الأقسام"], costCenterId: 7 },
+    { categoryId: 3, cost: GL.costFurniture, accumulated: GL.accDepFurniture, names: ["أثاث مكاتب الإدارة العليا", "أثاث قاعة الاجتماعات", "تجهيزات الاستقبال والعيادات", "أثاث مكاتب الإدارة المالية", "أسرّة طبية وتجهيزات الغرف", "تكييفات مركزية — المستشفى"], costCenterId: 1 },
+    { categoryId: 4, cost: GL.costComputers, accumulated: GL.accDepComputers, names: ["سيرفر التطبيقات الرئيسي", "سيرفر قواعد البيانات", "شبكة ومُبدّلات المستشفى", "أجهزة حاسب — الإدارة المالية", "أجهزة حاسب — التعاقدات", "طابعات وماسحات ضوئية", "نظام كاميرات المراقبة"], costCenterId: 8 },
+    { categoryId: 5, cost: GL.costVehicles, accumulated: GL.accDepVehicles, names: ["سيارة إسعاف مجهزة — رقم 1", "سيارة إسعاف مجهزة — رقم 2", "سيارة إسعاف — فرع الإسكندرية", "سيارة نقل خفيف — المشتريات", "سيارة إدارية — المدير العام", "سيارة إدارية — المدير المالي", "ميكروباص نقل العاملين"], costCenterId: 6 },
   ];
 
   const out = [];

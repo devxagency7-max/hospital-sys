@@ -6,11 +6,11 @@
  */
 
 export const APP = {
-  name: "ADVANCED ERP",
-  nameAr: "النظام المتقدم للإدارة المالية والأعمال",
-  tagline: "Financial & Business Management System",
+  name: "HOSPITAL ERP",
+  nameAr: "نظام الإدارة المالية للمستشفى",
+  tagline: "Hospital Financial Management System",
   /** اسم المنشأة — يظهر في الهيدر وترويسة كل تقرير مطبوع. */
-  organization: "شركة الأعمال المتقدمة",
+  organization: "مستشفى الحياة التخصصي",
   version: "1.0.0",
 };
 

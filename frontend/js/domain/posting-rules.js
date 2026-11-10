@@ -44,17 +44,17 @@ export const MAP_KEYS = Object.freeze({
   advancesFromCustomers: "دفعات مقدمة من العملاء",
   advancesToSuppliers: "دفعات مقدمة للموردين",
 
-  /* --- الإيرادات والمبيعات --- */
-  salesRevenue: "إيرادات المبيعات",
-  serviceRevenue: "إيرادات الخدمات",
-  salesReturns: "مردودات المبيعات",
+  /* --- الإيرادات --- */
+  salesRevenue: "إيرادات الخدمات الطبية",
+  serviceRevenue: "إيرادات خدمات مساندة",
+  salesReturns: "مردودات الإيرادات",
   salesDiscounts: "الخصم المسموح به",
   otherIncome: "إيرادات أخرى",
 
-  /* --- المخزون وتكلفة المبيعات --- */
-  inventory: "المخزون السلعي",
+  /* --- المخزون وتكلفة الخدمات --- */
+  inventory: "مخزون المستلزمات الطبية",
   goodsReceivedNotInvoiced: "مخزون مستلم ولم يُفوتر",
-  costOfGoodsSold: "تكلفة المبيعات",
+  costOfGoodsSold: "تكلفة الخدمات الطبية",
   inventoryShrinkage: "عجز وتلف المخزون",
   inventorySurplus: "زيادة المخزون (إيراد تسوية)",
   purchaseReturns: "مردودات المشتريات",
@@ -162,7 +162,7 @@ export function customerInvoiceLines(invoice, accountMap) {
     for (const [accountId, amount] of byRevenueAccount) {
       lines.push(
         credit(accountOr(accountId, accountMap, "salesRevenue"), amount, {
-          description: "إيراد مبيعات",
+          description: "إيراد خدمات طبية",
           costCenterId: invoice?.costCenterId ?? null,
         }),
       );
@@ -170,7 +170,7 @@ export function customerInvoiceLines(invoice, accountMap) {
   } else {
     lines.push(
       credit(resolveAccount(accountMap, "salesRevenue"), subtotal, {
-        description: "إيراد مبيعات",
+        description: "إيراد خدمات طبية",
         costCenterId: invoice?.costCenterId ?? null,
       }),
     );

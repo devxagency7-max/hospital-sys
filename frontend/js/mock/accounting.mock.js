@@ -2,7 +2,7 @@
  * بيانات المحاسبة العامة التجريبية:
  * دليل الحسابات، السنوات والفترات المالية، خريطة الربط المحاسبي، وقيود اليومية.
  *
- * دليل الحسابات هنا دليل منشأة تجارية/صناعية عامة بترميز هرمي من أربعة
+ * دليل الحسابات هنا دليل مستشفى خاص بترميز هرمي من أربعة
  * مستويات، مبنيّ بحيث تكون كل أوراقه قابلة للترحيل عليها وكل أب مجموع أبنائه.
  */
 
@@ -41,15 +41,15 @@ export const accounts = [
 
   { id: 113, code: "113", name: "العملاء والمدينون", nameEn: "Trade Receivables", type: "asset", parentId: 11, level: 3, nature: "debit", status: "active" },
   { id: 1131, code: "1131", name: "عملاء — تجارة محلية", nameEn: "Local Customers", type: "asset", parentId: 113, level: 4, nature: "debit", status: "active" },
-  { id: 1132, code: "1132", name: "عملاء — تصدير", nameEn: "Export Customers", type: "asset", parentId: 113, level: 4, nature: "debit", status: "active" },
+  { id: 1132, code: "1132", name: "عملاء — سياحة علاجية", nameEn: "Medical Tourism Receivables", type: "asset", parentId: 113, level: 4, nature: "debit", status: "active" },
   { id: 1133, code: "1133", name: "أوراق قبض (شيكات تحت التحصيل)", nameEn: "Notes Receivable", type: "asset", parentId: 113, level: 4, nature: "debit", status: "active" },
   { id: 1134, code: "1134", name: "مخصص الديون المشكوك في تحصيلها", nameEn: "Allowance for Doubtful Debts", type: "asset", parentId: 113, level: 4, nature: "credit", status: "active" },
 
   { id: 114, code: "114", name: "المخزون", nameEn: "Inventory", type: "asset", parentId: 11, level: 3, nature: "debit", status: "active" },
-  { id: 11411, code: "11411", name: "مخزون أصناف تجارية", nameEn: "Trading Goods Inventory", type: "asset", parentId: 114, level: 4, nature: "debit", status: "active" },
-  { id: 11412, code: "11412", name: "مخزون مواد خام", nameEn: "Raw Materials Inventory", type: "asset", parentId: 114, level: 4, nature: "debit", status: "active" },
-  { id: 11413, code: "11413", name: "مخزون إنتاج تام", nameEn: "Finished Goods Inventory", type: "asset", parentId: 114, level: 4, nature: "debit", status: "active" },
-  { id: 11414, code: "11414", name: "مخزون قطع غيار ومستهلكات", nameEn: "Spare Parts Inventory", type: "asset", parentId: 114, level: 4, nature: "debit", status: "active" },
+  { id: 11411, code: "11411", name: "مخزون مستهلكات طبية عامة", nameEn: "General Medical Consumables Inventory", type: "asset", parentId: 114, level: 4, nature: "debit", status: "active" },
+  { id: 11412, code: "11412", name: "مخزون أدوية", nameEn: "Medications Inventory", type: "asset", parentId: 114, level: 4, nature: "debit", status: "active" },
+  { id: 11413, code: "11413", name: "مخزون مستلزمات العمليات", nameEn: "Surgical Supplies Inventory", type: "asset", parentId: 114, level: 4, nature: "debit", status: "active" },
+  { id: 11414, code: "11414", name: "مخزون قطع غيار الأجهزة الطبية", nameEn: "Medical Equipment Spares Inventory", type: "asset", parentId: 114, level: 4, nature: "debit", status: "active" },
   { id: 11415, code: "11415", name: "مخزون فرع الإسكندرية", nameEn: "Alexandria Branch Inventory", type: "asset", parentId: 114, level: 4, nature: "debit", status: "active" },
 
   { id: 115, code: "115", name: "مدينون متنوعون وأرصدة مدينة أخرى", nameEn: "Other Receivables", type: "asset", parentId: 11, level: 3, nature: "debit", status: "active" },
@@ -66,7 +66,7 @@ export const accounts = [
 
   { id: 121, code: "121", name: "الأصول الثابتة — بالتكلفة", nameEn: "Fixed Assets at Cost", type: "asset", parentId: 12, level: 3, nature: "debit", status: "active" },
   { id: 1211, code: "1211", name: "أراضٍ ومبانٍ", nameEn: "Land & Buildings", type: "asset", parentId: 121, level: 4, nature: "debit", status: "active", isFixedAsset: true },
-  { id: 1212, code: "1212", name: "آلات ومعدات إنتاج", nameEn: "Machinery & Equipment", type: "asset", parentId: 121, level: 4, nature: "debit", status: "active", isFixedAsset: true },
+  { id: 1212, code: "1212", name: "أجهزة ومعدات طبية", nameEn: "Medical Equipment", type: "asset", parentId: 121, level: 4, nature: "debit", status: "active", isFixedAsset: true },
   { id: 1213, code: "1213", name: "أثاث وتجهيزات مكتبية", nameEn: "Furniture & Fixtures", type: "asset", parentId: 121, level: 4, nature: "debit", status: "active", isFixedAsset: true },
   { id: 1214, code: "1214", name: "أجهزة حاسب وشبكات", nameEn: "Computers & Networks", type: "asset", parentId: 121, level: 4, nature: "debit", status: "active", isFixedAsset: true },
   { id: 1215, code: "1215", name: "سيارات ووسائل نقل", nameEn: "Vehicles", type: "asset", parentId: 121, level: 4, nature: "debit", status: "active", isFixedAsset: true },
@@ -131,11 +131,11 @@ export const accounts = [
   /* ===================== 4. الإيرادات ===================== */
   { id: 4, code: "4", name: "الإيرادات", nameEn: "Revenue", type: "revenue", parentId: null, level: 1, nature: "credit", status: "active" },
   { id: 41, code: "41", name: "إيرادات النشاط الرئيسي", nameEn: "Operating Revenue", type: "revenue", parentId: 4, level: 2, nature: "credit", status: "active" },
-  { id: 411, code: "411", name: "مبيعات أصناف تجارية", nameEn: "Trading Sales", type: "revenue", parentId: 41, level: 3, nature: "credit", status: "active" },
-  { id: 4111, code: "4111", name: "مبيعات محلية", nameEn: "Local Sales", type: "revenue", parentId: 411, level: 4, nature: "credit", status: "active" },
-  { id: 4112, code: "4112", name: "مبيعات تصدير", nameEn: "Export Sales", type: "revenue", parentId: 411, level: 4, nature: "credit", status: "active" },
-  { id: 412, code: "412", name: "مبيعات إنتاج تام", nameEn: "Manufactured Goods Sales", type: "revenue", parentId: 41, level: 3, nature: "credit", status: "active" },
-  { id: 413, code: "413", name: "إيرادات خدمات وصيانة", nameEn: "Service Revenue", type: "revenue", parentId: 41, level: 3, nature: "credit", status: "active" },
+  { id: 411, code: "411", name: "إيرادات الخدمات الطبية", nameEn: "Medical Services Revenue", type: "revenue", parentId: 41, level: 3, nature: "credit", status: "active" },
+  { id: 4111, code: "4111", name: "إيرادات خدمات طبية — محلي", nameEn: "Local Medical Services", type: "revenue", parentId: 411, level: 4, nature: "credit", status: "active" },
+  { id: 4112, code: "4112", name: "إيرادات سياحة علاجية", nameEn: "Medical Tourism Revenue", type: "revenue", parentId: 411, level: 4, nature: "credit", status: "active" },
+  { id: 412, code: "412", name: "إيرادات العمليات والإقامة", nameEn: "Surgery & Inpatient Revenue", type: "revenue", parentId: 41, level: 3, nature: "credit", status: "active" },
+  { id: 413, code: "413", name: "إيرادات خدمات مساندة", nameEn: "Ancillary Services Revenue", type: "revenue", parentId: 41, level: 3, nature: "credit", status: "active" },
   { id: 42, code: "42", name: "إيرادات أخرى", nameEn: "Other Income", type: "revenue", parentId: 4, level: 2, nature: "credit", status: "active" },
   { id: 421, code: "421", name: "أرباح استبعاد أصول", nameEn: "Gain on Asset Disposal", type: "revenue", parentId: 42, level: 3, nature: "credit", status: "active" },
   { id: 422, code: "422", name: "زيادة مخزون بالجرد", nameEn: "Inventory Surplus", type: "revenue", parentId: 42, level: 3, nature: "credit", status: "active" },
@@ -144,11 +144,11 @@ export const accounts = [
   /* ===================== 5. المصروفات ===================== */
   { id: 5, code: "5", name: "المصروفات", nameEn: "Expenses", type: "expense", parentId: null, level: 1, nature: "debit", status: "active" },
 
-  { id: 51, code: "51", name: "تكلفة المبيعات", nameEn: "Cost of Sales", type: "expense", parentId: 5, level: 2, nature: "debit", status: "active" },
-  { id: 511, code: "511", name: "تكلفة الأصناف المباعة", nameEn: "Cost of Goods Sold", type: "expense", parentId: 51, level: 3, nature: "debit", status: "active" },
-  { id: 5111, code: "5111", name: "تكلفة أصناف تجارية مباعة", nameEn: "COGS — Trading", type: "expense", parentId: 511, level: 4, nature: "debit", status: "active" },
-  { id: 5112, code: "5112", name: "تكلفة إنتاج تام مباع", nameEn: "COGS — Manufactured", type: "expense", parentId: 511, level: 4, nature: "debit", status: "active" },
-  { id: 512, code: "512", name: "مواد خام مستهلكة", nameEn: "Raw Materials Consumed", type: "expense", parentId: 51, level: 3, nature: "debit", status: "active" },
+  { id: 51, code: "51", name: "تكلفة الخدمات الطبية", nameEn: "Cost of Medical Services", type: "expense", parentId: 5, level: 2, nature: "debit", status: "active" },
+  { id: 511, code: "511", name: "تكلفة المستلزمات المصروفة", nameEn: "Cost of Supplies Issued", type: "expense", parentId: 51, level: 3, nature: "debit", status: "active" },
+  { id: 5111, code: "5111", name: "تكلفة مستهلكات طبية مصروفة", nameEn: "Medical Consumables Cost", type: "expense", parentId: 511, level: 4, nature: "debit", status: "active" },
+  { id: 5112, code: "5112", name: "تكلفة مستلزمات عمليات مصروفة", nameEn: "Surgical Supplies Cost", type: "expense", parentId: 511, level: 4, nature: "debit", status: "active" },
+  { id: 512, code: "512", name: "أدوية مستهلكة", nameEn: "Medications Consumed", type: "expense", parentId: 51, level: 3, nature: "debit", status: "active" },
   { id: 513, code: "513", name: "عجز وتلف المخزون", nameEn: "Inventory Shrinkage", type: "expense", parentId: 51, level: 3, nature: "debit", status: "active" },
 
   { id: 52, code: "52", name: "مصروفات عمومية وإدارية", nameEn: "General & Administrative", type: "expense", parentId: 5, level: 2, nature: "debit", status: "active" },
@@ -174,13 +174,13 @@ export const accounts = [
   { id: 5241, code: "5241", name: "مصروف إهلاك الأصول الثابتة", nameEn: "Depreciation Expense", type: "expense", parentId: 524, level: 4, nature: "debit", status: "active" },
   { id: 5242, code: "5242", name: "مصروف إطفاء الأصول غير الملموسة", nameEn: "Amortization Expense", type: "expense", parentId: 524, level: 4, nature: "debit", status: "active" },
 
-  { id: 53, code: "53", name: "مصروفات بيع وتوزيع", nameEn: "Selling & Distribution", type: "expense", parentId: 5, level: 2, nature: "debit", status: "active" },
+  { id: 53, code: "53", name: "مصروفات تسويق وتعاقدات", nameEn: "Marketing & Contracting", type: "expense", parentId: 5, level: 2, nature: "debit", status: "active" },
   { id: 531, code: "531", name: "خصومات ومردودات", nameEn: "Discounts & Returns", type: "expense", parentId: 53, level: 3, nature: "debit", status: "active" },
-  { id: 5311, code: "5311", name: "الخصم المسموح به", nameEn: "Sales Discounts", type: "expense", parentId: 531, level: 4, nature: "debit", status: "active" },
-  { id: 5312, code: "5312", name: "مردودات المبيعات", nameEn: "Sales Returns", type: "expense", parentId: 531, level: 4, nature: "debit", status: "active" },
-  { id: 532, code: "532", name: "نقل وشحن وتوزيع", nameEn: "Freight & Distribution", type: "expense", parentId: 53, level: 3, nature: "debit", status: "active" },
+  { id: 5311, code: "5311", name: "الخصم المسموح به", nameEn: "Allowed Discounts", type: "expense", parentId: 531, level: 4, nature: "debit", status: "active" },
+  { id: 5312, code: "5312", name: "مردودات الإيرادات", nameEn: "Revenue Returns", type: "expense", parentId: 531, level: 4, nature: "debit", status: "active" },
+  { id: 532, code: "532", name: "نقل وإسعاف وانتقالات", nameEn: "Transport & Ambulance", type: "expense", parentId: 53, level: 3, nature: "debit", status: "active" },
   { id: 533, code: "533", name: "دعاية وتسويق", nameEn: "Marketing & Advertising", type: "expense", parentId: 53, level: 3, nature: "debit", status: "active" },
-  { id: 534, code: "534", name: "عمولات مبيعات", nameEn: "Sales Commissions", type: "expense", parentId: 53, level: 3, nature: "debit", status: "active" },
+  { id: 534, code: "534", name: "عمولات تعاقدات", nameEn: "Contracting Commissions", type: "expense", parentId: 53, level: 3, nature: "debit", status: "active" },
 
   { id: 54, code: "54", name: "مصروفات تمويلية وأخرى", nameEn: "Finance & Other Expenses", type: "expense", parentId: 5, level: 2, nature: "debit", status: "active" },
   { id: 541, code: "541", name: "فوائد وأعباء بنكية", nameEn: "Interest & Bank Charges", type: "expense", parentId: 54, level: 3, nature: "debit", status: "active" },
@@ -392,23 +392,23 @@ const openingEntry = entry({
     D(1123, 420_000, "البنك التجاري الدولي — رصيد افتتاحي"),
     D(1124, 180_000, "بنك القاهرة (الرواتب) — رصيد افتتاحي"),
     D(1131, 2_640_000, "عملاء محليون — رصيد افتتاحي"),
-    D(1132, 780_000, "عملاء تصدير — رصيد افتتاحي"),
+    D(1132, 780_000, "عملاء سياحة علاجية — رصيد افتتاحي"),
     D(1133, 320_000, "شيكات تحت التحصيل"),
     /*
      * أرصدة المخزون الافتتاحية **نائبة** هنا، وتُضبط أدناه بعد بناء كل قيود
      * النشاط — راجع كتلة «معايرة أرصدة المخزون الافتتاحية».
      */
-    D(11411, 0, "مخزون أصناف تجارية — رصيد افتتاحي"),
-    D(11412, 0, "مخزون مواد خام — رصيد افتتاحي"),
-    D(11413, 0, "مخزون إنتاج تام — رصيد افتتاحي"),
-    D(11414, 0, "مخزون قطع غيار — رصيد افتتاحي"),
+    D(11411, 0, "مخزون مستهلكات طبية — رصيد افتتاحي"),
+    D(11412, 0, "مخزون أدوية — رصيد افتتاحي"),
+    D(11413, 0, "مخزون مستلزمات عمليات — رصيد افتتاحي"),
+    D(11414, 0, "مخزون قطع غيار أجهزة — رصيد افتتاحي"),
     D(11415, 0, "مخزون فرع الإسكندرية — رصيد افتتاحي"),
     D(1151, 96_000, "سلف الموظفين القائمة"),
     D(1152, 240_000, "دفعات مقدمة للموردين"),
     D(1153, 180_000, "مصروفات مدفوعة مقدمًا (إيجار وتأمين)"),
     D(1154, 85_000, "تأمينات لدى الغير"),
     D(1211, 6_500_000, "أراضٍ ومبانٍ — بالتكلفة"),
-    D(1212, 4_850_000, "آلات ومعدات — بالتكلفة"),
+    D(1212, 4_850_000, "أجهزة ومعدات طبية — بالتكلفة"),
     D(1213, 720_000, "أثاث وتجهيزات — بالتكلفة"),
     D(1214, 640_000, "أجهزة حاسب وشبكات — بالتكلفة"),
     D(1215, 1_980_000, "سيارات ووسائل نقل — بالتكلفة"),
@@ -417,7 +417,7 @@ const openingEntry = entry({
     /* حسابات المقابلة والخصوم وحقوق الملكية — دائن */
     C(1134, 132_000, "مخصص الديون المشكوك فيها"),
     C(1221, 1_040_000, "مجمع إهلاك المبانٍ"),
-    C(1222, 1_746_000, "مجمع إهلاك الآلات"),
+    C(1222, 1_746_000, "مجمع إهلاك الأجهزة الطبية"),
     C(1223, 288_000, "مجمع إهلاك الأثاث"),
     C(1224, 384_000, "مجمع إهلاك الحاسبات"),
     C(1225, 792_000, "مجمع إهلاك السيارات"),
@@ -432,7 +432,7 @@ const openingEntry = entry({
     C(2133, 310_000, "ضريبة أرباح تجارية مستحقة"),
     C(2141, 92_000, "إيجارات ومرافق مستحقة"),
     C(2142, 148_000, "دائنون متنوعون"),
-    C(2211, 2_400_000, "قرض البنك الأهلي — تمويل آلات"),
+    C(2211, 2_400_000, "قرض البنك الأهلي — تمويل أجهزة طبية"),
     C(311, 12_000_000, "رأس المال المدفوع"),
     C(321, 1_200_000, "الاحتياطي القانوني"),
     C(322, 650_000, "احتياطي عام"),
@@ -447,20 +447,20 @@ const openingEntry = entry({
 const activityEntries = [
   entry({
     id: 2, number: 2, date: "2026-10-05",
-    description: "فاتورة مبيعات محلية — شركة النور للتجارة والتوزيع",
+    description: "فاتورة خدمات طبية — شركة النور للتأمين الطبي",
     sourceType: "customer_invoice", sourceId: 1, reference: "SI-2026-0001", costCenterId: 4,
     lines: [
-      D(1131, 456_000, "مديونية شركة النور", { partyType: "customer", partyId: 1 }),
-      C(4111, 400_000, "مبيعات محلية"),
+      D(1131, 456_000, "مديونية شركة النور للتأمين الطبي", { partyType: "customer", partyId: 1 }),
+      C(4111, 400_000, "إيرادات خدمات طبية — محلي"),
       C(2131, 56_000, "ض.ق.م مخرجات 14%"),
     ],
   }),
   entry({
     id: 3, number: 3, date: "2026-10-05",
-    description: "تكلفة الأصناف المباعة — فاتورة SI-2026-0001",
+    description: "تكلفة المستلزمات المصروفة — فاتورة SI-2026-0001",
     sourceType: "inventory_issue", sourceId: 1, reference: "ISS-2026-0001", costCenterId: 4,
     lines: [
-      D(5111, 268_000, "تكلفة أصناف تجارية مباعة"),
+      D(5111, 268_000, "تكلفة مستهلكات طبية مصروفة"),
       C(11411, 268_000, "خروج مخزون بالتكلفة — المخزن الرئيسي"),
     ],
   }),
@@ -475,12 +475,12 @@ const activityEntries = [
   }),
   entry({
     id: 5, number: 5, date: "2026-10-12",
-    description: "فاتورة مورد — شركة الدلتا للصناعات المعدنية (خامات)",
+    description: "فاتورة مورد — الشركة العربية لتوزيع الأدوية",
     sourceType: "supplier_invoice", sourceId: 1, reference: "PI-2026-0001", costCenterId: 5,
     lines: [
-      D(11412, 520_000, "إضافة مخزون مواد خام بالتكلفة"),
+      D(11412, 520_000, "إضافة مخزون أدوية بالتكلفة"),
       D(1161, 72_800, "ض.ق.م مدخلات قابلة للخصم"),
-      C(2111, 592_800, "التزام تجاه شركة الدلتا", { partyType: "supplier", partyId: 1 }),
+      C(2111, 592_800, "التزام تجاه الشركة العربية لتوزيع الأدوية", { partyType: "supplier", partyId: 1 }),
     ],
   }),
   entry({
@@ -544,20 +544,20 @@ const activityEntries = [
   }),
   entry({
     id: 12, number: 12, date: "2026-11-03",
-    description: "فاتورة مبيعات تصدير — شركة الصفوة للتجارة الدولية",
+    description: "فاتورة سياحة علاجية — شركة الصفوة للسياحة العلاجية",
     sourceType: "customer_invoice", sourceId: 7, reference: "SI-2026-0014", costCenterId: 4,
     lines: [
-      D(1132, 1_240_000, "مديونية شركة الصفوة (تصدير)", { partyType: "customer", partyId: 7 }),
-      C(4112, 1_240_000, "مبيعات تصدير — معفاة من ض.ق.م"),
+      D(1132, 1_240_000, "مديونية شركة الصفوة (سياحة علاجية)", { partyType: "customer", partyId: 7 }),
+      C(4112, 1_240_000, "إيرادات سياحة علاجية — معفاة من ض.ق.م"),
     ],
   }),
   entry({
     id: 13, number: 13, date: "2026-11-03",
-    description: "تكلفة الأصناف المباعة — فاتورة SI-2026-0014",
+    description: "تكلفة المستلزمات المصروفة — فاتورة SI-2026-0014",
     sourceType: "inventory_issue", sourceId: 14, reference: "ISS-2026-0014", costCenterId: 4,
     lines: [
-      D(5112, 806_000, "تكلفة إنتاج تام مباع"),
-      C(11413, 806_000, "خروج مخزون إنتاج تام"),
+      D(5112, 806_000, "تكلفة مستلزمات عمليات مصروفة"),
+      C(11413, 806_000, "خروج مخزون مستلزمات عمليات"),
     ],
   }),
   entry({
@@ -572,12 +572,12 @@ const activityEntries = [
   }),
   entry({
     id: 15, number: 15, date: "2026-11-05",
-    description: "إشعار دائن لشركة الفتح — خصم كمية متأخر",
+    description: "إشعار دائن — تسوية مطالبات مرضى النقدي",
     sourceType: "customer_credit_note", sourceId: 2, reference: "CN-2026-0004", costCenterId: 4,
     lines: [
-      D(5312, 42_000, "مردودات ومسموحات مبيعات"),
+      D(5312, 42_000, "مردودات ومسموحات إيرادات"),
       D(2131, 5_880, "عكس ض.ق.م مخرجات"),
-      C(1131, 47_880, "تخفيض مديونية مجموعة الفتح", { partyType: "customer", partyId: 2 }),
+      C(1131, 47_880, "تخفيض مديونية حسابات مرضى النقدي", { partyType: "customer", partyId: 2 }),
     ],
   }),
   entry({
@@ -622,18 +622,18 @@ const activityEntries = [
   }),
   entry({
     id: 20, number: 20, date: "2026-11-07",
-    description: "عمولات مندوبي المبيعات — أكتوبر 2026",
+    description: "عمولات التعاقدات الطبية — أكتوبر 2026",
     sourceType: "manual", status: "pending_approval", costCenterId: 4,
     createdBy: "محاسب / كريم فتحي",
     notes: "بانتظار اعتماد رئيس الحسابات — مرفق كشف العمولات.",
     lines: [
-      D(534, 64_800, "عمولات مبيعات أكتوبر"),
+      D(534, 64_800, "عمولات تعاقدات أكتوبر"),
       C(2142, 64_800, "دائنون متنوعون — عمولات مستحقة"),
     ],
   }),
   entry({
     id: 21, number: 21, date: "2026-11-07",
-    description: "مصروفات صيانة دورية لخط الإنتاج",
+    description: "مصروفات صيانة دورية للأجهزة الطبية",
     sourceType: "manual", status: "draft", costCenterId: 7,
     createdBy: "محاسب / كريم فتحي",
     notes: "مسوّدة — في انتظار فاتورة المورد النهائية.",
@@ -653,7 +653,7 @@ const activityEntries = [
   }),
   entry({
     id: 23, number: 23, date: "2026-10-15",
-    description: "إيجار المقر الرئيسي والمصنع — الربع الرابع 2026",
+    description: "إيجار مباني المستشفى — الربع الرابع 2026",
     sourceType: "manual", costCenterId: 1,
     lines: [
       D(5221, 420_000, "إيجار الربع الرابع"),
@@ -739,18 +739,19 @@ const monthlyEntries = (() => {
     const exportSales = round100(1_450_000 * seasonality * (1 + random.float() * 0.18));
     const vat = round2(localSales * 0.14);
 
-    /* هامش إجمالي بين 32% و 38% — واقعي لمنشأة تجارية/صناعية. */
+    /* هامش إجمالي بين 32% و 38% — واقعي لمستشفى خاص. */
     const cogsRate = 0.62 + random.float() * 0.06;
     const cogsLocal = round100(localSales * cogsRate);
     const cogsExport = round100(exportSales * (cogsRate + 0.03));
 
     /*
-     * دورة التصنيع: خامات تُشترى ← تُستهلك في الإنتاج ← تُصبح إنتاجًا تامًا
-     * ← يُباع. المشتريات تتجاوز الاستهلاك قليلًا وإلا نفد المخزون خلال الشهور،
-     * والإنتاج يتجاوز المبيعات قليلًا لنفس السبب.
+     * دورة المستلزمات: أدوية ومحاليل تُشترى ← تُجهَّز منها أطقم معقمة
+     * لمخزن العمليات (التعقيم المركزي) ← تُصرف على الخدمات. المشتريات تتجاوز
+     * الاستهلاك قليلًا وإلا نفد المخزون خلال الشهور، والتجهيز يتجاوز الصرف
+     * قليلًا لنفس السبب.
      *
-     * بدون قيد الإنتاج (خامات ← إنتاج تام) يخرج مخزون الإنتاج التام برصيد
-     * سالب: تكلفة المبيعات تصرف منه شهريًا ولا شيء يُضيف إليه.
+     * بدون قيد التجهيز (أدوية ← مستلزمات عمليات) يخرج مخزون مستلزمات
+     * العمليات برصيد سالب: تكلفة الخدمات تصرف منه شهريًا ولا شيء يُضيف إليه.
      */
     const production = round100(cogsExport * 1.08);
     const purchaseRaw = round100(cogsExport * 1.15);
@@ -777,9 +778,9 @@ const monthlyEntries = (() => {
       [5223, 23_500, "اتصالات وإنترنت"],
       [5224, 46_000, "صيانة وإصلاحات"],
       [5225, 18_500, "مستلزمات مكتبية ونظافة"],
-      [532, 94_000, "نقل وشحن وتوزيع"],
+      [532, 94_000, "نقل وإسعاف وانتقالات"],
       [533, 72_000, "دعاية وتسويق"],
-      [534, round100(localSales * 0.012), "عمولات مبيعات"],
+      [534, round100(localSales * 0.012), "عمولات تعاقدات"],
     ];
     const opexTotal = round2(opexRows.reduce((sum, [, amount]) => sum + amount, 0));
     /* يُسدَّد 92% فورًا والباقي يُستحق — فيبقى لحساب الدائنين رصيد واقعي. */
@@ -788,26 +789,26 @@ const monthlyEntries = (() => {
     out.push(
       entry({
         id: id += 1, number: number += 1, date: `${FISCAL_YEAR}-${mm}-25`,
-        description: `إجمالي مبيعات ${label} — مجمَّع شهريًا`,
+        description: `إجمالي إيرادات الخدمات الطبية ${label} — مجمَّع شهريًا`,
         sourceType: "manual", costCenterId: 4,
         createdBy: "محاسب / كريم فتحي",
         lines: [
-          D(1131, round2(localSales + vat), "مديونية عملاء محليين — مبيعات الشهر"),
-          D(1132, exportSales, "مديونية عملاء التصدير — مبيعات الشهر"),
-          C(4111, localSales, "مبيعات محلية"),
-          C(4112, exportSales, "مبيعات تصدير — معفاة من ض.ق.م"),
+          D(1131, round2(localSales + vat), "مديونية عملاء محليين — إيرادات الشهر"),
+          D(1132, exportSales, "مديونية عملاء السياحة العلاجية — إيرادات الشهر"),
+          C(4111, localSales, "إيرادات خدمات طبية — محلي"),
+          C(4112, exportSales, "إيرادات سياحة علاجية — معفاة من ض.ق.م"),
           C(2131, vat, "ض.ق.م مخرجات 14%"),
         ],
       }),
       entry({
         id: id += 1, number: number += 1, date: `${FISCAL_YEAR}-${mm}-25`,
-        description: `تكلفة المبيعات ${label}`,
+        description: `تكلفة الخدمات الطبية ${label}`,
         sourceType: "manual", costCenterId: 4,
         lines: [
-          D(5111, cogsLocal, "تكلفة أصناف تجارية مباعة"),
-          D(5112, cogsExport, "تكلفة إنتاج تام مباع"),
-          C(11411, cogsLocal, "خروج مخزون تجاري بالتكلفة"),
-          C(11413, cogsExport, "خروج مخزون إنتاج تام بالتكلفة"),
+          D(5111, cogsLocal, "تكلفة مستهلكات طبية مصروفة"),
+          D(5112, cogsExport, "تكلفة مستلزمات عمليات مصروفة"),
+          C(11411, cogsLocal, "خروج مخزون مستهلكات بالتكلفة"),
+          C(11413, cogsExport, "خروج مخزون مستلزمات عمليات بالتكلفة"),
         ],
       }),
       entry({
@@ -818,9 +819,9 @@ const monthlyEntries = (() => {
         lines: [
           D(1121, collectedLocalBank, "البنك الأهلي — تحصيلات"),
           D(1111, round2(collectedLocal - collectedLocalBank), "الخزينة الرئيسية — تحصيلات نقدية"),
-          D(1122, collectedExport, "بنك مصر — تحصيلات تصدير"),
+          D(1122, collectedExport, "بنك مصر — تحصيلات سياحة علاجية"),
           C(1131, collectedLocal, "سداد عملاء محليين"),
-          C(1132, collectedExport, "سداد عملاء التصدير"),
+          C(1132, collectedExport, "سداد عملاء السياحة العلاجية"),
         ],
       }),
       entry({
@@ -897,7 +898,7 @@ const monthlyEntries = (() => {
         lines: [
           D(5241, 123_750, "مصروف إهلاك الأصول الثابتة"),
           C(1221, 18_056, "مجمع إهلاك المبانٍ"),
-          C(1222, 56_583, "مجمع إهلاك الآلات"),
+          C(1222, 56_583, "مجمع إهلاك الأجهزة الطبية"),
           C(1223, 7_200, "مجمع إهلاك الأثاث"),
           C(1224, 14_222, "مجمع إهلاك الحاسبات"),
           C(1225, 27_689, "مجمع إهلاك السيارات"),
@@ -915,21 +916,21 @@ const monthlyEntries = (() => {
       }),
       entry({
         id: id += 1, number: number += 1, date: `${FISCAL_YEAR}-${mm}-22`,
-        description: `تحويل إنتاج تام إلى المخزن — ${label}`,
+        description: `تجهيز مستلزمات العمليات (تعقيم مركزي) — ${label}`,
         sourceType: "manual", costCenterId: 7,
-        notes: "استهلاك خامات مقابل إضافة إنتاج تام. لا إيراد — تحويل داخلي بين حسابي مخزون.",
+        notes: "استهلاك أدوية ومحاليل مقابل إضافة مستلزمات عمليات مجهَّزة. لا إيراد — تحويل داخلي بين حسابي مخزون.",
         lines: [
-          D(11413, production, "إضافة إنتاج تام بالتكلفة"),
-          C(11412, production, "استهلاك مواد خام في الإنتاج"),
+          D(11413, production, "إضافة مستلزمات عمليات مجهَّزة بالتكلفة"),
+          C(11412, production, "استهلاك أدوية ومحاليل في التجهيز"),
         ],
       }),
       entry({
         id: id += 1, number: number += 1, date: `${FISCAL_YEAR}-${mm}-15`,
-        description: `مشتريات خامات وأصناف — ${label}`,
+        description: `مشتريات أدوية ومستلزمات طبية — ${label}`,
         sourceType: "manual", costCenterId: 5,
         lines: [
-          D(11412, purchaseRaw, "إضافة مخزون مواد خام"),
-          D(11411, purchaseTrading, "إضافة مخزون أصناف تجارية"),
+          D(11412, purchaseRaw, "إضافة مخزون أدوية ومحاليل"),
+          D(11411, purchaseTrading, "إضافة مخزون مستهلكات طبية"),
           D(1161, purchaseVat, "ض.ق.م مدخلات قابلة للخصم"),
           C(2111, purchaseTotal, "التزام تجاه الموردين"),
         ],

@@ -15,24 +15,24 @@ const TODAY = REFERENCE_DATE.toISOString().slice(0, 10);
    ============================================================================ */
 
 export const companyInfo = {
-  name: "شركة الأعمال المتقدمة للتجارة والصناعة",
-  nameEn: "Advanced Business Trading & Industry Co.",
-  legalForm: "شركة مساهمة مصرية",
+  name: "مستشفى الحياة التخصصي",
+  nameEn: "Al-Hayah Specialized Hospital",
+  legalForm: "شركة مساهمة مصرية — منشأة طبية خاصة",
   commercialRegister: "128470",
   taxId: "204-851-963",
   taxOffice: "مأمورية ضرائب مدينة نصر — الشركات",
   vatRegistration: "VAT-204851963",
-  industrialRegister: "IR-77410",
+  industrialRegister: "LIC-77410",
   establishedAt: "2014-03-18",
   capital: 12_000_000,
 
-  address: "القاهرة — مدينة نصر، شارع عباس العقاد، برج الأعمال، الدور الثامن",
+  address: "القاهرة — مدينة نصر، شارع عباس العقاد، مبنى المستشفى الرئيسي",
   governorate: "القاهرة",
   postalCode: "11765",
   phone: "0224011234",
   fax: "0224011235",
-  email: "info@advanced-erp.example",
-  website: "www.advanced-erp.example",
+  email: "info@alhayah-hospital.example",
+  website: "www.alhayah-hospital.example",
 
   logoUrl: "assets/logo.png",
   currency: "EGP",
@@ -42,7 +42,7 @@ export const companyInfo = {
   timeZone: "Africa/Cairo",
 
   /** يظهر في تذييل كل تقرير مطبوع. */
-  reportFooter: "شركة الأعمال المتقدمة للتجارة والصناعة — س.ت 128470 — ب.ض 204-851-963",
+  reportFooter: "مستشفى الحياة التخصصي — س.ت 128470 — ب.ض 204-851-963",
 };
 
 export const branches = BRANCHES;
@@ -70,7 +70,7 @@ const USER_SEEDS = [
   { id: 11, name: "وليد حسن البحيري", username: "w.behairy", role: "inv", employeeId: 29, departmentId: 6, jobTitle: "أمين مخزن" },
   { id: 12, name: "ماجد فادي عطية", username: "m.atya", role: "inv", employeeId: 30, departmentId: 6, jobTitle: "أمين مخزن — الإسكندرية" },
   { id: 13, name: "نادر إسلام الفقي", username: "n.fakey", role: "gl", employeeId: null, departmentId: 1, jobTitle: "مراجع داخلي" },
-  { id: 14, name: "رامي عادل خليل", username: "r.khalil", role: "fin", employeeId: 21, departmentId: 4, jobTitle: "مندوب مبيعات أول" },
+  { id: 14, name: "رامي عادل خليل", username: "r.khalil", role: "fin", employeeId: 21, departmentId: 4, jobTitle: "مسؤول تعاقدات ومطالبات أول" },
   { id: 15, name: "شيماء باسم النجار", username: "s.naggar", role: "hr", employeeId: 13, departmentId: 3, jobTitle: "أخصائي موارد بشرية" },
 ];
 
@@ -81,7 +81,7 @@ export const users = USER_SEEDS.map((seed, index) => {
   return {
     ...seed,
     code: `USR-${String(seed.id).padStart(3, "0")}`,
-    email: `${seed.username}@advanced-erp.example`,
+    email: `${seed.username}@alhayah-hospital.example`,
     phone: random.phone(),
     roleName: ROLES[seed.role]?.label ?? seed.role,
     branchId: seed.username === "m.atya" ? 2 : 1,

@@ -251,7 +251,7 @@ export function createCustomerInvoice(payload, { user } = {}) {
       lines: where("customerInvoiceLines", (row) => row.invoiceId === invoice.id),
     },
     date: invoice.date,
-    description: `فاتورة مبيعات ${invoice.invoiceNumber} — ${customer.name}`,
+    description: `فاتورة خدمات طبية ${invoice.invoiceNumber} — ${customer.name}`,
     reference: invoice.invoiceNumber,
     costCenterId: invoice.costCenterId,
     user,

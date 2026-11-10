@@ -4,8 +4,9 @@
  * يضم: زر طي الشريط، شريط تقدّم الطلبات، بحث سريع (لوحة أوامر)، إشعارات
  * المخزون، وقائمة المستخدم.
  *
- * مبدّل الأدوار أداة تطوير لا ميزة للمستخدم: وجوده يجعل اختبار الواجهة
- * المدركة للصلاحيات فعليًا بدل افتراضه. يُزال عند ربط المصادقة في Phase 7.
+ * مبدّل القسم (أقصى اليسار) ميزة أساسية بطلب المالك: مدير النظام يرى كل
+ * شيء، وكل دور آخر يرى موديوله فقط — والزر يبدّل بينهم فورًا. عند ربط
+ * المصادقة الحقيقية يُقيَّد الزر بصلاحية إدارية أو يُستبدل بتسجيل الدخول.
  */
 
 import { el, cx, render, qs } from "../../js/core/dom.js";
@@ -20,7 +21,6 @@ import { notificationsPanel } from "./notifications-panel.js";
 import { openCommandPalette } from "../common/command-palette.js";
 import { toast } from "../feedback/toast.js";
 import { describeDataLayer } from "../../js/api/meta.api.js";
-import { APP } from "../../js/core/config.js";
 import { setTheme, currentThemePreference } from "../../js/core/theme.js";
 import { navigate } from "../../js/core/router.js";
 
@@ -71,7 +71,6 @@ export function header({ onOpenMobileNav } = {}) {
 
     /* --- يسار (النهاية في RTL) --- */
     dataLayerBadge(),
-    roleSwitcher(),
     iconButton("image", {
       label: "استوديو تخصيص الخلفية والمظهر",
       size: "icon-sm",
@@ -80,6 +79,8 @@ export function header({ onOpenMobileNav } = {}) {
     }),
     notificationsPanel(),
     userMenuHost,
+    /* آخر عنصر في RTL = أقصى اليسار — مكان زر تبديل القسم بطلب المالك. */
+    roleSwitcher(),
   );
 
   /* --- بطاقة المستخدم وقائمتها --- */
@@ -150,7 +151,7 @@ export function header({ onOpenMobileNav } = {}) {
       el(
         "div",
         { class: "p-1.5" },
-        menuItem({ icon: "settings", label: "الإعدادات", href: "#/settings/hospital" }),
+        menuItem({ icon: "settings", label: "الإعدادات", href: "#/settings/company" }),
         menuItem({
           icon: "logout",
           label: "تسجيل الخروج",
@@ -340,24 +341,38 @@ function dataLayerBadge() {
   );
 }
 
-/** مبدّل الأدوار — أداة تطوير، تُزال في Phase 7. */
+/**
+ * زر تبديل القسم — في أقصى يسار الهيدر.
+ *
+ * يعرض الدور الحالي ويفتح قائمة بالأدوار الخمسة: مدير النظام يرى كل شيء،
+ * وكل دور آخر يرى موديوله وتقاريره فقط. التبديل يُعيد رسم الشريط الجانبي
+ * ولوحة التحكم فورًا، ويعيد التوجيه إن كانت الشاشة الحالية ممنوعة.
+ */
 function roleSwitcher() {
-  const host = el("div", { class: "relative hidden md:block" });
+  const host = el("div", { class: "relative" });
 
   let panel = null;
+
+  function closePanel() {
+    panel?.remove();
+    panel = null;
+    toggle.setAttribute("aria-expanded", "false");
+  }
 
   const toggle = el(
     "button",
     {
       type: "button",
       class:
-        "inline-flex items-center gap-1.5 h-6 px-2 rounded-full border border-line-strong " +
-        "text-[10px] text-muted hover:text-ink hover:border-faint transition-colors",
-      title: "تبديل الدور لاختبار الصلاحيات (أداة تطوير)",
+        "hx-press inline-flex items-center gap-1.5 h-8 ps-2.5 pe-2 rounded-[var(--radius-control)] " +
+        "bg-brand-50 border border-brand-200 text-brand-300 text-xs font-semibold " +
+        "hover:bg-brand-100 hover:border-brand-300 transition-colors shrink-0",
+      title: "تبديل القسم — اختر الدور الذي تعمل به",
+      "aria-haspopup": "true",
+      "aria-expanded": "false",
       onClick: () => {
         if (panel) {
-          panel.remove();
-          panel = null;
+          closePanel();
           return;
         }
 
@@ -365,47 +380,48 @@ function roleSwitcher() {
           "div",
           {
             class:
-              "absolute top-full end-0 mt-1.5 z-30 w-56 bg-surface border border-line " +
-              "rounded-[var(--radius-control)] shadow-raised p-1.5",
+              "absolute top-full end-0 mt-1.5 z-30 w-60 bg-surface border border-line " +
+              "rounded-[var(--radius-card)] shadow-overlay p-1.5 hx-rise",
+            role: "menu",
           },
           el(
             "p",
-            { class: "px-2 py-1 text-[10px] text-faint leading-snug" },
-            "أداة تطوير: بدّل الدور لتتحقق من أن الواجهة تحترم الصلاحيات.",
+            { class: "px-2 py-1.5 text-[10px] text-faint leading-snug border-b border-line mb-1" },
+            "اختر القسم الذي تعمل عليه — كل دور يرى شاشات موديوله فقط، ومدير النظام يرى كل شيء.",
           ),
           ...Object.entries(ROLES).map(([key, role]) =>
             el(
               "button",
               {
                 type: "button",
+                role: "menuitem",
                 class: cx(
-                  "w-full flex items-center justify-between gap-2 px-2 py-1.5 rounded text-start text-xs transition-colors",
+                  "w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-[var(--radius-control)] text-start text-sm transition-colors",
                   currentRole().key === key
-                    ? "bg-brand-50 text-brand-300 font-medium"
+                    ? "bg-brand-50 text-brand-300 font-semibold"
                     : "text-ink hover:bg-subtle",
                 ),
                 onClick: () => {
                   setRole(key);
-                  panel?.remove();
-                  panel = null;
+                  closePanel();
                   paintLabel();
                   // الشاشة الحالية قد تكون ممنوعة على الدور الجديد — نعيد توجيهها.
                   window.dispatchEvent(new HashChangeEvent("hashchange"));
                 },
               },
               el("span", {}, role.label),
-              currentRole().key === key ? icon("check", { size: 13 }) : null,
+              currentRole().key === key ? icon("check", { size: 14 }) : null,
             ),
           ),
         );
 
         host.appendChild(panel);
+        toggle.setAttribute("aria-expanded", "true");
 
         setTimeout(() => {
           const onOutside = (evt) => {
             if (!host.contains(evt.target)) {
-              panel?.remove();
-              panel = null;
+              closePanel();
               document.removeEventListener("mousedown", onOutside);
             }
           };
@@ -413,9 +429,9 @@ function roleSwitcher() {
         }, 0);
       },
     },
-    icon("user", { size: 11 }),
-    el("span", { dataset: { roleLabel: "" } }, currentRole().label),
-    icon("chevronDown", { size: 11 }),
+    icon("users", { size: 14 }),
+    el("span", { dataset: { roleLabel: "" }, class: "max-sm:hidden" }, currentRole().label),
+    icon("chevronDown", { size: 12 }),
   );
 
   function paintLabel() {
@@ -424,5 +440,5 @@ function roleSwitcher() {
   }
 
   host.appendChild(toggle);
-  return APP.phase < 7 ? host : el("span", { hidden: true });
+  return host;
 }
