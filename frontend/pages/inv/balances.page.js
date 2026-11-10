@@ -17,18 +17,12 @@ import {
   textColumn,
   quantityColumn,
   moneyColumn,
-  tagColumn,
   statusColumn,
   totalCell,
   dateColumn,
 } from "../_shared/cells.js";
 import { listBalances } from "../../js/api/inventory.api.js";
 import { getWarehouses, getItemCategories, toOptions } from "../../js/api/lookups.api.js";
-
-const COSTING_LABELS = {
-  fifo: { label: "FIFO", tone: "brand" },
-  weighted_average: { label: "متوسط مرجح", tone: "info" },
-};
 
 export default async function balancesPage() {
   const [warehouses, categories] = await Promise.all([
@@ -102,10 +96,6 @@ export default async function balancesPage() {
       moneyColumn("totalValue", "القيمة الإجمالية", {
         tooltip: "الكمية × تكلفتها = قيمة المخزون في هذا الصف، ومجموعها يطابق حساب المخزون في الميزانية.",
       }),
-      tagColumn("costingMethod", "التقييم", COSTING_LABELS, {
-        width: "7.5rem",
-        tooltip: "طريقة حساب تكلفة الصرف: FIFO يصرف الأقدم شراءً بسعره، والمتوسط المرجّح يصرف بمتوسط تكلفة الرصيد.",
-      }),
       dateColumn("lastMovementDate", "آخر حركة", { hidden: true }),
       statusColumn(),
     ],
@@ -119,7 +109,7 @@ export default async function balancesPage() {
             { value: integer(rows.reduce((sum, r) => sum + (r.available ?? 0), 0)), numeric: true },
             { value: "", colspan: 1 },
             { value: totalCell(money.sumBy(rows, "totalValue")), numeric: true },
-            { value: "", colspan: 2 },
+            { value: "", colspan: 1 },
           ]
         : null,
 

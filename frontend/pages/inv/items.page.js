@@ -17,7 +17,6 @@ import {
   textColumn,
   quantityColumn,
   moneyColumn,
-  tagColumn,
   statusColumn,
   totalCell,
   countColumn,
@@ -26,11 +25,6 @@ import { formModal, selectField, value, numberValue, moneyField } from "../_shar
 import { textField } from "../../components/forms/fields.js";
 import { listItems, createItem } from "../../js/api/inventory.api.js";
 import { getItemCategories, getUnits, getWarehouses, toOptions, invalidateLookups } from "../../js/api/lookups.api.js";
-
-const COSTING_METHODS = {
-  fifo: { label: "الوارد أولاً صادر أولاً (FIFO)", tone: "brand" },
-  weighted_average: { label: "المتوسط المرجّح", tone: "info" },
-};
 
 export default async function itemsPage() {
   const [categories, units, warehouses] = await Promise.all([
@@ -82,14 +76,6 @@ export default async function itemsPage() {
           { value: "inactive", label: "غير نشط" },
         ],
       },
-      {
-        key: "costingMethod",
-        label: "طريقة التقييم",
-        options: [
-          { value: "fifo", label: "FIFO" },
-          { value: "weighted_average", label: "متوسط مرجح" },
-        ],
-      },
     ],
 
     columns: [
@@ -109,10 +95,6 @@ export default async function itemsPage() {
         tooltip: "الكمية الموجودة × تكلفتها = أموال المستشفى المجمّدة في هذا الصنف على الرف.",
       }),
       countColumn("warehousesCount", "المخازن"),
-      tagColumn("costingMethod", "التقييم", COSTING_METHODS, {
-        width: "8.5rem",
-        tooltip: "طريقة حساب تكلفة الصرف: FIFO يصرف الأقدم شراءً بسعره، والمتوسط المرجّح يصرف بمتوسط تكلفة الرصيد.",
-      }),
       statusColumn(),
     ],
 
@@ -124,7 +106,7 @@ export default async function itemsPage() {
             { value: integer(rows.reduce((sum, r) => sum + (r.available ?? 0), 0)), numeric: true },
             { value: "", colspan: 1 },
             { value: totalCell(money.sumBy(rows, "totalValue")), numeric: true },
-            { value: "", colspan: 3 },
+            { value: "", colspan: 2 },
           ]
         : null,
 
@@ -188,6 +170,11 @@ function openItemModal(context, { categories, units, warehouses }) {
     categoryId: Number(categories[0]?.id ?? 1),
     category: categories[0]?.name ?? "أدوية ومستلزمات",
     unit: units[0]?.name ?? "قطعة",
+    /*
+     * طريقة التقييم لا تُعرض في الواجهة بقرار المالك — FIFO افتراضيًا لكل
+     * صنف جديد (الأنسب لمستشفى: الأقدم صلاحيةً يُصرف أولًا)، والمحرك يحسب
+     * تكلفة الصرف بها دون أن يحتاج المستخدم لفهم المصطلح.
+     */
     costingMethod: "fifo",
     minLevel: 10,
     maxLevel: 500,
@@ -244,16 +231,6 @@ function openItemModal(context, { categories, units, warehouses }) {
             value: form.unit,
             options: units.map((u) => ({ value: u.name, label: `${u.name} (${u.code ?? ""})` })),
             onChange: value((v) => (form.unit = v)),
-          }),
-          selectField({
-            label: "طريقة التقييم",
-            required: true,
-            value: form.costingMethod,
-            options: [
-              { value: "fifo", label: "الوارد أولاً صادر أولاً (FIFO)" },
-              { value: "weighted_average", label: "المتوسط المرجّح" },
-            ],
-            onChange: value((v) => (form.costingMethod = v)),
           }),
         ),
 
