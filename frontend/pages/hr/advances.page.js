@@ -31,7 +31,7 @@ export default async function advancesPage() {
     description: "إدارة سلف العاملين ومتابعة سداد الأقساط الشهرية المخصومة من الرواتب.",
     tableId: "hr-advances",
     searchPlaceholder: "بحث برقم السلفة، كود الموظف، أو اسمه…",
-    initialParams: { sort: "requestDate", order: "desc" },
+    initialParams: { sort: "requestedAt", order: "desc" },
     fetch: async (params) => listAdvances(params),
 
     actions: () => [
@@ -51,18 +51,18 @@ export default async function advancesPage() {
 
     columns: [
       codeColumn("advanceNumber", "رقم السلفة", { width: "11rem" }),
-      dateColumn("requestDate", "تاريخ الطلب"),
+      dateColumn("requestedAt", "تاريخ الطلب"),
       codeColumn("employeeCode", "كود الموظف", { width: "10rem" }),
       textColumn("employeeName", "الموظف", { width: "16rem" }),
       moneyColumn("amount", "مبلغ السلفة"),
       {
-        key: "installmentsCount",
-        header: "عدد الأقساط",
+        key: "installments",
+        label: "عدد الأقساط",
         width: "9rem",
-        render: (row) => el("span", null, `${row.installmentsCount ?? 1} شهر`),
+        render: (row) => el("span", null, `${row.installments ?? 1} شهر`),
       },
-      moneyColumn("monthlyInstallment", "القسط الشهري"),
-      moneyColumn("remainingBalance", "المتبقي للسداد", { signed: false }),
+      moneyColumn("installmentAmount", "القسط الشهري"),
+      moneyColumn("outstanding", "المتبقي للسداد", { signed: false }),
       statusColumn(),
     ],
 
@@ -72,8 +72,8 @@ export default async function advancesPage() {
             { value: `مجموع الصفحة (${integer(rows.length)})`, colspan: 4 },
             { value: totalCell(money.sumBy(rows, "amount")), numeric: true },
             { value: "", colspan: 1 },
-            { value: totalCell(money.sumBy(rows, "monthlyInstallment")), numeric: true },
-            { value: totalCell(money.sumBy(rows, "remainingBalance")), numeric: true },
+            { value: totalCell(money.sumBy(rows, "installmentAmount")), numeric: true },
+            { value: totalCell(money.sumBy(rows, "outstanding")), numeric: true },
             { value: "", colspan: 1 },
           ]
         : null,
@@ -82,8 +82,8 @@ export default async function advancesPage() {
       const res = await listAdvances({ perPage: 200 });
       const rows = res.data ?? [];
       const totalAdvances = money.sumBy(rows, "amount");
-      const totalRemaining = money.sumBy(rows, "remainingBalance");
-      const activeCount = rows.filter((r) => r.status === "active").length;
+      const totalRemaining = money.sumBy(rows, "outstanding");
+      const activeCount = rows.filter((r) => r.status === "partially_recovered").length;
 
       return [
         statTile({
@@ -136,13 +136,6 @@ export default async function advancesPage() {
       style: "width: 100%; padding: 0.5rem; border-radius: 0.375rem; border: 1px solid var(--border-color); background: var(--bg-surface);",
     });
 
-    const dateInput = el("input", {
-      type: "date",
-      value: new Date().toISOString().split("T")[0],
-      class: "form-input",
-      style: "width: 100%; padding: 0.5rem; border-radius: 0.375rem; border: 1px solid var(--border-color); background: var(--bg-surface);",
-    });
-
     const reasonInput = el("input", {
       type: "text",
       placeholder: "سبب طلب السلفة…",
@@ -153,7 +146,6 @@ export default async function advancesPage() {
     form.appendChild(el("div", null, el("label", { style: "display: block; font-weight: 600; font-size: 0.8125rem; margin-bottom: 0.25rem;" }, "الموظف *"), empSelect));
     form.appendChild(el("div", null, el("label", { style: "display: block; font-weight: 600; font-size: 0.8125rem; margin-bottom: 0.25rem;" }, "مبلغ السلفة *"), amountInput));
     form.appendChild(el("div", null, el("label", { style: "display: block; font-weight: 600; font-size: 0.8125rem; margin-bottom: 0.25rem;" }, "عدد أقساط السداد (أشهر) *"), installmentsInput));
-    form.appendChild(el("div", null, el("label", { style: "display: block; font-weight: 600; font-size: 0.8125rem; margin-bottom: 0.25rem;" }, "تاريخ الطلب *"), dateInput));
     form.appendChild(el("div", null, el("label", { style: "display: block; font-weight: 600; font-size: 0.8125rem; margin-bottom: 0.25rem;" }, "السبب"), reasonInput));
 
     const modal = openModal({
@@ -180,8 +172,7 @@ export default async function advancesPage() {
               await createAdvance({
                 employeeId: empSelect.value,
                 amount: amt,
-                installmentsCount: inst,
-                requestDate: dateInput.value,
+                installments: inst,
                 reason: reasonInput.value || "سلفة نقدية",
               });
               toast.success("تم تسجيل السلفة واعتمادها بنجاح.");

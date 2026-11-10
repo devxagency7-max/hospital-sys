@@ -327,6 +327,7 @@ export const stockMovements = (() => {
       date, quantity, unitCost: null,
       reference, documentType: "stock_transfer",
       counterWarehouseId: toWarehouseId,
+      counterWarehouseName: warehouseById.get(toWarehouseId)?.name ?? "—",
       performedBy: "أمين مخزن / وليد البحيري", notes: null,
     });
 
@@ -339,6 +340,7 @@ export const stockMovements = (() => {
       unitCost: item.costPrice,
       reference, documentType: "stock_transfer",
       counterWarehouseId: fromWarehouseId,
+      counterWarehouseName: warehouseById.get(fromWarehouseId)?.name ?? "—",
       performedBy: "أمين مخزن / وليد البحيري", notes: null,
     });
   }

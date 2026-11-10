@@ -34,7 +34,7 @@ export default async function leavesPage() {
     description: "إدارة طلبات الإجازات السنوية والمرضية والعارضة ومتابعة موافقات مديري الإدارات.",
     tableId: "hr-leaves",
     searchPlaceholder: "بحث باسم الموظف أو نوع الإجازة…",
-    initialParams: { sort: "startDate", order: "desc" },
+    initialParams: { sort: "fromDate", order: "desc" },
     fetch: async (params) => listLeaveRequests(params),
 
     actions: () => [
@@ -56,24 +56,24 @@ export default async function leavesPage() {
       codeColumn("employeeCode", "كود الموظف", { width: "10rem" }),
       textColumn("employeeName", "الموظف", { width: "16rem" }),
       {
-        key: "leaveTypeName",
-        header: "نوع الإجازة",
+        key: "typeLabel",
+        label: "نوع الإجازة",
         width: "12rem",
-        render: (row) => badge(row.leaveTypeName ?? "سنوية", { variant: "info" }),
+        render: (row) => badge(row.typeLabel ?? "سنوية", { tone: "info" }),
       },
-      dateColumn("startDate", "من تاريخ"),
-      dateColumn("endDate", "إلى تاريخ"),
+      dateColumn("fromDate", "من تاريخ"),
+      dateColumn("toDate", "إلى تاريخ"),
       {
-        key: "daysCount",
-        header: "عدد الأيام",
+        key: "days",
+        label: "عدد الأيام",
         width: "9rem",
-        render: (row) => el("span", { style: "font-weight: 700; color: var(--primary);" }, `${row.daysCount ?? 1} يوم`),
+        render: (row) => el("span", { style: "font-weight: 700; color: var(--primary);" }, `${row.days ?? 1} يوم`),
       },
       textColumn("reason", "السبب / الملاحظات", { width: "15rem", muted: true }),
       statusColumn(),
       {
         key: "actions",
-        header: "الإجراءات",
+        label: "الإجراءات",
         width: "12rem",
         render: (row) => {
           if (row.status === "pending" || row.status === "submitted") {
@@ -164,7 +164,7 @@ export default async function leavesPage() {
       class: "form-select",
       style: "width: 100%; padding: 0.5rem; border-radius: 0.375rem; border: 1px solid var(--border-color); background: var(--bg-surface);",
     });
-    leaveTypes.forEach((t) => typeSelect.appendChild(el("option", { value: t.id }, t.name)));
+    leaveTypes.forEach((t) => typeSelect.appendChild(el("option", { value: t.id }, t.label)));
 
     const startDateInput = el("input", {
       type: "date",
@@ -210,9 +210,9 @@ export default async function leavesPage() {
             try {
               await createLeaveRequest({
                 employeeId: empSelect.value,
-                leaveTypeId: typeSelect.value,
-                startDate: startDateInput.value,
-                endDate: endDateInput.value,
+                type: typeSelect.value,
+                fromDate: startDateInput.value,
+                toDate: endDateInput.value,
                 reason: reasonInput.value || "إجازة",
               });
               toast.success("تم إرسال طلب الإجازة بنجاح وهو قيد الاعتماد.");

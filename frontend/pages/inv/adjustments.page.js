@@ -39,13 +39,7 @@ export default async function adjustmentsPage() {
     tableId: "inv-adjustments",
     searchPlaceholder: "بحث برقم التسوية أو كود الصنف أو المرجع…",
     initialParams: { sort: "date", order: "desc" },
-    fetch: async (params) => {
-      const res = await listMovements(params);
-      const rows = (res.data ?? []).filter((m) =>
-        m.documentType === "stock_adjustment" || m.type === "adjustment_in" || m.type === "adjustment_out",
-      );
-      return { data: rows, meta: { ...res.meta, total: rows.length } };
-    },
+    fetch: (params) => listMovements({ ...params, documentType: "stock_adjustment" }),
 
     actions: (context) => [
       button({

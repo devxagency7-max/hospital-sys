@@ -38,7 +38,7 @@ export default async function receiptsPage() {
     tableId: "inv-receipts",
     searchPlaceholder: "بحث برقم الإذن أو كود الصنف أو المرجع…",
     initialParams: { sort: "date", order: "desc" },
-    fetch: (params) => listMovements({ ...params, type: "goods_receipt" }),
+    fetch: (params) => listMovements({ ...params, documentType: "goods_receipt" }),
 
     actions: (context) => [
       button({
@@ -91,7 +91,7 @@ export default async function receiptsPage() {
       ),
 
     stats: async () => {
-      const { data, meta } = await listMovements({ type: "goods_receipt", perPage: 200 });
+      const { data, meta } = await listMovements({ documentType: "goods_receipt", perPage: 200 });
       const totalVal = money.sumBy(data, "totalCost");
       const totalQty = data.reduce((sum, r) => sum + (r.quantity ?? 0), 0);
 

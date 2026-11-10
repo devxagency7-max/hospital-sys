@@ -32,7 +32,7 @@ export default async function countsPage() {
     description: "مطابقة الأرصدة الفعلية على الرف مع الأرصدة الدفترية واحتساب الفروق وترحيلها لتسويات مخزنية.",
     tableId: "inv-counts",
     searchPlaceholder: "بحث برقم الجرد أو اسم المستودع…",
-    initialParams: { sort: "date", order: "desc" },
+    initialParams: { sort: "plannedDate", order: "desc" },
     fetch: listStockCounts,
 
     actions: () => [
@@ -66,7 +66,7 @@ export default async function countsPage() {
     columns: [
       codeColumn("countNumber", "رقم الجرد", { width: "10.5rem" }),
       textColumn("warehouseName", "المستودع الخاضع للجرد", { width: "14rem" }),
-      dateColumn("date", "تاريخ الجرد"),
+      dateColumn("plannedDate", "تاريخ الجرد"),
       countColumn("itemsCounted", "الأصناف المحصورة"),
       countColumn("variancesCount", "أصناف بفروق"),
       moneyColumn("varianceValue", "قيمة الفروق", { signed: true }),

@@ -39,7 +39,7 @@ export default async function issuesPage() {
     tableId: "inv-issues",
     searchPlaceholder: "بحث برقم إذن الصرف أو كود الصنف أو الغرض…",
     initialParams: { sort: "date", order: "desc" },
-    fetch: (params) => listMovements({ ...params, type: "goods_issue" }),
+    fetch: (params) => listMovements({ ...params, documentType: "goods_issue" }),
 
     actions: (context) => [
       button({
@@ -92,7 +92,7 @@ export default async function issuesPage() {
       ),
 
     stats: async () => {
-      const { data, meta } = await listMovements({ type: "goods_issue", perPage: 200 });
+      const { data, meta } = await listMovements({ documentType: "goods_issue", perPage: 200 });
       const totalCost = money.sumBy(data, "totalCost");
       const totalQty = data.reduce((sum, r) => sum + (r.quantity ?? 0), 0);
 

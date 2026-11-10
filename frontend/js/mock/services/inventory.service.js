@@ -462,6 +462,7 @@ export function createTransfer(payload, { user } = {}) {
     unitCost: preview.unitCost, totalCost: preview.totalCost, costingMethod: method,
     reference, documentType: "stock_transfer",
     counterWarehouseId: toWarehouse.id,
+    counterWarehouseName: toWarehouse.name,
     performedBy: user?.name ?? "—", notes: payload?.notes ?? null,
   });
 
@@ -474,6 +475,7 @@ export function createTransfer(payload, { user } = {}) {
     unitCost: preview.unitCost, totalCost: preview.totalCost, costingMethod: method,
     reference, documentType: "stock_transfer",
     counterWarehouseId: fromWarehouse.id,
+    counterWarehouseName: fromWarehouse.name,
     performedBy: user?.name ?? "—", notes: payload?.notes ?? null,
   });
 

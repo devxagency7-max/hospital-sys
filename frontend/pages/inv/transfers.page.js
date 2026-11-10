@@ -66,16 +66,17 @@ export default async function transfersPage() {
       dateColumn("date", "تاريخ التحويل"),
       nameColumn("itemName", "itemCode", "الصنف", { width: "16rem" }),
       textColumn("warehouseName", "من مستودع", { width: "11rem" }),
+      textColumn("counterWarehouseName", "إلى مستودع", { width: "11rem" }),
       quantityColumn("quantity", "الكمية المحولة"),
       moneyColumn("unitCost", "تكلفة الوحدة"),
       moneyColumn("totalCost", "إجمالي القيمة"),
-      textColumn("reason", "البيان والملاحظات", { width: "14rem", muted: true }),
+      textColumn("notes", "البيان والملاحظات", { width: "14rem", muted: true }),
     ],
 
     summaryRow: (rows) =>
       rows.length
         ? [
-            { value: `مجموع الصفحة (${integer(rows.length)})`, colspan: 4 },
+            { value: `مجموع الصفحة (${integer(rows.length)})`, colspan: 5 },
             { value: integer(rows.reduce((sum, r) => sum + (r.quantity ?? 0), 0)), numeric: true },
             { value: "", colspan: 1 },
             { value: totalCell(money.sumBy(rows, "totalCost")), numeric: true },
