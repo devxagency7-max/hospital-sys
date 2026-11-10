@@ -95,24 +95,37 @@ export function compact(value) {
   return isNumeric(value) ? COMPACT.format(Number(value)) : EMPTY;
 }
 
+/**
+ * يُنظّف قيمة معروضة للتصدير أو العرض: يزيل حروف التحكم الاتجاهي (RLM / LRM / ALM وغيرها)
+ * ويُعيد المسافات غير الفاصلة إلى مسافات عادية.
+ *
+ * إزالة هذه العلامات من التواريخ ضرورية عند استخدام الأرقام اللاتينية مع واجهة عربية:
+ * `Intl` يُدرج U+200F حول الفواصل، وهو ما يتعارض مع عزل LTR في الجداول فيقلب ترتيب المقاطع (292023/09/).
+ */
+export function stripBidi(value) {
+  return String(value ?? "")
+    .replace(/[‎‏؜⁦-⁩]/g, "")
+    .replace(/ /g, " ");
+}
+
 export function date(value) {
   const parsed = parseDate(value);
-  return parsed ? DATE.format(parsed) : EMPTY;
+  return parsed ? stripBidi(DATE.format(parsed)) : EMPTY;
 }
 
 export function dateLong(value) {
   const parsed = parseDate(value);
-  return parsed ? DATE_LONG.format(parsed) : EMPTY;
+  return parsed ? stripBidi(DATE_LONG.format(parsed)) : EMPTY;
 }
 
 export function dateTime(value) {
   const parsed = parseDate(value);
-  return parsed ? DATE_TIME.format(parsed) : EMPTY;
+  return parsed ? stripBidi(DATE_TIME.format(parsed)) : EMPTY;
 }
 
 export function time(value) {
   const parsed = parseDate(value);
-  return parsed ? TIME.format(parsed) : EMPTY;
+  return parsed ? stripBidi(TIME.format(parsed)) : EMPTY;
 }
 
 /** «قبل 3 أيام» — للسجلات والتدقيق. */
@@ -190,16 +203,7 @@ export function ltrIsolate(value) {
   return `${LRI}${value}${PDI}`;
 }
 
-/**
- * يُنظّف قيمة معروضة للتصدير: يزيل حروف التحكم الاتجاهي ويُعيد المسافات غير
- * الفاصلة إلى مسافات عادية. استدعِها في طبقة التصدير (CSV/Excel) وإلا ظهرت
- * رموز غريبة في الملف المُصدَّر.
- */
-export function stripBidi(value) {
-  return String(value ?? "")
-    .replace(/[‎‏؜⁦-⁩]/g, "")
-    .replace(/ /g, " ");
-}
+
 
 /**
  * رقم هاتف مصري: 01012345678 → 0101 234 5678.

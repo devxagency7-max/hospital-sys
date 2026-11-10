@@ -36,6 +36,7 @@ export default async function journalPage() {
     tableId: "gl-journal",
     searchPlaceholder: "بحث برقم القيد أو الوصف أو المرجع…",
     initialParams: { sort: "date", order: "desc" },
+    fetch: listJournalEntries,
 
     actions: () => [
       button({
