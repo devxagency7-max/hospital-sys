@@ -36,12 +36,6 @@ export default async function categoriesPage() {
         icon: "inventory",
         onClick: () => navigate("/inv/items"),
       }),
-      button({
-        label: "وحدات القياس",
-        variant: "secondary",
-        icon: "reports",
-        onClick: () => navigate("/inv/units"),
-      }),
     ],
 
     filters: [

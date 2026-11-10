@@ -274,12 +274,6 @@ const IMPLEMENTED = [
     load: () => import("../../pages/inv/categories.page.js"),
   },
   {
-    path: "/inv/units",
-    title: "وحدات القياس",
-    permission: "inv.item.manage",
-    load: () => import("../../pages/inv/units.page.js"),
-  },
-  {
     path: "/inv/warehouses",
     title: "المخازن",
     permission: "inv.view",

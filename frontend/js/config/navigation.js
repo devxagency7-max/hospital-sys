@@ -107,7 +107,6 @@ export const navigation = [
     children: [
       { label: "الأصناف", path: "/inv/items", permission: "inv.view" },
       { label: "التصنيفات", path: "/inv/categories", permission: "inv.item.manage" },
-      { label: "وحدات القياس", path: "/inv/units", permission: "inv.item.manage" },
       { label: "المخازن", path: "/inv/warehouses", permission: "inv.view" },
 
       { label: "أرصدة المخزون", path: "/inv/balances", permission: "inv.view" },
