@@ -29,6 +29,7 @@ import { toApiError } from "../../js/core/errors.js";
  * @property {string} label               رأس العمود
  * @property {(row:object)=>Node|string} [render]  عرض مخصص للخلية
  * @property {boolean} [sortable]
+ * @property {string} [tooltip]           شرح يظهر عند الوقوف على رأس العمود — أيقونة ⓘ صغيرة + title
  * @property {"start"|"center"|"end"} [align="start"]
  * @property {string} [width]             قيمة CSS، مثل "8rem"
  * @property {boolean} [numeric]          محاذاة نهاية + أرقام بعرض ثابت
@@ -212,6 +213,14 @@ export function dataTable({
       const isSorted = params.sort === column.key;
       const alignment = column.numeric ? "end" : (column.align ?? "start");
 
+      /*
+       * علامة الشرح: أيقونة ⓘ صغيرة بجوار العنوان، والنص نفسه في title على
+       * <th> كله — فيعمل الوقوف على أي جزء من رأس العمود، بلا مكتبة tooltips.
+       */
+      const tooltipMark = column.tooltip
+        ? icon("info", { size: 11, class: "text-faint shrink-0" })
+        : null;
+
       const content = column.sortable
         ? el(
             "button",
@@ -230,12 +239,18 @@ export function dataTable({
               "aria-label": `ترتيب حسب ${column.label}`,
             },
             el("span", {}, column.label),
+            tooltipMark,
             icon(isSorted ? (params.order === "desc" ? "arrowDown" : "arrowUp") : "sort", {
               size: 13,
               class: isSorted ? "text-brand-600" : "text-faint",
             }),
           )
-        : el("span", { class: "font-semibold text-muted" }, column.label);
+        : el(
+            "span",
+            { class: cx("font-semibold text-muted", column.tooltip && "inline-flex items-center gap-1") },
+            column.label,
+            tooltipMark,
+          );
 
       return el(
         "th",
@@ -244,8 +259,10 @@ export function dataTable({
           class: cx(
             "px-3 py-2.5 text-xs whitespace-nowrap border-b border-line",
             alignment === "end" ? "text-end" : alignment === "center" ? "text-center" : "text-start",
+            column.tooltip && "cursor-help",
           ),
           style: column.width ? { width: column.width } : undefined,
+          title: column.tooltip || undefined,
           "aria-sort": isSorted ? (params.order === "desc" ? "descending" : "ascending") : undefined,
         },
         content,

@@ -93,6 +93,8 @@ export default async function movementsPage() {
         label: "نوع الحركة",
         width: "9rem",
         align: "center",
+        tooltip:
+          "«رصيد افتتاحي» = كمية الجرد الفعلي لحظة بدء النظام، وهي أول حركة لكل صنف وكل ما بعدها يبني عليها.",
         render: (row) => {
           const t = MOVEMENT_TYPES[row.type] ?? { label: row.typeLabel ?? row.type, tone: "neutral" };
           return badge(t.label, { tone: t.tone, size: "sm" });
@@ -114,10 +116,16 @@ export default async function movementsPage() {
           );
         },
       },
-      moneyColumn("costPerUnit", "تكلفة الوحدة"),
-      moneyColumn("totalCost", "إجمالي التكلفة"),
+      moneyColumn("costPerUnit", "تكلفة الوحدة", {
+        tooltip: "تكلفة شراء الوحدة في هذه الحركة — وفي الصرف يحسبها محرك التقييم من طبقات الشراء، لا تُكتب يدويًا.",
+      }),
+      moneyColumn("totalCost", "إجمالي التكلفة", {
+        tooltip: "الكمية × تكلفة الوحدة لهذه الحركة.",
+      }),
       codeColumn("reference", "المرجع", { width: "8.5rem" }),
-      quantityColumn("balanceAfter", "الرصيد بعدها"),
+      quantityColumn("balanceAfter", "الرصيد بعدها", {
+        tooltip: "رصيد الصنف في المخزن بعد تنفيذ هذه الحركة مباشرة.",
+      }),
     ],
 
     summaryRow: (rows) =>

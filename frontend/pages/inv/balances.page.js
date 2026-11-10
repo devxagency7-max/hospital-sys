@@ -87,12 +87,25 @@ export default async function balancesPage() {
       nameColumn("itemName", "itemCode", "الصنف", { width: "16rem" }),
       textColumn("warehouseName", "المخزن", { width: "11rem", sortable: true }),
       textColumn("category", "التصنيف", { width: "9rem", muted: true }),
-      quantityColumn("onHand", "الرصيد الفعلي"),
-      quantityColumn("reserved", "المحجوز"),
-      quantityColumn("available", "المتاح"),
-      moneyColumn("averageCost", "متوسط التكلفة"),
-      moneyColumn("totalValue", "القيمة الإجمالية"),
-      tagColumn("costingMethod", "التقييم", COSTING_LABELS, { width: "7.5rem" }),
+      quantityColumn("onHand", "الرصيد الفعلي", {
+        tooltip: "الكمية الموجودة فعليًا في هذا المخزن الآن: الرصيد الافتتاحي + الإضافات − الصرف.",
+      }),
+      quantityColumn("reserved", "المحجوز", {
+        tooltip: "كميات عليها أذون صرف معتمدة لم تُسلَّم بعد — لا يمكن صرفها لجهة أخرى.",
+      }),
+      quantityColumn("available", "المتاح", {
+        tooltip: "ما يمكن صرفه الآن = الرصيد الفعلي − المحجوز. النظام يرفض الصرف فوق هذا الرقم.",
+      }),
+      moneyColumn("averageCost", "متوسط التكلفة", {
+        tooltip: "متوسط تكلفة شراء الوحدة الواحدة للرصيد الحالي في هذا المخزن.",
+      }),
+      moneyColumn("totalValue", "القيمة الإجمالية", {
+        tooltip: "الكمية × تكلفتها = قيمة المخزون في هذا الصف، ومجموعها يطابق حساب المخزون في الميزانية.",
+      }),
+      tagColumn("costingMethod", "التقييم", COSTING_LABELS, {
+        width: "7.5rem",
+        tooltip: "طريقة حساب تكلفة الصرف: FIFO يصرف الأقدم شراءً بسعره، والمتوسط المرجّح يصرف بمتوسط تكلفة الرصيد.",
+      }),
       dateColumn("lastMovementDate", "آخر حركة", { hidden: true }),
       statusColumn(),
     ],

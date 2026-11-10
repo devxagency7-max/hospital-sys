@@ -24,7 +24,7 @@ import * as money from "../../js/core/money.js";
  * الاتجاه معنى (الربح، الفرق، الرصيد). الأعمدة التي لا تكون سالبة أبدًا
  * (الإجمالي، المدين) تبقى محايدة اللون، فلا يصير اللون ضجيجًا.
  */
-export function moneyColumn(key, label, { signed = false, width, hidden, align = "end", symbol = false } = {}) {
+export function moneyColumn(key, label, { signed = false, width, hidden, align = "end", symbol = false, tooltip } = {}) {
   return {
     key,
     label,
@@ -33,6 +33,7 @@ export function moneyColumn(key, label, { signed = false, width, hidden, align =
     align,
     width,
     hidden,
+    tooltip,
     render: (row) => {
       const value = Number(row[key]);
       if (!Number.isFinite(value)) return el("span", { class: "text-faint" }, EMPTY);
@@ -53,7 +54,7 @@ export function moneyColumn(key, label, { signed = false, width, hidden, align =
 }
 
 /** عمود كمية — يحترم عدد المنازل العشرية للوحدة. */
-export function quantityColumn(key, label, { width, hidden, decimals } = {}) {
+export function quantityColumn(key, label, { width, hidden, decimals, tooltip } = {}) {
   return {
     key,
     label,
@@ -61,6 +62,7 @@ export function quantityColumn(key, label, { width, hidden, decimals } = {}) {
     sortable: true,
     width,
     hidden,
+    tooltip,
     render: (row) => {
       const value = Number(row[key]);
       if (!Number.isFinite(value)) return el("span", { class: "text-faint" }, EMPTY);
@@ -157,12 +159,13 @@ export function textColumn(key, label, { width, hidden, sortable = false, muted 
 }
 
 /** عمود وسم من قائمة قيم ← ألوان. */
-export function tagColumn(key, label, map, { width = "8rem", hidden } = {}) {
+export function tagColumn(key, label, map, { width = "8rem", hidden, tooltip } = {}) {
   return {
     key,
     label,
     width,
     hidden,
+    tooltip,
     align: "center",
     render: (row) => {
       const found = map[row[key]];

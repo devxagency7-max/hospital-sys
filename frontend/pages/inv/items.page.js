@@ -96,12 +96,23 @@ export default async function itemsPage() {
       nameColumn("name", "code", "الصنف", { width: "16rem" }),
       textColumn("category", "التصنيف", { width: "9rem", muted: true }),
       textColumn("unit", "الوحدة", { width: "5rem" }),
-      quantityColumn("onHand", "الرصيد الفعلي"),
-      quantityColumn("available", "المتاح"),
-      moneyColumn("costPrice", "سعر التكلفة"),
-      moneyColumn("totalValue", "القيمة الإجمالية"),
+      quantityColumn("onHand", "الرصيد الفعلي", {
+        tooltip: "الكمية الموجودة فعليًا على الرف الآن: الرصيد الافتتاحي (جرد بداية التشغيل) + كل الإضافات − كل الصرف.",
+      }),
+      quantityColumn("available", "المتاح", {
+        tooltip: "ما يمكن صرفه الآن = الرصيد الفعلي − المحجوز لأذون صرف معتمدة لم تُسلَّم بعد.",
+      }),
+      moneyColumn("costPrice", "سعر التكلفة", {
+        tooltip: "تكلفة شراء الوحدة الواحدة من المورد — وليست سعر الخدمة للمريض.",
+      }),
+      moneyColumn("totalValue", "القيمة الإجمالية", {
+        tooltip: "الكمية الموجودة × تكلفتها = أموال المستشفى المجمّدة في هذا الصنف على الرف.",
+      }),
       countColumn("warehousesCount", "المخازن"),
-      tagColumn("costingMethod", "التقييم", COSTING_METHODS, { width: "8.5rem" }),
+      tagColumn("costingMethod", "التقييم", COSTING_METHODS, {
+        width: "8.5rem",
+        tooltip: "طريقة حساب تكلفة الصرف: FIFO يصرف الأقدم شراءً بسعره، والمتوسط المرجّح يصرف بمتوسط تكلفة الرصيد.",
+      }),
       statusColumn(),
     ],
 
