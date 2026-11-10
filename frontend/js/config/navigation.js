@@ -31,7 +31,6 @@ export const navigation = [
     children: [
       { label: "دليل الحسابات", path: "/gl/accounts", permission: "gl.view" },
       { label: "قيود اليومية", path: "/gl/journal", permission: "gl.view" },
-      { label: "إنشاء قيد يومية", path: "/gl/journal/new", permission: "gl.journal.create" },
       { label: "دفتر الأستاذ العام", path: "/gl/ledger", permission: "gl.ledger.view" },
       { label: "ميزان المراجعة", path: "/gl/trial-balance", permission: "gl.trialbalance.view" },
       { label: "مراكز التكلفة", path: "/gl/cost-centers", permission: "gl.view" },
@@ -51,15 +50,12 @@ export const navigation = [
     children: [
       { label: "العملاء", path: "/fin/customers", permission: "fin.view" },
       { label: "فواتير العملاء", path: "/fin/customer-invoices", permission: "fin.view" },
-      { label: "إصدار فاتورة", path: "/fin/customer-invoices/new", permission: "fin.customer.invoice" },
       { label: "التحصيلات", path: "/fin/receipts", permission: "fin.view" },
       { label: "إشعارات الدائن", path: "/fin/credit-notes", permission: "fin.view" },
-      { label: "تقادم ذمم العملاء", path: "/fin/receivables-aging", permission: "fin.view" },
 
       { label: "الموردون", path: "/fin/suppliers", permission: "fin.view" },
       { label: "فواتير الموردين", path: "/fin/supplier-invoices", permission: "fin.view" },
       { label: "مدفوعات الموردين", path: "/fin/supplier-payments", permission: "fin.view" },
-      { label: "تقادم ذمم الموردين", path: "/fin/payables-aging", permission: "fin.view" },
 
       { label: "الخزائن النقدية", path: "/fin/cash-boxes", permission: "fin.view" },
       { label: "الحركات النقدية", path: "/fin/cash-movements", permission: "fin.view" },
@@ -72,7 +68,6 @@ export const navigation = [
 
       { label: "الضرائب والإقرارات", path: "/fin/taxes", permission: "fin.tax.manage" },
       { label: "القوائم المالية", path: "/fin/statements", permission: "fin.statements.view" },
-      { label: "مطابقة الحسابات الرقابية", path: "/fin/reconciliation", permission: "fin.view" },
     ],
   },
 
@@ -86,7 +81,6 @@ export const navigation = [
     permission: "hr.view",
     children: [
       { label: "الموظفون", path: "/hr/employees", permission: "hr.view" },
-      { label: "إضافة موظف", path: "/hr/employees/new", permission: "hr.employee.manage" },
       { label: "الهيكل التنظيمي", path: "/hr/org-chart", permission: "hr.view" },
       { label: "الوظائف والدرجات", path: "/hr/positions", permission: "hr.org.manage" },
       { label: "الورديات", path: "/hr/shifts", permission: "hr.org.manage" },
@@ -144,8 +138,6 @@ export const navigation = [
       { label: "تقارير الذمم", path: "/reports/receivables", permission: "reports.financial.view" },
       { label: "تقارير الموارد البشرية", path: "/reports/hr", permission: "reports.hr.view" },
       { label: "تقارير المخازن", path: "/reports/inventory", permission: "reports.inventory.view" },
-      { label: "تقارير مراكز التكلفة", path: "/reports/cost-centers", permission: "reports.financial.view" },
-      { label: "مركز التصدير", path: "/reports/exports", permission: "reports.export" },
     ],
   },
 
@@ -160,7 +152,6 @@ export const navigation = [
     children: [
       { label: "المستخدمون", path: "/admin/users", permission: "admin.users.view" },
       { label: "الأدوار", path: "/admin/roles", permission: "admin.roles.manage" },
-      { label: "كتالوج الصلاحيات", path: "/admin/permissions", permission: "admin.roles.manage" },
     ],
   },
 

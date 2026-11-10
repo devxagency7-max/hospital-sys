@@ -58,20 +58,20 @@ export const branches = BRANCHES;
  */
 const USER_SEEDS = [
   { id: 1, name: "عبدالله محمد فتحي", username: "a.fathy", role: "admin", employeeId: null, departmentId: 8, jobTitle: "مدير النظام" },
-  { id: 2, name: "محمود سيد الغزالي", username: "m.ghazaly", role: "gm", employeeId: 1, departmentId: 1, jobTitle: "المدير العام" },
-  { id: 3, name: "هشام عمر البحيري", username: "h.behairy", role: "financial_manager", employeeId: 2, departmentId: 2, jobTitle: "المدير المالي" },
-  { id: 4, name: "هالة إبراهيم منصور", username: "h.mansour", role: "chief_accountant", employeeId: 3, departmentId: 2, jobTitle: "رئيس الحسابات" },
-  { id: 5, name: "كريم أحمد فتحي", username: "k.fathy", role: "accountant", employeeId: 5, departmentId: 2, jobTitle: "محاسب أول" },
-  { id: 6, name: "مصطفى وليد زكي", username: "m.zaki", role: "accountant", employeeId: 6, departmentId: 2, jobTitle: "محاسب" },
-  { id: 7, name: "سامح محمد زكي", username: "s.zaki", role: "treasurer", employeeId: 9, departmentId: 2, jobTitle: "أمين الخزينة" },
-  { id: 8, name: "إيمان خالد القاضي", username: "e.kady", role: "hr_manager", employeeId: 11, departmentId: 3, jobTitle: "مدير الموارد البشرية" },
-  { id: 9, name: "دعاء سامح شلبي", username: "d.shalaby", role: "hr_officer", employeeId: 12, departmentId: 3, jobTitle: "أخصائي موارد بشرية" },
-  { id: 10, name: "نادر طارق سليمان", username: "n.soliman", role: "warehouse_manager", employeeId: 28, departmentId: 6, jobTitle: "مدير المخازن" },
-  { id: 11, name: "وليد حسن البحيري", username: "w.behairy", role: "storekeeper", employeeId: 29, departmentId: 6, jobTitle: "أمين مخزن" },
-  { id: 12, name: "ماجد فادي عطية", username: "m.atya", role: "storekeeper", employeeId: 30, departmentId: 6, jobTitle: "أمين مخزن — الإسكندرية" },
-  { id: 13, name: "نادر إسلام الفقي", username: "n.fakey", role: "auditor", employeeId: null, departmentId: 1, jobTitle: "مراجع داخلي" },
-  { id: 14, name: "رامي عادل خليل", username: "r.khalil", role: "accountant", employeeId: 21, departmentId: 4, jobTitle: "مندوب مبيعات أول" },
-  { id: 15, name: "شيماء باسم النجار", username: "s.naggar", role: "hr_officer", employeeId: 13, departmentId: 3, jobTitle: "أخصائي موارد بشرية" },
+  { id: 2, name: "محمود سيد الغزالي", username: "m.ghazaly", role: "admin", employeeId: 1, departmentId: 1, jobTitle: "المدير العام" },
+  { id: 3, name: "هشام عمر البحيري", username: "h.behairy", role: "fin", employeeId: 2, departmentId: 2, jobTitle: "المدير المالي" },
+  { id: 4, name: "هالة إبراهيم منصور", username: "h.mansour", role: "gl", employeeId: 3, departmentId: 2, jobTitle: "رئيس الحسابات" },
+  { id: 5, name: "كريم أحمد فتحي", username: "k.fathy", role: "fin", employeeId: 5, departmentId: 2, jobTitle: "محاسب أول" },
+  { id: 6, name: "مصطفى وليد زكي", username: "m.zaki", role: "gl", employeeId: 6, departmentId: 2, jobTitle: "محاسب" },
+  { id: 7, name: "سامح محمد زكي", username: "s.zaki", role: "fin", employeeId: 9, departmentId: 2, jobTitle: "أمين الخزينة" },
+  { id: 8, name: "إيمان خالد القاضي", username: "e.kady", role: "hr", employeeId: 11, departmentId: 3, jobTitle: "مدير الموارد البشرية" },
+  { id: 9, name: "دعاء سامح شلبي", username: "d.shalaby", role: "hr", employeeId: 12, departmentId: 3, jobTitle: "أخصائي موارد بشرية" },
+  { id: 10, name: "نادر طارق سليمان", username: "n.soliman", role: "inv", employeeId: 28, departmentId: 6, jobTitle: "مدير المخازن" },
+  { id: 11, name: "وليد حسن البحيري", username: "w.behairy", role: "inv", employeeId: 29, departmentId: 6, jobTitle: "أمين مخزن" },
+  { id: 12, name: "ماجد فادي عطية", username: "m.atya", role: "inv", employeeId: 30, departmentId: 6, jobTitle: "أمين مخزن — الإسكندرية" },
+  { id: 13, name: "نادر إسلام الفقي", username: "n.fakey", role: "gl", employeeId: null, departmentId: 1, jobTitle: "مراجع داخلي" },
+  { id: 14, name: "رامي عادل خليل", username: "r.khalil", role: "fin", employeeId: 21, departmentId: 4, jobTitle: "مندوب مبيعات أول" },
+  { id: 15, name: "شيماء باسم النجار", username: "s.naggar", role: "hr", employeeId: 13, departmentId: 3, jobTitle: "أخصائي موارد بشرية" },
 ];
 
 export const users = USER_SEEDS.map((seed, index) => {
@@ -87,7 +87,7 @@ export const users = USER_SEEDS.map((seed, index) => {
     branchId: seed.username === "m.atya" ? 2 : 1,
     /** صلاحيات إضافية فوق الدور — استثناء مُعلَن لا تعديل صامت على الدور. */
     extraPermissions: seed.id === 5 ? ["gl.journal.approve"] : [],
-    twoFactorEnabled: ["admin", "financial_manager", "gm"].includes(seed.role),
+    twoFactorEnabled: ["admin", "fin"].includes(seed.role),
     mustChangePassword: false,
     lastLoginAt: inactive
       ? "2026-07-14T09:12:00+03:00"
@@ -110,16 +110,10 @@ export const users = USER_SEEDS.map((seed, index) => {
  */
 const DESCRIPTIONS = {
   admin: "وصول كامل لكل الموديولات والإعدادات. يُمنح لمسؤول النظام فقط.",
-  gm: "عرض شامل واعتماد مسيّرات الرواتب والتسويات المخزنية، بلا صلاحية ترحيل محاسبي.",
-  financial_manager: "إدارة كاملة للمحاسبة العامة والمالية، واعتماد مسيّرات الرواتب.",
-  chief_accountant: "دليل الحسابات والقيود والترحيل وإغلاق الفترات، وكل الموديول المالي.",
-  accountant: "إدخال القيود والفواتير والتحصيلات دون صلاحية ترحيل أو اعتماد.",
-  treasurer: "الخزائن والبنوك والتحصيل والصرف وصرف الرواتب.",
-  hr_manager: "إدارة كاملة للموارد البشرية بما فيها تشغيل واعتماد مسيّرات الرواتب.",
-  hr_officer: "ملفات الموظفين والحضور والإجازات وتجهيز المسيّر دون اعتماده.",
-  warehouse_manager: "إدارة كاملة للمخازن واعتماد التسويات، وإدارة بيانات الموردين.",
-  storekeeper: "تنفيذ حركات المخزون والجرد دون اعتماد التسويات.",
-  auditor: "عرض واستخراج كل التقارير وسجل التدقيق، بلا أي صلاحية تعديل.",
+  gl: "المحاسبة العامة كاملة: الدليل والقيود والترحيل والفترات والإغلاق، مع التقارير المالية.",
+  fin: "المحاسبة المالية كاملة: العملاء والموردون والخزائن والبنوك والأصول والضرائب، مع التقارير المالية.",
+  hr: "الموارد البشرية كاملة: الموظفون والحضور والإجازات والرواتب، مع تقارير الموارد البشرية.",
+  inv: "المخازن كاملة: الأصناف والحركات والجرد والتقييم، مع تقارير المخازن.",
 };
 
 
@@ -283,20 +277,20 @@ export const systemPreferences = {
 };
 
 export const notificationPreferences = [
-  { id: 1, key: "journal_pending_approval", label: "قيد يومية بانتظار الاعتماد", module: "المحاسبة العامة", inApp: true, email: true, roles: ["chief_accountant", "financial_manager"] },
-  { id: 2, key: "period_closing_due", label: "موعد إغلاق الفترة المحاسبية", module: "المحاسبة العامة", inApp: true, email: true, roles: ["chief_accountant"] },
-  { id: 3, key: "invoice_overdue", label: "فاتورة عميل تجاوزت تاريخ الاستحقاق", module: "المحاسبة المالية", inApp: true, email: true, roles: ["accountant", "financial_manager"] },
-  { id: 4, key: "credit_limit_exceeded", label: "عميل تجاوز حد الائتمان", module: "المحاسبة المالية", inApp: true, email: true, roles: ["financial_manager", "gm"] },
-  { id: 5, key: "supplier_payment_due", label: "دفعة مورد تستحق قريبًا", module: "المحاسبة المالية", inApp: true, email: false, roles: ["treasurer", "accountant"] },
-  { id: 6, key: "cashbox_over_limit", label: "رصيد الخزينة تجاوز الحد المسموح", module: "المحاسبة المالية", inApp: true, email: false, roles: ["treasurer"] },
-  { id: 7, key: "bank_unreconciled", label: "حركات بنكية غير مُطابَقة", module: "المحاسبة المالية", inApp: true, email: false, roles: ["accountant"] },
-  { id: 8, key: "payroll_ready", label: "مسيّر رواتب جاهز للاعتماد", module: "الموارد البشرية", inApp: true, email: true, roles: ["hr_manager", "financial_manager"] },
-  { id: 9, key: "leave_request_pending", label: "طلب إجازة بانتظار الاعتماد", module: "الموارد البشرية", inApp: true, email: false, roles: ["hr_manager"] },
-  { id: 10, key: "document_expiring", label: "مستند موظف قارب انتهاء صلاحيته", module: "الموارد البشرية", inApp: true, email: true, roles: ["hr_officer"] },
-  { id: 11, key: "low_stock", label: "صنف وصل الحد الأدنى", module: "المخازن", inApp: true, email: false, roles: ["storekeeper", "warehouse_manager"] },
-  { id: 12, key: "stock_near_expiry", label: "تشغيلة قاربت انتهاء الصلاحية", module: "المخازن", inApp: true, email: true, roles: ["warehouse_manager"] },
-  { id: 13, key: "adjustment_pending", label: "تسوية مخزنية بانتظار الاعتماد", module: "المخازن", inApp: true, email: false, roles: ["warehouse_manager", "gm"] },
-  { id: 14, key: "stock_count_due", label: "جرد فعلي مُجدول", module: "المخازن", inApp: true, email: true, roles: ["warehouse_manager"] },
+  { id: 1, key: "journal_pending_approval", label: "قيد يومية بانتظار الاعتماد", module: "المحاسبة العامة", inApp: true, email: true, roles: ["gl", "admin"] },
+  { id: 2, key: "period_closing_due", label: "موعد إغلاق الفترة المحاسبية", module: "المحاسبة العامة", inApp: true, email: true, roles: ["gl"] },
+  { id: 3, key: "invoice_overdue", label: "فاتورة عميل تجاوزت تاريخ الاستحقاق", module: "المحاسبة المالية", inApp: true, email: true, roles: ["fin"] },
+  { id: 4, key: "credit_limit_exceeded", label: "عميل تجاوز حد الائتمان", module: "المحاسبة المالية", inApp: true, email: true, roles: ["fin", "admin"] },
+  { id: 5, key: "supplier_payment_due", label: "دفعة مورد تستحق قريبًا", module: "المحاسبة المالية", inApp: true, email: false, roles: ["fin"] },
+  { id: 6, key: "cashbox_over_limit", label: "رصيد الخزينة تجاوز الحد المسموح", module: "المحاسبة المالية", inApp: true, email: false, roles: ["fin"] },
+  { id: 7, key: "bank_unreconciled", label: "حركات بنكية غير مُطابَقة", module: "المحاسبة المالية", inApp: true, email: false, roles: ["fin"] },
+  { id: 8, key: "payroll_ready", label: "مسيّر رواتب جاهز للاعتماد", module: "الموارد البشرية", inApp: true, email: true, roles: ["hr", "fin"] },
+  { id: 9, key: "leave_request_pending", label: "طلب إجازة بانتظار الاعتماد", module: "الموارد البشرية", inApp: true, email: false, roles: ["hr"] },
+  { id: 10, key: "document_expiring", label: "مستند موظف قارب انتهاء صلاحيته", module: "الموارد البشرية", inApp: true, email: true, roles: ["hr"] },
+  { id: 11, key: "low_stock", label: "صنف وصل الحد الأدنى", module: "المخازن", inApp: true, email: false, roles: ["inv"] },
+  { id: 12, key: "stock_near_expiry", label: "تشغيلة قاربت انتهاء الصلاحية", module: "المخازن", inApp: true, email: true, roles: ["inv"] },
+  { id: 13, key: "adjustment_pending", label: "تسوية مخزنية بانتظار الاعتماد", module: "المخازن", inApp: true, email: false, roles: ["inv", "admin"] },
+  { id: 14, key: "stock_count_due", label: "جرد فعلي مُجدول", module: "المخازن", inApp: true, email: true, roles: ["inv"] },
 ];
 
 /** أنواع المستندات المصدرية — تظهر في فلتر «المصدر» في دفتر اليومية. */

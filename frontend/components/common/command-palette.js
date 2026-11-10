@@ -24,7 +24,7 @@ import * as fmt from "../../js/core/format.js";
 const SCREENS = flatScreens().filter((screen) => can(screen.permission));
 
 /** اختصارات تُعرض قبل أي كتابة — أكثر الوجهات استخدامًا يوميًا. */
-const QUICK_PATHS = ["/", "/gl/journal", "/fin/customer-invoices", "/fin/receivables-aging", "/inv/balances"];
+const QUICK_PATHS = ["/", "/gl/journal", "/fin/customer-invoices", "/fin/receipts", "/inv/balances"];
 
 export function openCommandPalette() {
   let selectedIndex = 0;

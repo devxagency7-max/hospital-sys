@@ -8,6 +8,7 @@ import { el } from "../../js/core/dom.js";
 import { button } from "../../components/common/button.js";
 import { badge } from "../../components/common/badge.js";
 import { navigate } from "../../js/core/router.js";
+import { can } from "../../js/core/permissions.js";
 
 const REPORT_SECTIONS = [
   {
@@ -15,6 +16,7 @@ const REPORT_SECTIONS = [
     desc: "القوائم المالية الختامية، موازين المراجعة، ودفاتر الأستاذ العام والتحليلي.",
     icon: "reports",
     path: "/reports/financial",
+    permission: "reports.financial.view",
     items: ["قائمة الدخل والأرباح والخسائر", "الميزانية العمومية والمركز المالي", "قائمة التدفقات النقدية", "ميزان المراجعة بالمجاميع والأرصدة"],
   },
   {
@@ -22,6 +24,7 @@ const REPORT_SECTIONS = [
     desc: "أعمار الديون وتقادم ذمم العملاء والموردين وكشوف الحسابات المجمعة.",
     icon: "billing",
     path: "/reports/receivables",
+    permission: "reports.financial.view",
     items: ["تقرير تقادم ذمم العملاء (Aging)", "تقرير تقادم ذمم الموردين", "كشوف الحسابات التفصيلية", "سجل التحصيلات وسندات القبض"],
   },
   {
@@ -29,6 +32,7 @@ const REPORT_SECTIONS = [
     desc: "كشوف الأجور وتكلفة العمالة بالإدارات، وسجلات الحضور والغياب والإجازات.",
     icon: "users",
     path: "/reports/hr",
+    permission: "reports.hr.view",
     items: ["التقرير المالي لمسيّرات الرواتب", "تحليل تكلفة العمالة حسب الإدارات", "تقرير أرصدة الإجازات المستحقة", "تقرير الحضور والتأخير والانصراف"],
   },
   {
@@ -36,21 +40,8 @@ const REPORT_SECTIONS = [
     desc: "تقييم المخزون (FIFO / متوسط مرجح)، كشف ركود الأصناف، وتتبع الصلاحية.",
     icon: "inventory",
     path: "/reports/inventory",
+    permission: "reports.inventory.view",
     items: ["تقييم المخزون والمقارنة المحاسبية", "تقرير الأصناف التي بلغت حد الطلب", "تتبع الصلاحية وتواريخ الانتهاء", "حركات الأصناف الصادرة والواردة"],
-  },
-  {
-    title: "تقارير مراكز التكلفة والربحية",
-    desc: "تحليل ربحية الأقسام ومراكز المسؤولية وتوزيع المصروفات المشتركة.",
-    icon: "accounting",
-    path: "/reports/cost-centers",
-    items: ["تحليل ربحية مراكز التكلفة", "توزيع المصروفات التشغيلية والإدارية", "مقارنة الموازنات التقديرية بالفعلي"],
-  },
-  {
-    title: "مركز التصدير الموحد",
-    desc: "تصدير البيانات الدفترية والسجلات بصيغ PDF / Excel / CSV بنقرة واحدة.",
-    icon: "download",
-    path: "/reports/exports",
-    items: ["تصدير دفتر اليومية العام", "تصدير كشوف فواتير المبيعات والمشتريات", "تصدير أرصدة المخازن والتشغيلات"],
   },
 ];
 
@@ -77,12 +68,6 @@ export default async function reportsHubPage() {
         variant: "secondary",
         icon: "dashboard",
         onClick: () => navigate("/"),
-      }),
-      button({
-        label: "مركز التصدير",
-        variant: "primary",
-        icon: "download",
-        onClick: () => navigate("/reports/exports"),
       })
     )
   );
@@ -91,7 +76,7 @@ export default async function reportsHubPage() {
     style: "display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 1.5rem;",
   });
 
-  REPORT_SECTIONS.forEach((sec) => {
+  REPORT_SECTIONS.filter((sec) => can(sec.permission)).forEach((sec) => {
     const card = el(
       "div",
       {

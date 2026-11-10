@@ -19,6 +19,7 @@ import { heroSearch } from "../../components/dashboard/hero-search.js";
 import { revenueChart } from "../../components/dashboard/revenue-chart.js";
 import { currency, amount, integer, percent, date as formatDate, dateTime } from "../../js/core/format.js";
 import { navigate } from "../../js/core/router.js";
+import { can, canAny } from "../../js/core/permissions.js";
 import { getSummary } from "../../js/api/dashboard.api.js";
 
 export default async function dashboardPage() {
@@ -52,20 +53,20 @@ export default async function dashboardPage() {
 }
 
 function render(host, data) {
-  /* --- تنبيهات صحة البيانات قبل أي رقم --- */
+  /* --- تنبيهات صحة البيانات قبل أي رقم — لمن يملك رؤية المحاسبة فقط --- */
   const broken = (data.reconciliation ?? []).filter((row) => !row.isReconciled);
-  if (broken.length) {
+  if (broken.length && can("gl.trialbalance.view")) {
     host.appendChild(
       alert({
         tone: "danger",
         title: "فرق بين الأستاذ المساعد والحساب الرقابي",
         message: broken.map((row) => `${row.label}: فرق ${amount(row.difference)}`).join(" · "),
-        actions: button({ label: "شاشة المطابقة", variant: "danger", size: "sm", onClick: () => navigate("/fin/reconciliation") }),
+        actions: button({ label: "فتح ميزان المراجعة", variant: "danger", size: "sm", onClick: () => navigate("/gl/trial-balance") }),
       }),
     );
   }
 
-  if (data.accounting.unbalancedEntries) {
+  if (data.accounting.unbalancedEntries && can("gl.view")) {
     host.appendChild(
       alert({
         tone: "danger",
@@ -78,9 +79,11 @@ function render(host, data) {
 
   host.appendChild(heroSearch());
 
-  /* ================= الأداء المالي ================= */
+  /* ================= الأداء المالي — للأدوار المحاسبية فقط ================= */
   const perf = data.performance;
+  const seesFinancials = canAny(["gl.view", "fin.view"]);
 
+  if (seesFinancials)
   host.appendChild(
     statGrid(
       statTile({
@@ -129,6 +132,7 @@ function render(host, data) {
   );
 
   /* ================= الاتجاه الشهري ================= */
+  if (seesFinancials)
   host.appendChild(
     card({
       title: "الإيراد والمصروف والربح — شهريًا",
@@ -146,7 +150,8 @@ function render(host, data) {
     }),
   );
 
-  /* ================= الذمم ================= */
+  /* ================= الذمم — للمحاسبة المالية فقط ================= */
+  if (can("fin.view"))
   host.appendChild(
     el(
       "div",
@@ -161,7 +166,7 @@ function render(host, data) {
         top: data.receivables.top,
         health: data.receivables.collectionHealth,
         overLimit: data.receivables.overLimit,
-        path: "/fin/receivables-aging",
+        path: "/reports/receivables",
         partyPath: "/fin/customers",
       }),
       agingCard({
@@ -172,7 +177,7 @@ function render(host, data) {
         invoices: data.payables.invoicesCount,
         distribution: data.payables.distribution,
         top: data.payables.top,
-        path: "/fin/payables-aging",
+        path: "/reports/receivables",
         partyPath: "/fin/suppliers",
       }),
     ),
@@ -182,12 +187,13 @@ function render(host, data) {
   const hr = data.hr;
   const inv = data.inventory;
 
+  if (canAny(["hr.view", "inv.view"]))
   host.appendChild(
     el(
       "div",
       { class: "grid gap-4 lg:grid-cols-2" },
 
-      card({
+      !can("hr.view") ? null : card({
         title: "الموارد البشرية",
         subtitle: `${integer(hr.headcount)} على رأس العمل من ${integer(hr.totalEmployees)} موظف`,
         actions: button({ label: "الموظفون", variant: "ghost", size: "sm", onClick: () => navigate("/hr/employees") }),
@@ -210,7 +216,7 @@ function render(host, data) {
         ),
       }),
 
-      card({
+      !can("inv.view") ? null : card({
         title: "المخازن",
         subtitle: `${integer(inv.itemsCount)} صنف في ${integer(inv.warehousesCount)} مخزن`,
         actions: button({ label: "الأرصدة", variant: "ghost", size: "sm", onClick: () => navigate("/inv/balances") }),
@@ -228,26 +234,27 @@ function render(host, data) {
     ),
   );
 
-  /* ================= ما ينتظر قرارًا ================= */
+  /* ================= ما ينتظر قرارًا — كل دور يرى بنود موديوله فقط ================= */
   const approvals = data.approvals;
 
-  if (approvals.total) {
+  const approvalItems = [
+    ["قيود بانتظار الاعتماد", approvals.journalEntries, "/gl/journal", "accounting", "gl.view"],
+    ["إشعارات دائن", approvals.creditNotes, "/fin/credit-notes", "receipt", "fin.view"],
+    ["تسويات مخزنية", approvals.stockAdjustments, "/inv/adjustments", "inventory", "inv.view"],
+    ["طلبات إجازة", approvals.leaveRequests, "/hr/leaves", "users", "hr.view"],
+    ["مسيّرات رواتب", approvals.payrollRuns, "/hr/payroll", "money", "hr.payroll.view"],
+    ["جرد جارٍ", approvals.stockCounts, "/inv/counts", "columns", "inv.count.manage"],
+  ].filter(([, count, , , permission]) => count > 0 && can(permission));
+
+  if (approvalItems.length) {
     host.appendChild(
       card({
-        title: `ما ينتظر قرارًا (${integer(approvals.total)})`,
+        title: `ما ينتظر قرارًا (${integer(approvalItems.reduce((sum, [, count]) => sum + count, 0))})`,
         subtitle: "المسوّدات غير محسوبة — العمل الذي لم يُقدَّم لا ينتظر أحدًا",
         body: el(
           "div",
           { class: "grid gap-2 sm:grid-cols-2 lg:grid-cols-3" },
-          ...[
-            ["قيود بانتظار الاعتماد", approvals.journalEntries, "/gl/journal", "accounting"],
-            ["إشعارات دائن", approvals.creditNotes, "/fin/credit-notes", "receipt"],
-            ["تسويات مخزنية", approvals.stockAdjustments, "/inv/adjustments", "inventory"],
-            ["طلبات إجازة", approvals.leaveRequests, "/hr/leaves", "users"],
-            ["مسيّرات رواتب", approvals.payrollRuns, "/hr/payroll", "money"],
-            ["جرد جارٍ", approvals.stockCounts, "/inv/counts", "columns"],
-          ]
-            .filter(([, count]) => count > 0)
+          ...approvalItems
             .map(([label, count, path, iconName]) =>
               el(
                 "button",
@@ -272,7 +279,8 @@ function render(host, data) {
     );
   }
 
-  /* ================= مراكز التكلفة وأحدث النشاط ================= */
+  /* ================= مراكز التكلفة وأحدث النشاط — للمحاسبة العامة ================= */
+  if (can("gl.view"))
   host.appendChild(
     el(
       "div",

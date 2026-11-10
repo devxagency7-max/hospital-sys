@@ -38,10 +38,10 @@ export default async function supplierInvoicesPage() {
         onClick: () => navigate("/fin/supplier-payments"),
       }),
       button({
-        label: "تقادم ذمم الموردين",
+        label: "تقارير الذمم",
         variant: "ghost",
         icon: "reports",
-        onClick: () => navigate("/fin/payables-aging"),
+        onClick: () => navigate("/reports/receivables"),
       }),
     ],
 

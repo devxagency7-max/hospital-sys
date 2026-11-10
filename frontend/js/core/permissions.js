@@ -107,12 +107,8 @@ export const PERMISSIONS = {
 /**
  * الأدوار. `*` = كل الصلاحيات، و `gl.*` = كل صلاحيات نطاق المحاسبة العامة.
  *
- * الأدوار النهائية يحددها العميل؛ هذه نقطة بداية واقعية لمنشأة تجارية.
- *
- * ملاحظة على الفصل بين المهام (segregation of duties): `gl.journal.create`
- * و`gl.journal.post` مفصولتان عن قصد، و`hr.payroll.process` مفصولة عن
- * `hr.payroll.approve` — فمن يُجهّز المسيّر لا يعتمده، ومن يُنشئ القيد لا
- * يُرحّله. دمجهما في مفتاح واحد يُفقد النظام أهم ضابط رقابي فيه.
+ * خمسة أدوار على قدر الموديولات: مدير النظام يرى كل شيء، وكل دور آخر
+ * محصور في موديوله + تقاريره فقط. لوحة التحكم مشتركة للجميع كنقطة هبوط.
  */
 export const ROLES = {
   admin: {
@@ -120,180 +116,47 @@ export const ROLES = {
     permissions: ["*"],
   },
 
-  gm: {
-    label: "المدير العام",
-    permissions: [
-      "dashboard.view",
-      "gl.view",
-      "gl.ledger.view",
-      "gl.trialbalance.view",
-      "fin.view",
-      "fin.statements.view",
-      "hr.view",
-      "hr.payroll.view",
-      "hr.payroll.approve",
-      "hr.leave.approve",
-      "inv.view",
-      "inv.valuation.view",
-      "inv.adjustment.approve",
-      "reports.*",
-      "admin.audit.view",
-      "admin.settings.view",
-    ],
-  },
-
-  financial_manager: {
-    label: "المدير المالي",
+  gl: {
+    label: "محاسب عام",
     permissions: [
       "dashboard.view",
       "gl.*",
-      "fin.*",
-      "inv.view",
-      "inv.valuation.view",
-      "hr.view",
-      "hr.payroll.view",
-      "hr.payroll.approve",
-      "reports.*",
-      "admin.audit.view",
-      "admin.settings.view",
-    ],
-  },
-
-  chief_accountant: {
-    label: "رئيس الحسابات",
-    permissions: [
-      "dashboard.view",
-      "gl.view",
-      "gl.account.manage",
-      "gl.journal.create",
-      "gl.journal.approve",
-      "gl.journal.post",
-      "gl.journal.reverse",
-      "gl.ledger.view",
-      "gl.trialbalance.view",
-      "gl.period.manage",
-      "fin.*",
-      "inv.view",
-      "inv.valuation.view",
-      "reports.view",
-      "reports.financial.view",
-      "reports.inventory.view",
-      "reports.export",
-    ],
-  },
-
-  accountant: {
-    label: "محاسب",
-    permissions: [
-      "dashboard.view",
-      "gl.view",
-      "gl.journal.create",
-      "gl.ledger.view",
-      "gl.trialbalance.view",
-      "fin.view",
-      "fin.customer.manage",
-      "fin.customer.invoice",
-      "fin.customer.receipt",
-      "fin.supplier.manage",
-      "fin.supplier.invoice",
-      "fin.supplier.payment",
-      "fin.statements.view",
-      "inv.view",
       "reports.view",
       "reports.financial.view",
       "reports.export",
     ],
   },
 
-  treasurer: {
-    label: "أمين الخزينة",
+  fin: {
+    label: "محاسب مالي",
     permissions: [
       "dashboard.view",
-      "fin.view",
-      "fin.cashbox.manage",
-      "fin.cashbox.transact",
-      "fin.cashbox.reconcile",
-      "fin.bank.transact",
-      "fin.customer.receipt",
-      "fin.supplier.payment",
-      "hr.payroll.pay",
+      "fin.*",
       "reports.view",
       "reports.financial.view",
+      "reports.export",
     ],
   },
 
-  hr_manager: {
-    label: "مدير الموارد البشرية",
+  hr: {
+    label: "مسؤول الموارد البشرية",
     permissions: [
       "dashboard.view",
       "hr.*",
       "reports.view",
       "reports.hr.view",
       "reports.export",
-      "admin.settings.view",
     ],
   },
 
-  hr_officer: {
-    label: "موظف موارد بشرية",
-    permissions: [
-      "dashboard.view",
-      "hr.view",
-      "hr.employee.manage",
-      "hr.employee.document",
-      "hr.attendance.view",
-      "hr.attendance.manage",
-      "hr.leave.request",
-      "hr.payroll.view",
-      "hr.payroll.process",
-      "reports.view",
-      "reports.hr.view",
-    ],
-  },
-
-  warehouse_manager: {
-    label: "مدير المخازن",
+  inv: {
+    label: "أمين المخازن",
     permissions: [
       "dashboard.view",
       "inv.*",
-      "fin.supplier.manage",
       "reports.view",
       "reports.inventory.view",
       "reports.export",
-    ],
-  },
-
-  storekeeper: {
-    label: "أمين مخزن",
-    permissions: [
-      "dashboard.view",
-      "inv.view",
-      "inv.receipt.create",
-      "inv.issue.create",
-      "inv.transfer.create",
-      "inv.adjustment.create",
-      "inv.return.create",
-      "inv.count.manage",
-      "reports.view",
-      "reports.inventory.view",
-    ],
-  },
-
-  auditor: {
-    label: "مراجع داخلي",
-    permissions: [
-      "dashboard.view",
-      "gl.view",
-      "gl.ledger.view",
-      "gl.trialbalance.view",
-      "fin.view",
-      "fin.statements.view",
-      "hr.view",
-      "hr.payroll.view",
-      "inv.view",
-      "inv.valuation.view",
-      "reports.*",
-      "admin.audit.view",
     ],
   },
 };

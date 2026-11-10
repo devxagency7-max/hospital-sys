@@ -102,12 +102,6 @@ const IMPLEMENTED = [
     load: () => import("../../pages/fin/credit-notes.page.js"),
   },
   {
-    path: "/fin/receivables-aging",
-    title: "تقادم ذمم العملاء",
-    permission: "fin.view",
-    load: () => import("../../pages/fin/receivables-aging.page.js"),
-  },
-  {
     path: "/fin/suppliers",
     title: "الموردون",
     permission: "fin.view",
@@ -124,12 +118,6 @@ const IMPLEMENTED = [
     title: "مدفوعات الموردين",
     permission: "fin.view",
     load: () => import("../../pages/fin/supplier-payments.page.js"),
-  },
-  {
-    path: "/fin/payables-aging",
-    title: "تقادم ذمم الموردين",
-    permission: "fin.view",
-    load: () => import("../../pages/fin/payables-aging.page.js"),
   },
   {
     path: "/fin/cash-boxes",
@@ -184,12 +172,6 @@ const IMPLEMENTED = [
     title: "القوائم المالية",
     permission: "fin.statements.view",
     load: () => import("../../pages/fin/statements.page.js"),
-  },
-  {
-    path: "/fin/reconciliation",
-    title: "مطابقة الحسابات الرقابية",
-    permission: "fin.view",
-    load: () => import("../../pages/fin/reconciliation.page.js"),
   },
 
   /* ===================== 3. الموارد البشرية ===================== */
@@ -383,18 +365,6 @@ const IMPLEMENTED = [
     permission: "reports.inventory.view",
     load: () => import("../../pages/reports/inventory-reports.page.js"),
   },
-  {
-    path: "/reports/cost-centers",
-    title: "تقارير مراكز التكلفة",
-    permission: "reports.financial.view",
-    load: () => import("../../pages/reports/cost-centers-reports.page.js"),
-  },
-  {
-    path: "/reports/exports",
-    title: "مركز التصدير",
-    permission: "reports.export",
-    load: () => import("../../pages/reports/exports.page.js"),
-  },
 
   /* ===================== الإدارة والنظام ===================== */
   {
@@ -408,12 +378,6 @@ const IMPLEMENTED = [
     title: "الأدوار",
     permission: "admin.roles.manage",
     load: () => import("../../pages/admin/roles.page.js"),
-  },
-  {
-    path: "/admin/permissions",
-    title: "كتالوج الصلاحيات",
-    permission: "admin.roles.manage",
-    load: () => import("../../pages/admin/permissions.page.js"),
   },
   {
     path: "/admin/audit",

@@ -38,12 +38,6 @@ export default async function rolesPage() {
       "div",
       { style: "display: flex; gap: 0.75rem;" },
       button({
-        label: "كتالوج الصلاحيات",
-        variant: "secondary",
-        icon: "shield",
-        onClick: () => navigate("/admin/permissions"),
-      }),
-      button({
         label: "المستخدمون",
         variant: "ghost",
         icon: "users",
