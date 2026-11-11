@@ -165,7 +165,29 @@ export function exportStyledExcel({
 
   const exportDate = dateTime(new Date().toISOString());
   const user = currentUser()?.name ?? "إدارة المستشفى";
-  const colCount = Math.max(headers.length, 4);
+  const colCount = Math.max(headers.length, 3);
+
+  // حساب تقسيم الأعمدة للترويسة العلوية لتمتد على كامل عرض الشيت
+  let centerCols = Math.max(1, Math.round(colCount * 0.28));
+  const rem = colCount - centerCols;
+  let rightCols = Math.ceil(rem / 2);
+  let leftCols = colCount - centerCols - rightCols;
+  if (leftCols < 1 && colCount >= 3) {
+    leftCols = 1;
+    rightCols = Math.max(1, colCount - centerCols - leftCols);
+  }
+
+  const escapeXml = (str) =>
+    String(str ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&apos;");
+
+  const rawBase64 = HOSPITAL_LOGO_BASE64.replace(/^data:image\/[^;]+;base64,/, "");
+  const wrappedBase64 = rawBase64.match(/.{1,76}/g).join("\r\n");
+  const boundary = "----=_NextBoundary_Hospital_2026";
 
   const excelHtml = `
 <html xmlns:o="urn:schemas-microsoft-com:office:office"
@@ -181,6 +203,7 @@ export function exportStyledExcel({
           <x:Name>${escapeXml(title).slice(0, 31)}</x:Name>
           <x:WorksheetOptions>
             <x:DisplayRightToLeft/>
+            <x:DoNotDisplayGridlines/>
           </x:WorksheetOptions>
         </x:ExcelWorksheet>
       </x:ExcelWorksheets>
@@ -192,70 +215,71 @@ export function exportStyledExcel({
       font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
       margin: 0;
       padding: 0;
+      background-color: #ffffff;
     }
     table {
       border-collapse: collapse;
       font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
       text-align: right;
+      width: 100%;
     }
   </style>
 </head>
 <body dir="rtl">
-  <table border="0" cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse;">
-    <!-- 1. ترويسة الشعار والبيانات الرسمية (خلفية بيضاء نقية تماماً بدون خطوط شبكة خلفها) -->
-    <tr style="background-color: #ffffff;">
-      <td colspan="${colCount}" style="background-color: #ffffff; border: none; padding: 18px 14px 10px 14px; text-align: center;">
-        <table border="0" cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse; border: none;">
-          <tr>
-            <!-- الجانب الأيمن: بيانات المنشأة الطبية -->
-            <td style="border: none; text-align: right; vertical-align: middle; width: 35%;">
-              <div style="font-size: 16pt; font-weight: bold; color: #1e3a8a; line-height: 1.3;">
-                ${escapeXml(company.name || "مستشفى أمان الحياة")}
-              </div>
-              <div style="font-size: 9.5pt; color: #475569; margin-top: 3px;">
-                ${escapeXml(company.legalForm || "شركة مساهمة مصرية — منشأة طبية خاصة")}
-              </div>
-              <div style="font-size: 9pt; color: #0284c7; font-weight: 600; margin-top: 2px;">
-                س.ت: ${escapeXml(company.commercialRegister || "128470")} — ب.ض: ${escapeXml(company.taxId || "204-851-963")}
-              </div>
-            </td>
-
-            <!-- المنتصف: شعار المستشفى المعتمد واسم الشيت / المكان -->
-            <td style="border: none; text-align: center; vertical-align: middle; width: 30%;">
-              <img src="${HOSPITAL_LOGO_BASE64}" width="72" height="72" alt="Logo" style="display: block; margin: 0 auto; object-fit: contain; border: none;" />
-              <div style="margin-top: 6px; display: inline-block; background-color: #eff6ff; color: #1d4ed8; border: 1.5px solid #bfdbfe; padding: 4px 14px; border-radius: 6px; font-size: 12.5pt; font-weight: bold;">
-                ${escapeXml(title)}
-              </div>
-            </td>
-
-            <!-- الجانب الأيسر: تاريخ التصدير وبيانات المستخدم والسجلات -->
-            <td style="border: none; text-align: left; vertical-align: middle; width: 35%; font-size: 9pt; color: #334155;">
-              <div style="margin-bottom: 3px;">
-                <strong style="color: #0f172a;">تاريخ التصدير:</strong>
-                <span style="font-weight: bold; color: #1e40af;">${escapeXml(exportDate)}</span>
-              </div>
-              <div style="margin-bottom: 3px;">
-                <strong style="color: #0f172a;">المُصدِّر:</strong>
-                <span>${escapeXml(user)}</span>
-              </div>
-              ${period ? `<div style="margin-bottom: 3px;"><strong style="color: #0f172a;">الفترة:</strong> <span>${escapeXml(period)}</span></div>` : ""}
-              <div>
-                <strong style="color: #0f172a;">عدد السجلات:</strong>
-                <span style="font-weight: bold; color: #059669;">${rows.length} سجل</span>
-              </div>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-
-    <!-- 2. صف فاصل فارغ بخلفية بيضاء وبدون حدود -->
+  <table border="0" cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse; background-color: #ffffff;">
+    <!-- 1. هامش علوي أبيض مفرغ بدون خطوط شبكة -->
     <tr style="height: 14px; background-color: #ffffff;">
       <td colspan="${colCount}" style="border: none; background-color: #ffffff; height: 14px;"></td>
     </tr>
 
-    <!-- 3. عناوين الأعمدة (هيدر الجدول أزرق كحلي ملكي فخم بنص أبيض ناصع) -->
-    <tr style="height: 38px;">
+    <!-- 2. الترويسة الرئيسية ممتدة عبر كامل أعمدة الشيت بدون جداول متداخلة وبدون خطوط شبكة -->
+    <tr style="height: 85px; background-color: #ffffff;">
+      <!-- اليمين: اسم المنشأة الطبية وبياناتها القانونية والضريبية -->
+      <td colspan="${rightCols}" style="border: none; background-color: #ffffff; text-align: right; vertical-align: middle; padding: 10px 16px;">
+        <div style="font-family: 'Segoe UI', Tahoma, Arial, sans-serif; font-size: 17pt; font-weight: bold; color: #1e3a8a; line-height: 1.3;">
+          ${escapeXml(company.name || "مستشفى أمان الحياة")}
+        </div>
+        <div style="font-family: 'Segoe UI', Tahoma, Arial, sans-serif; font-size: 9.5pt; color: #475569; margin-top: 3px;">
+          ${escapeXml(company.legalForm || "شركة مساهمة مصرية — منشأة طبية خاصة")}
+        </div>
+        <div style="font-family: 'Segoe UI', Tahoma, Arial, sans-serif; font-size: 8.5pt; color: #94a3b8; margin-top: 2px;">
+          س.ت: ${escapeXml(company.commercialRegister || "128470")} · ب.ض: ${escapeXml(company.taxId || "204-851-963")}
+        </div>
+      </td>
+
+      <!-- المنتصف: شعار مستشفى أمان الحياة بدقة عالية ومضمّن داخل الملف -->
+      <td colspan="${centerCols}" style="border: none; background-color: #ffffff; text-align: center; vertical-align: middle; padding: 6px 10px;">
+        <img src="cid:logo.png@excel.export" width="70" height="70" alt="لوجو مستشفى أمان الحياة" style="border: none; vertical-align: middle;" />
+      </td>
+
+      <!-- اليسار: تاريخ وتوقيت التصدير والمُعِد والفترة وعدد السجلات -->
+      ${
+        leftCols > 0
+          ? `
+      <td colspan="${leftCols}" style="border: none; background-color: #ffffff; text-align: left; vertical-align: middle; padding: 10px 16px; font-size: 9pt; color: #475569; line-height: 1.5;">
+        <div>تاريخ التصدير: <strong style="color: #0f172a;">${escapeXml(exportDate)}</strong></div>
+        <div>المُعِد / المسؤول: <strong style="color: #0f172a;">${escapeXml(user)}</strong></div>
+        ${period ? `<div>الفترة: ${escapeXml(period)}</div>` : ""}
+        <div>عدد السجلات: <strong style="color: #0284c7;">${rows.length} سجل</strong></div>
+      </td>`
+          : ""
+      }
+    </tr>
+
+    <!-- 3. شريط عنوان التقرير البارز ممتد بعرض الشيت بالكامل -->
+    <tr style="height: 38px; background-color: #eff6ff;">
+      <td colspan="${colCount}" style="border-top: 1px solid #bfdbfe; border-bottom: 2px solid #1e40af; border-left: none; border-right: none; background-color: #eff6ff; text-align: center; vertical-align: middle; font-family: 'Segoe UI', Tahoma, Arial, sans-serif; font-size: 13.5pt; font-weight: bold; color: #1e40af; padding: 6px 12px; height: 38px;">
+        تقرير: ${escapeXml(title)}
+      </td>
+    </tr>
+
+    <!-- 4. فاصل أبيض ناصع مفرغ قبل الجدول -->
+    <tr style="height: 12px; background-color: #ffffff;">
+      <td colspan="${colCount}" style="border: none; background-color: #ffffff; height: 12px;"></td>
+    </tr>
+
+    <!-- 5. عناوين الأعمدة (هيدر الجدول أزرق كحلي ملكي فخم بنص أبيض عريض) -->
+    <tr style="height: 36px; background-color: #1e40af; color: #ffffff;">
       ${headers
         .map(
           (h) => `
@@ -263,12 +287,12 @@ export function exportStyledExcel({
           background-color: #1e40af;
           color: #ffffff;
           font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
-          font-size: 11pt;
+          font-size: 10.5pt;
           font-weight: bold;
           text-align: center;
           vertical-align: middle;
           border: 1px solid #172554;
-          padding: 10px 14px;
+          padding: 10px 12px;
         ">
           ${escapeXml(h.label ?? h)}
         </th>`,
@@ -276,7 +300,7 @@ export function exportStyledExcel({
         .join("")}
     </tr>
 
-    <!-- 4. صفوف البيانات بتدريجات الأبيض النقي والأبيض الثلجي (Zebra Striping) -->
+    <!-- 6. صفوف البيانات بتدريجات الأبيض النقي والأبيض الثلجي الناعم (Zebra Striping) -->
     ${rows
       .map((row, rIdx) => {
         const isEven = rIdx % 2 === 1;
@@ -284,7 +308,7 @@ export function exportStyledExcel({
         return `
         <tr style="height: 28px; background-color: ${rowBg};">
           ${row
-            .map((cellVal) => {
+            .map((cellVal, cIdx) => {
               const raw =
                 cellVal && typeof cellVal === "object" && cellVal.value !== undefined
                   ? cellVal.value
@@ -294,7 +318,7 @@ export function exportStyledExcel({
                 !isNaN(Number(text.replace(/[, ج.م]/g, "").trim())) &&
                 text.trim() !== "" &&
                 (text.includes(".") || !isNaN(Number(text)));
-              const align = isNum ? "left" : "right";
+              const align = isNum ? "left" : cIdx === 0 ? "right" : "center";
               const msoFormat = isNum
                 ? 'mso-number-format: "\\#\\,\\#\\#0\\.00";'
                 : 'mso-number-format: "\\@";';
@@ -318,7 +342,7 @@ export function exportStyledExcel({
       })
       .join("")}
 
-    <!-- 5. صف المجاميع الإجمالية إن وُجد -->
+    <!-- 7. صف المجاميع الإجمالية إن وُجد -->
     ${
       totals
         ? `
@@ -349,12 +373,12 @@ export function exportStyledExcel({
         : ""
     }
 
-    <!-- 6. فاصل وتوقيعات الاعتماد الرسمية بدون خطوط شبكة -->
+    <!-- 8. فاصل وتوقيعات الاعتماد الرسمية بدون خطوط شبكة -->
     <tr style="height: 20px; background-color: #ffffff;">
       <td colspan="${colCount}" style="border: none; background-color: #ffffff; height: 20px;"></td>
     </tr>
-    <tr>
-      <td colspan="${colCount}" style="background-color: #ffffff; border: none; padding: 16px 12px;">
+    <tr style="background-color: #ffffff;">
+      <td colspan="${colCount}" style="background-color: #ffffff; border: none; border-top: 1px dashed #cbd5e1; padding: 16px 12px;">
         <table border="0" cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse; border: none; font-size: 9.5pt; color: #475569;">
           <tr>
             <td style="border: none; text-align: right; width: 33%;">
@@ -380,7 +404,24 @@ export function exportStyledExcel({
 </html>
 `;
 
-  const blob = new Blob([excelHtml], { type: "application/vnd.ms-excel;charset=utf-8;" });
+  const mhtmlPayload = `MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="${boundary}"
+
+--${boundary}
+Content-Type: image/png; name="hospital_logo.png"
+Content-Transfer-Encoding: base64
+Content-ID: <logo.png@excel.export>
+Content-Location: hospital_logo.png
+
+${wrappedBase64}
+--${boundary}
+Content-Type: text/html; charset="utf-8"
+
+${excelHtml}
+--${boundary}--
+`;
+
+  const blob = new Blob([mhtmlPayload], { type: "application/vnd.ms-excel;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
 
   const cleanName = String(title ?? "تقرير")
