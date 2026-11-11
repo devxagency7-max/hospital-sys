@@ -17,7 +17,7 @@ const TODAY = REFERENCE_DATE.toISOString().slice(0, 10);
 export const companyInfo = {
   name: "مستشفى أمان الحياة",
   nameEn: "Aman Al-Hayah Hospital",
-  legalForm: "شركة مساهمة مصرية — منشأة طبية خاصة",
+  legalForm: "",
   commercialRegister: "128470",
   taxId: "204-851-963",
   taxOffice: "مأمورية ضرائب بني سويف",

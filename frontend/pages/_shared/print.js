@@ -152,7 +152,6 @@ export function exportStyledExcel({
   totals = null,
   company = {
     name: "مستشفى أمان الحياة",
-    legalForm: "شركة مساهمة مصرية — منشأة طبية خاصة",
     commercialRegister: "128470",
     taxId: "204-851-963",
   },
@@ -272,13 +271,8 @@ export function exportStyledExcel({
       <td colspan="${rightCols}" style="border: none; background-color: #ffffff; text-align: right; vertical-align: middle; padding: 8px 18px;">
         <table border="0" cellpadding="0" cellspacing="0" style="border-collapse: collapse; width: 100%; text-align: right; font-family: 'Segoe UI', Tahoma, Arial, sans-serif;">
           <tr>
-            <td style="border: none; padding: 6px 0 4px 0; font-size: 19pt; font-weight: bold; color: #1e3a8a; line-height: 1.4; white-space: nowrap;">
+            <td style="border: none; padding: 6px 0 6px 0; font-size: 19pt; font-weight: bold; color: #1e3a8a; line-height: 1.4; white-space: nowrap;">
               ${escapeXml(company.name || "مستشفى أمان الحياة")}
-            </td>
-          </tr>
-          <tr>
-            <td style="border: none; padding: 5px 0 4px 0; font-size: 10pt; color: #475569; font-weight: 600; white-space: nowrap;">
-              ${escapeXml(company.legalForm || "شركة مساهمة مصرية — منشأة طبية خاصة")}
             </td>
           </tr>
           <tr>
@@ -632,7 +626,6 @@ export function previewTableReport({ title = "تقرير الجدول", columns,
   return printReport({
     company: {
       name: "مستشفى أمان الحياة",
-      legalForm: "شركة مساهمة مصرية — منشأة طبية خاصة",
       commercialRegister: "128470",
       taxId: "204-851-963",
     },

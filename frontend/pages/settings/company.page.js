@@ -16,10 +16,10 @@ export default async function companySettingsPage() {
   const state = {
     name: company.name ?? "",
     nameEn: company.nameEn ?? "",
-    legalForm: company.legalForm ?? "شركة مساهمة مصرية",
+    legalForm: company.legalForm ?? "",
     taxId: company.taxId ?? "",
     commercialRegister: company.commercialRegister ?? "",
-    activity: company.activity ?? "تجارة وتوزيع وإدارة سلاسل الإمداد",
+    activity: company.activity ?? "خدمات طبية ورعاية صحية متكاملة",
     currency: company.currency ?? "EGP",
     address: company.address ?? "",
     phone: company.phone ?? "",
