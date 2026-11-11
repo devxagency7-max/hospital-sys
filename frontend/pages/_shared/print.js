@@ -18,6 +18,7 @@ import { toast } from "../../components/feedback/toast.js";
 import { printableReportSheet } from "../../components/reports/printable-report.js";
 import { dateTime, date as formatDate } from "../../js/core/format.js";
 import { currentUser } from "../../js/core/permissions.js";
+import { APP } from "../../js/core/config.js";
 import { HOSPITAL_LOGO_BASE64 } from "../../js/core/logo-base64.js";
 
 /**
@@ -102,7 +103,7 @@ export function printReport(definition) {
         onClick: () => exportStyledExcel({ title, headers, rows, totals, company, period }),
       }),
       button({
-        label: "تنزيل CSV خام",
+        label: "تنزيل CSV",
         variant: "ghost",
         icon: "download",
         onClick: () => exportCsv({ title, headers, rows, totals }),
@@ -507,12 +508,13 @@ ${excelHtml}
   const blob = new Blob([mhtmlPayload], { type: "application/vnd.ms-excel;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
 
+  const safeDate = new Date().toISOString().slice(0, 10);
   const cleanName = String(title ?? "تقرير")
     .replace(/[\/\\?%*:|"<>]/g, "-")
     .replace(/\s+/g, "_");
   const link = el("a", {
     href: url,
-    download: `مستشفى_أمان_الحياة_${cleanName}_${formatDate(new Date().toISOString())}.xls`,
+    download: `مستشفى_أمان_الحياة_${cleanName}_${safeDate}.xls`,
   });
 
   document.body.appendChild(link);
@@ -526,52 +528,91 @@ ${excelHtml}
 /**
  * تصدير البيانات كملف CSV منسق ومُعرَّب بالكامل مع علامة BOM وترويسة واضحة.
  */
-export function exportCsv({ title, headers, rows, totals }) {
-  if (!rows?.length) {
-    toast.warning("لا توجد بيانات متاحة للتصدير.");
-    return;
-  }
+export function exportCsv({ title, headers, rows, columns, totals }) {
+  try {
+    let effectiveHeaders = headers;
+    let effectiveRows = rows;
 
-  const cell = (raw) => {
-    const node = raw && typeof raw === "object" && raw.value !== undefined ? raw.value : raw;
-    let text = "";
-    if (node instanceof Node) {
-      const primary = node.querySelector(".text-ink, div:first-child");
-      text = primary?.textContent?.trim() || node.textContent?.trim() || "";
-    } else {
-      text = String(node ?? "").trim();
+    // دعم تمرير columns + rows ككائنات (مثل dataTable)
+    if ((!effectiveHeaders || !effectiveHeaders.length) && columns?.length) {
+      const visibleCols = columns.filter((col) => col && !col.hidden && col.key !== "actions");
+      effectiveHeaders = visibleCols.map((c) => ({ label: c.label ?? c.key }));
+      effectiveRows = (rows || []).map((row) =>
+        visibleCols.map((col) => {
+          if (
+            col.key &&
+            row[col.key] !== undefined &&
+            typeof row[col.key] === "string" &&
+            /name|title|description|desc|notes|details|statement|subject|item/i.test(col.key)
+          ) {
+            return row[col.key].trim();
+          }
+          if (col.render) {
+            const rendered = col.render(row);
+            if (rendered instanceof Node) {
+              const primary = rendered.querySelector(".text-ink, div:first-child");
+              return primary?.textContent?.trim() || rendered.textContent?.trim() || "";
+            }
+            return rendered !== null && rendered !== undefined ? String(rendered).trim() : "";
+          }
+          const val = row[col.key];
+          return val !== null && val !== undefined ? String(val) : "";
+        })
+      );
     }
-    return `"${text.replace(/"/g, '""')}"`;
-  };
 
-  const cleanTitle = String(title ?? "تقرير").trim();
-  const exportDate = formatDate(new Date().toISOString());
+    if (!effectiveRows?.length) {
+      toast.warning("لا توجد بيانات متاحة للتصدير.");
+      return;
+    }
 
-  const lines = [
-    `"${APP.organization || "مستشفى أمان الحياة"}"`,
-    `"تقرير: ${cleanTitle.replace(/"/g, '""')}"`,
-    `"تاريخ الإصدار والتصدير: ${exportDate}"`,
-    "",
-    headers.map((header) => cell(header.label ?? header)).join(","),
-    ...rows.map((row) => row.map(cell).join(",")),
-    ...(totals ? [totals.map(cell).join(",")] : []),
-  ];
+    const cell = (raw) => {
+      const node = raw && typeof raw === "object" && raw.value !== undefined ? raw.value : raw;
+      let text = "";
+      if (node instanceof Node) {
+        const primary = node.querySelector(".text-ink, div:first-child");
+        text = primary?.textContent?.trim() || node.textContent?.trim() || "";
+      } else {
+        text = String(node ?? "").trim();
+      }
+      return `"${text.replace(/"/g, '""')}"`;
+    };
 
-  const blob = new Blob([`\uFEFF${lines.join("\r\n")}`], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
+    const cleanTitle = String(title ?? "تقرير").trim();
+    const now = new Date();
+    const safeDate = now.toISOString().slice(0, 10);
+    const exportDateText = formatDate(now.toISOString());
+    const orgName = APP?.organization || "مستشفى أمان الحياة";
 
-  const cleanName = cleanTitle.replace(/[\/\\?%*:|"<>]/g, "-").replace(/\s+/g, "_");
-  const link = el("a", {
-    href: url,
-    download: `مستشفى_أمان_الحياة_${cleanName}_${exportDate}.csv`,
-  });
+    const lines = [
+      `"${orgName}"`,
+      `"تقرير: ${cleanTitle.replace(/"/g, '""')}"`,
+      `"تاريخ الإصدار والتصدير: ${exportDateText}"`,
+      "",
+      effectiveHeaders.map((header) => cell(header?.label ?? header)).join(","),
+      ...effectiveRows.map((row) => (Array.isArray(row) ? row.map(cell).join(",") : cell(row))),
+      ...(totals ? [Array.isArray(totals) ? totals.map(cell).join(",") : cell(totals)] : []),
+    ];
 
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
+    const blob = new Blob([`\uFEFF${lines.join("\r\n")}`], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
 
-  toast.success(`تم تصدير ${rows.length} صف إلى ملف CSV منسق بنجاح.`);
+    const cleanName = cleanTitle.replace(/[\/\\?%*:|"<>]/g, "-").replace(/\s+/g, "_");
+    const link = el("a", {
+      href: url,
+      download: `مستشفى_أمان_الحياة_${cleanName}_${safeDate}.csv`,
+    });
+
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+
+    toast.success(`تم تنزيل ملف CSV (${effectiveRows.length} صف) بنجاح.`);
+  } catch (err) {
+    console.error("[exportCsv] فشل تنزيل ملف CSV:", err);
+    toast.error("تعذر تنزيل ملف CSV. تفاصيل الخطأ مسجلة في وحدة التحكم.");
+  }
 }
 
 /* ==========================================================================
@@ -681,9 +722,9 @@ export function exportTableToExcel({ title = "تقرير", columns, rows, subtit
   });
 }
 
-/** توافقية الاسم القديم: يوجه تلقائياً إلى التصدير المنسق */
-export function exportTableToCsv(options) {
-  exportTableToExcel(options);
+/** تصدير بيانات أي جدول كملف CSV منسق ومُعرَّب بالكامل */
+export function exportTableToCsv({ title = "تقرير", columns, rows, subtitle, period, totals }) {
+  exportCsv({ title, columns, rows, totals, period: period || subtitle || null });
 }
 
 

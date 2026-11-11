@@ -21,7 +21,7 @@ import { dataTable, summaryCells } from "../../components/tables/data-table.js";
 import { errorState } from "../../components/feedback/states.js";
 import { toast } from "../../components/feedback/toast.js";
 import { button } from "../../components/common/button.js";
-import { exportTableToCsv, previewTableReport } from "./print.js";
+import { exportTableToExcel, exportTableToCsv, previewTableReport } from "./print.js";
 import { describeError } from "../../js/core/errors.js";
 
 /**
@@ -158,6 +158,25 @@ export async function listPage(definition) {
           // fallback
         }
       }
+      exportTableToExcel({ title, columns, rows: exportRows });
+    },
+  });
+
+  const csvBtn = button({
+    label: "تنزيل CSV",
+    icon: "download",
+    variant: "secondary",
+    size: "md",
+    onClick: async () => {
+      let exportRows = table.getRows();
+      if (fetchPage && exportRows.length < 500) {
+        try {
+          const allRes = await fetchPage({ ...table.getParams(), page: 1, perPage: 1000 });
+          if (allRes?.data?.length) exportRows = allRes.data;
+        } catch {
+          // fallback
+        }
+      }
       exportTableToCsv({ title, columns, rows: exportRows });
     },
   });
@@ -179,7 +198,7 @@ export async function listPage(definition) {
     fetch: fetchPage,
     filters,
     searchPlaceholder,
-    toolbarActions: [exportBtn, printBtn],
+    toolbarActions: [exportBtn, csvBtn, printBtn],
     rowActions: rowActions ? (row) => rowActions(row, context) : undefined,
     onRowClick,
     initialParams,
