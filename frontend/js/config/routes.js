@@ -20,6 +20,20 @@ const IMPLEMENTED = [
     load: () => import("../../pages/dashboard/dashboard.page.js"),
   },
 
+  /* ===================== الاستقبال واستعلام المرضى ===================== */
+  {
+    path: "/reception",
+    title: "استعلام وسداد حسابات المرضى",
+    permission: "reception.view",
+    load: () => import("../../pages/reception/reception-billing.page.js"),
+  },
+  {
+    path: "/reception/receipts",
+    title: "سندات قبض الاستقبال",
+    permission: "reception.receipt",
+    load: () => import("../../pages/reception/reception-receipts.page.js"),
+  },
+
   /* ===================== حسابات المرضى والخدمات الطبية ===================== */
   {
     path: "/patients",
@@ -457,6 +471,12 @@ const DYNAMIC = [
     title: "ملف المريض وكشف الحساب",
     permission: "patients.view",
     load: () => import("../../pages/patients/patient-detail.page.js"),
+  },
+  {
+    path: "/reception/patient/:id",
+    title: "استعلام وسداد حساب المريض",
+    permission: "reception.view",
+    load: () => import("../../pages/reception/reception-billing.page.js"),
   },
 ];
 

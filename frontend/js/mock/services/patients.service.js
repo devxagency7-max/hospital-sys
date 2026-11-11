@@ -487,3 +487,181 @@ export function getPatientStats() {
     roomOccupancyRate: 78.5, // 78.5% نسبة إشغال الأسرة
   };
 }
+
+/* ==========================================================================
+   8) استعلام حساب المريض الخاص بالاستقبال (Reception Patient Summary)
+   ============================================================================ */
+
+export function getReceptionPatientSummary(patientId) {
+  const patient = find("patients", patientId);
+  if (!patient) throw notFound("المريض غير موجود", { id: patientId });
+
+  const invoices = where("patientInvoices", (i) => Number(i.patientId) === Number(patientId));
+  const receipts = where("patientReceipts", (r) => Number(r.patientId) === Number(patientId));
+  const admissionsList = where("admissions", (a) => Number(a.patientId) === Number(patientId));
+
+  const summaryItems = [];
+
+  for (const inv of invoices) {
+    const lines = inv.lines || [];
+
+    // تجميع بنود العمليات الجراحية في بند إجمالي واحد للعملية
+    const surgeryLines = lines.filter((l) => l.category === "surgery");
+    if (surgeryLines.length > 0) {
+      const mainOp =
+        surgeryLines.find(
+          (l) =>
+            l.serviceCode.startsWith("SRV-SURG-01") ||
+            l.serviceCode.startsWith("SRV-SURG-02") ||
+            l.serviceCode.startsWith("SRV-SURG-03") ||
+            l.serviceCode.startsWith("SRV-SURG-04") ||
+            l.serviceCode.startsWith("SRV-SURG-05"),
+        ) || surgeryLines[0];
+      const surgTotal = surgeryLines.reduce((s, l) => s + (l.total || 0), 0);
+      const surgIns = Math.round(surgTotal * (inv.coverageRate || 0));
+      const surgPatient = surgTotal - surgIns;
+
+      summaryItems.push({
+        id: `surg-${inv.id}`,
+        invoiceId: inv.id,
+        invoiceNumber: inv.invoiceNumber,
+        date: inv.date,
+        type: "surgery",
+        typeLabel: "عمليات جراحية",
+        summaryTitle: `عملية جراحية: ${mainOp.description}`,
+        department: "قسم العمليات والجراحة",
+        totalCost: surgTotal,
+        insuranceCoverage: surgIns,
+        patientShare: surgPatient,
+        status: inv.status,
+        hasDetails: true,
+        detailsNotice:
+          "ملاحظة أمان: تفاصيل ومصروفات العملية الداخلية معروضة للاطلاع الفوري على الشاشة فقط لموظف الاستقبال للإجابة على استفسارات المريض شفهياً. طباعة هذه التفاصيل الدقيقة غير مصرح بها من الاستقبال ومخصصة حصرياً لإدارة الحسابات المالية العامة.",
+        internalBreakdown: surgeryLines.map((l) => ({
+          serviceCode: l.serviceCode,
+          description: l.description,
+          quantity: l.quantity,
+          unitPrice: l.unitPrice,
+          total: l.total,
+        })),
+      });
+    }
+
+    // تجميع بنود العناية المركزة في بند إجمالي واحد للإقامة والعناية
+    const icuLines = lines.filter((l) => l.category === "icu");
+    if (icuLines.length > 0) {
+      const icuTotal = icuLines.reduce((s, l) => s + (l.total || 0), 0);
+      const icuIns = Math.round(icuTotal * (inv.coverageRate || 0));
+      const icuPatient = icuTotal - icuIns;
+      summaryItems.push({
+        id: `icu-${inv.id}`,
+        invoiceId: inv.id,
+        invoiceNumber: inv.invoiceNumber,
+        date: inv.date,
+        type: "icu",
+        typeLabel: "عناية مركزة",
+        summaryTitle: "إقامة ورعاية بالعناية المركزة (ICU)",
+        department: "العناية المركزة",
+        totalCost: icuTotal,
+        insuranceCoverage: icuIns,
+        patientShare: icuPatient,
+        status: inv.status,
+        hasDetails: true,
+        detailsNotice:
+          "ملاحظة أمان: تفاصيل بنود وأجهزة العناية المركزة للاطلاع على الشاشة فقط — طباعة التفاصيل من اختصاص الإدارة المالية.",
+        internalBreakdown: icuLines.map((l) => ({
+          serviceCode: l.serviceCode,
+          description: l.description,
+          quantity: l.quantity,
+          unitPrice: l.unitPrice,
+          total: l.total,
+        })),
+      });
+    }
+
+    // تجميع بنود الإقامة العادية والغرف
+    const roomLines = lines.filter((l) => l.category === "room");
+    if (roomLines.length > 0) {
+      const roomTotal = roomLines.reduce((s, l) => s + (l.total || 0), 0);
+      const roomIns = Math.round(roomTotal * (inv.coverageRate || 0));
+      const roomPatient = roomTotal - roomIns;
+      summaryItems.push({
+        id: `room-${inv.id}`,
+        invoiceId: inv.id,
+        invoiceNumber: inv.invoiceNumber,
+        date: inv.date,
+        type: "room",
+        typeLabel: "إقامة وأجنحة",
+        summaryTitle: "إقامة بالقسم الداخلي ورعاية تمريضية",
+        department: "القسم الداخلي",
+        totalCost: roomTotal,
+        insuranceCoverage: roomIns,
+        patientShare: roomPatient,
+        status: inv.status,
+        hasDetails: true,
+        detailsNotice: "ملاحظة أمان: تفاصيل الإقامة والغرف للاطلاع على الشاشة فقط.",
+        internalBreakdown: roomLines.map((l) => ({
+          serviceCode: l.serviceCode,
+          description: l.description,
+          quantity: l.quantity,
+          unitPrice: l.unitPrice,
+          total: l.total,
+        })),
+      });
+    }
+
+    // بنود الفحوصات والتحاليل والأشعة والأدوية
+    const otherLines = lines.filter((l) => !["surgery", "icu", "room"].includes(l.category));
+    for (const l of otherLines) {
+      const lineIns = Math.round((l.total || 0) * (inv.coverageRate || 0));
+      const linePatient = (l.total || 0) - lineIns;
+      summaryItems.push({
+        id: `other-${inv.id}-${l.id}`,
+        invoiceId: inv.id,
+        invoiceNumber: inv.invoiceNumber,
+        date: inv.date,
+        type: l.category || "service",
+        typeLabel: l.categoryName || "خدمات طبية",
+        summaryTitle: l.description,
+        department: l.categoryName || "الخدمات الطبية",
+        totalCost: l.total,
+        insuranceCoverage: lineIns,
+        patientShare: linePatient,
+        status: inv.status,
+        hasDetails: false,
+        internalBreakdown: [
+          {
+            serviceCode: l.serviceCode,
+            description: l.description,
+            quantity: l.quantity,
+            unitPrice: l.unitPrice,
+            total: l.total,
+          },
+        ],
+      });
+    }
+  }
+
+  // ترتيب الحركات زمنيًا
+  summaryItems.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  const totalBilled = invoices.reduce((sum, i) => sum + (i.totalAfterDiscount || 0), 0);
+  const totalInsurance = invoices.reduce((sum, i) => sum + (i.insuranceAmount || 0), 0);
+  const totalPatientRequired = invoices.reduce((sum, i) => sum + (i.patientAmount || 0), 0);
+  const totalPaid = receipts.reduce((sum, r) => sum + (r.amount || 0), 0);
+  const remainingDue = Math.max(0, totalPatientRequired - totalPaid);
+
+  return {
+    patient,
+    admissions: admissionsList,
+    summaryItems,
+    receipts,
+    kpis: {
+      totalBilled,
+      totalInsurance,
+      totalPatientRequired,
+      totalPaid,
+      remainingDue,
+    },
+  };
+}

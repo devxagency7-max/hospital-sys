@@ -279,6 +279,14 @@ const ROUTES = {
   "POST /patients/receipts": ({ body }) => ({ data: patients.createPatientReceipt(body, actor()) }),
 
   /* ======================================================================
+     الاستقبال واستعلام المرضى
+     ====================================================================== */
+  "GET /reception/patients": ({ params }) => patients.listPatients(params),
+  "GET /reception/patients/:id/summary": ({ params }) => ({ data: patients.getReceptionPatientSummary(params.id) }),
+  "GET /reception/receipts": ({ params }) => patients.listPatientReceipts(params),
+  "POST /reception/receipts": ({ body }) => ({ data: patients.createPatientReceipt(body, actor()) }),
+
+  /* ======================================================================
      3. الموارد البشرية
      ====================================================================== */
 

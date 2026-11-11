@@ -96,6 +96,11 @@ export const PERMISSIONS = {
   "patients.services.manage": "إدارة دليل الخدمات الطبية",
   "patients.admissions.manage": "إدارة الإقامة والعمليات والعناية",
 
+  /* ===================== الاستقبال واستعلام المرضى ===================== */
+  "reception.view": "عرض موديول الاستقبال واستعلام المرضى",
+  "reception.receipt": "تسجيل سندات قبض الاستقبال",
+  "reception.summary.print": "طباعة كشف حساب ملخص للاستقبال",
+
   /* ===================== التقارير ===================== */
   "reports.view": "عرض التقارير",
   "reports.financial.view": "عرض التقارير المالية",
@@ -122,6 +127,16 @@ export const ROLES = {
   admin: {
     label: "مدير النظام",
     permissions: ["*"],
+  },
+
+  reception: {
+    label: "موظف استقبال وخدمة مرضى",
+    permissions: [
+      "dashboard.view",
+      "reception.*",
+      "patients.view",
+      "patients.receipt",
+    ],
   },
 
   gl: {
@@ -173,6 +188,7 @@ export const ROLES = {
     permissions: [
       "dashboard.view",
       "patients.*",
+      "reception.*",
       "reports.view",
       "reports.financial.view",
       "reports.export",
