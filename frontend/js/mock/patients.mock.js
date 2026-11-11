@@ -40,7 +40,7 @@ export const hospitalServices = [
   { id: 18, code: "SRV-RAD-01", category: "radiology", categoryName: "أشعة وتصوير", name: "أشعة رنين مغناطيسي MRI", price: 2600, unit: "فحص", department: "الأشعة" },
   { id: 19, code: "SRV-RAD-02", category: "radiology", categoryName: "أشعة وتصوير", name: "أشعة مقطعية متعددة المقاطع CT", price: 1750, unit: "فحص", department: "الأشعة" },
   { id: 20, code: "SRV-LAB-01", category: "lab", categoryName: "تحاليل طبية", name: "باقة تحاليل شاملة (كبد، كلى، سكر، دهون)", price: 680, unit: "تحليل", department: "المعامل" },
-  { id: 21, code: "SRV-PHARM-01", category: "medication", categoryName: "أدوية ومستلزمات", name: "بروتوكول أدوية ومحاليل وريدية منومة", price: 1450, unit: "حزمة", department: "الصيدلية" },
+  { id: 21, code: "SRV-PHARM-01", category: "medication", categoryName: "أدوية ومستلزمات", name: "بروتوكول أدوية ومحاليل وريدية للقسم الداخلي", price: 1450, unit: "حزمة", department: "الصيدلية" },
 ];
 
 /* ============================================================================
@@ -84,7 +84,7 @@ export const patients = PATIENT_NAMES.map(([name, gender], index) => {
   const provider = isInsurance ? insuranceProviders[index % insuranceProviders.length] : null;
   const coverageRate = provider ? provider.defaultCoverage : 0;
   
-  // حالات المرضى: منوم، طوارئ/عيادات، تم الخروج
+  // حالات المرضى: محجوز، طوارئ/عيادات، تم الخروج
   const status = index < 6 ? "inpatient" : index < 11 ? "discharged" : "outpatient";
   const roomTypes = ["جناح خاص 301", "غرفة مفردة 204", "سرير عناية ICU-02", "سرير عناية CCU-01", "غرفة 108", "سرير عناية NICU-03"];
   const room = status === "inpatient" ? roomTypes[index % roomTypes.length] : null;
@@ -142,7 +142,7 @@ export const admissions = [
     daysCount: 7,
     attendingDoctor: "د. حازم عبد العزيز — استشاري الجراحة العامة",
     status: "active",
-    statusLabel: "منوم حالياً",
+    statusLabel: "محجوز حالياً",
     diagnosis: "استئصال مرارة بالمنظار مع متابعة ما بعد الجراحة",
     totalCost: 3500 * 7 + 16500 + 3200 + 4500, // إقامة + جراحة + تخدير + تعقيم
   },
@@ -162,7 +162,7 @@ export const admissions = [
     daysCount: 5,
     attendingDoctor: "د. طارق الشربيني — استشاري الرعاية المركزة",
     status: "active",
-    statusLabel: "منوم حالياً",
+    statusLabel: "محجوز حالياً",
     diagnosis: "قصور تنفسي حاد ومراقبة ضغط دم شرياني",
     totalCost: 5200 * 5 + 1800 * 5 + 2600 + 680,
   },
@@ -182,7 +182,7 @@ export const admissions = [
     daysCount: 4,
     attendingDoctor: "د. شيرين حسني — استشاري أمراض القلب",
     status: "active",
-    statusLabel: "منوم حالياً",
+    statusLabel: "محجوز حالياً",
     diagnosis: "ذبحة صدرية غير مستقرة وقسطرة علاجية ودعامات",
     totalCost: 32000 + 6000 * 4 + 1750 + 680,
   },
@@ -202,7 +202,7 @@ export const admissions = [
     daysCount: 3,
     attendingDoctor: "د. حازم عبد العزيز",
     status: "active",
-    statusLabel: "منوم حالياً",
+    statusLabel: "محجوز حالياً",
     diagnosis: "ولادة قيصرية ورعاية أمومة ووليد",
     totalCost: 12500 + 1600 * 3 + 1450,
   },
@@ -251,7 +251,7 @@ export const patientInvoices = [
       { id: 2, serviceCode: "SRV-SURG-01", description: "جراحة استئصال مرارة بالمنظار", category: "surgery", categoryName: "عمليات جراحية", quantity: 1, unitPrice: 16500, total: 16500 },
       { id: 3, serviceCode: "SRV-SURG-06", description: "تخدير جراحي كلي وإشراف إفاقة", category: "surgery", categoryName: "عمليات جراحية", quantity: 1, unitPrice: 3200, total: 3200 },
       { id: 4, serviceCode: "SRV-SURG-07", description: "كشك عمليات جراحية ومستهلكات معقمة", category: "surgery", categoryName: "عمليات جراحية", quantity: 1, unitPrice: 4500, total: 4500 },
-      { id: 5, serviceCode: "SRV-PHARM-01", description: "بروتوكول أدوية ومحاليل وريدية منومة", category: "medication", categoryName: "أدوية وعلاج", quantity: 1, unitPrice: 1450, total: 1450 },
+      { id: 5, serviceCode: "SRV-PHARM-01", description: "بروتوكول أدوية ومحاليل وريدية للقسم الداخلي", category: "medication", categoryName: "أدوية وعلاج", quantity: 1, unitPrice: 1450, total: 1450 },
     ],
     subtotal: 50150,
     discount: 150,

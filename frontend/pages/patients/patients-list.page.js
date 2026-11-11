@@ -1,7 +1,7 @@
 /**
  * سجل المرضى.
  *
- * إدارة ملفات المرضى، التنويم والغرف، التأمين الطبي، والأرصدة المستحقة.
+ * إدارة ملفات المرضى، الإقامة الداخلية والغرف، التأمين الطبي، والأرصدة المستحقة.
  */
 
 import { el } from "../../js/core/dom.js";
@@ -17,9 +17,9 @@ import { textField } from "../../components/forms/fields.js";
 import { listPatients, createPatient, getPatientStats, getInsuranceProviders } from "../../js/api/patients.api.js";
 
 const STATUS_MAP = {
-  inpatient: { label: "منوم داخلي", tone: "brand" },
+  inpatient: { label: "محجوز بالقسم الداخلي", tone: "brand" },
   outpatient: { label: "عيادات خارجية", tone: "info" },
-  discharged: { label: "خرج من المستشفى", tone: "success" },
+  discharged: { label: "تم الخروج", tone: "success" },
 };
 
 export default async function patientsListPage() {
@@ -30,7 +30,7 @@ export default async function patientsListPage() {
 
   return listPage({
     title: "سجل المرضى",
-    description: "قاعدة بيانات المرضى المنومين والمراجعين، التأمين الطبي، وأرصدة الفواتير.",
+    description: "قاعدة بيانات مرضى الإقامة الداخلية والعيادات الخارجية، التأمين الطبي، وأرصدة الفواتير.",
     tableId: "patients-list",
     searchPlaceholder: "بحث باسم المريض أو الكود أو الرقم القومي أو الهاتف…",
     initialParams: { sort: "code", order: "desc" },
@@ -51,9 +51,9 @@ export default async function patientsListPage() {
         key: "status",
         label: "حالة المريض",
         options: [
-          { value: "inpatient", label: "منوم داخلي" },
+          { value: "inpatient", label: "محجوز بالقسم الداخلي" },
           { value: "outpatient", label: "عيادات خارجية" },
-          { value: "discharged", label: "خرج من المستشفى" },
+          { value: "discharged", label: "تم الخروج" },
         ],
       },
       {
@@ -151,7 +151,7 @@ export default async function patientsListPage() {
         icon: "people",
       }),
       statTile({
-        label: "المرضى المنومين بالأقسام",
+        label: "المرضى المحجوزين بالأقسام",
         value: integer(stats.activeInpatients || 0),
         tone: "info",
         icon: "hospital",

@@ -1,7 +1,7 @@
 /**
  * الإقامة والعمليات والعناية المركزة (Hospital Admissions, ICU & Surgeries).
  *
- * إدارة وتتبع فترات تنويم المرضى في الغرف والأجنحة، حالات العناية المركزة (ICU)،
+ * إدارة وتتبع فترات إقامة وحجز المرضى في الغرف والأجنحة، حالات العناية المركزة (ICU)،
  * غرف العمليات الجراحية، حساب الأيام والتكلفة اليومية، وتسجيل الخروج.
  */
 
@@ -33,7 +33,7 @@ export default async function patientAdmissionsPage() {
 
   return listPage({
     title: "الإقامة والعمليات والعناية المركزة",
-    description: "إدارة إشغال الأسرة، غرف العناية المركزة، أجنحة العمليات، وفترات التنويم ومتابعة الخروج.",
+    description: "إدارة إشغال الأسرة، غرف العناية المركزة، أجنحة العمليات، وفترات الإقامة الداخلية ومتابعة الخروج.",
     tableId: "patient-admissions-list",
     searchPlaceholder: "بحث برقم الإقامة، اسم المريض، الغرفة، أو التشخيص…",
     initialParams: { sort: "admissionDate", order: "desc" },
@@ -63,8 +63,8 @@ export default async function patientAdmissionsPage() {
         key: "status",
         label: "الحالة",
         options: [
-          { value: "active", label: "منوم حاليًا" },
-          { value: "discharged", label: "خرج من المستشفى" },
+          { value: "active", label: "محجوز حاليًا" },
+          { value: "discharged", label: "تم الخروج" },
         ],
       },
     ],
@@ -102,7 +102,7 @@ export default async function patientAdmissionsPage() {
         render: (row) =>
           row.dischargeDate
             ? el("span", { class: "tabular text-muted text-xs" }, date(row.dischargeDate))
-            : badge("منوم حاليًا", { tone: "danger", size: "sm" }),
+            : badge("محجوز حاليًا", { tone: "danger", size: "sm" }),
       },
       {
         key: "daysCount",
@@ -158,7 +158,7 @@ export default async function patientAdmissionsPage() {
 
       return [
         statTile({
-          label: "المرضى المنومين حاليًا",
+          label: "المرضى المحجوزين حاليًا",
           value: integer(activeCount),
           tone: "brand",
           icon: "hospital",

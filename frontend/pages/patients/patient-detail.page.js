@@ -103,7 +103,7 @@ export default async function patientDetailPage(context) {
             el("h1", { class: "text-xl font-bold" }, patient.name),
             badge(patient.code, { tone: "brand" }),
             patient.bloodGroup ? badge(patient.bloodGroup, { tone: "purple" }) : null,
-            badge(patient.status === "inpatient" ? "منوم حاليًا" : "خارجي", {
+            badge(patient.status === "inpatient" ? "محجوز حاليًا" : "عيادات خارجية", {
               tone: patient.status === "inpatient" ? "danger" : "info",
             }),
           ),
@@ -166,7 +166,7 @@ export default async function patientDetailPage(context) {
               { class: "font-semibold text-sm text-brand" },
               `${patient.roomNumber} — سرير ${patient.bedNumber || "01"}`,
             )
-          : el("div", { class: "text-muted font-medium" }, "غير منوم حاليًا (مراجع عيادات)"),
+          : el("div", { class: "text-muted font-medium" }, "غير محجوز حاليًا (مراجع عيادات خارجية)"),
         patient.attendingDoctor
           ? el("div", { class: "text-muted mt-0.5" }, `الطبيب: ${patient.attendingDoctor}`)
           : null,
@@ -297,7 +297,7 @@ function buildAdmissionsSection(admissions) {
         "div",
         {},
         el("h2", { class: "text-base font-bold" }, "سجل الإقامة والعمليات والعناية المركزة"),
-        el("p", { class: "text-xs text-muted" }, "فترات التنويم، نوع الإقامة، والطبيب المشرف."),
+        el("p", { class: "text-xs text-muted" }, "فترات الإقامة الداخلية، نوع الغرفة، والطبيب المشرف."),
       ),
     ),
   );
@@ -338,7 +338,7 @@ function buildAdmissionsSection(admissions) {
       el(
         "td",
         { class: "p-3" },
-        badge(a.status === "active" ? "منوم حاليًا" : "خرج", {
+        badge(a.status === "active" ? "محجوز حاليًا" : "تم الخروج", {
           tone: a.status === "active" ? "danger" : "success",
           size: "sm",
         }),

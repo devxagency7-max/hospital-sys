@@ -3,7 +3,7 @@
  * (Reception Desk Patient Billing & Inquiries)
  *
  * مخصص لموظفي الاستقبال والمكاتب الأمامية:
- * 1. بحث فوري عن المرضى، معرفة حالة التنويم، الغرفة، والطبيب المعالج.
+ * 1. بحث فوري عن المرضى، معرفة حالة الحجز والإقامة، الغرفة، والطبيب المعالج.
  * 2. استعراض الحساب الإجمالي للعمليات والإقامة والخدمات الطبية.
  * 3. إمكانية الاطلاع على تفاصيل ومصروفات العملية الداخلية على الشاشة فقط (View Only).
  * 4. حظر طباعة التفاصيل الداخلية الدقيقة من شاشة الاستقبال وتوجيه المريض للإدارة المالية.
@@ -277,7 +277,7 @@ export default async function receptionBillingPage(context) {
             { class: "flex items-center gap-2 flex-wrap" },
             el("h2", { class: "text-lg font-bold text-ink" }, patient.name),
             badge(patient.code, { tone: "brand" }),
-            badge(patient.status === "inpatient" ? "منوم حالياً" : "عيادات خارجية", {
+            badge(patient.status === "inpatient" ? "محجوز حالياً" : "عيادات خارجية", {
               tone: patient.status === "inpatient" ? "danger" : "info",
             }),
           ),

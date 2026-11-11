@@ -185,17 +185,17 @@ export function createAdmission(data, { user } = {}) {
     patientName: patient.name,
     patientCode: patient.code,
     status: "active",
-    statusLabel: "منوم حالياً",
+    statusLabel: "محجوز حالياً",
     admissionDate: data.admissionDate || TODAY,
     dailyRate,
     daysCount,
     totalCost: dailyRate * daysCount,
   });
 
-  // تحديث حالة المريض إلى منوم
+  // تحديث حالة المريض إلى محجوز
   update("patients", patient.id, {
     status: "inpatient",
-    statusLabel: "مقيم / منوّم",
+    statusLabel: "إقامة داخلية (محجوز)",
     currentRoom: data.roomNumber,
     admissionDate: data.admissionDate || TODAY,
     attendingDoctor: data.attendingDoctor || patient.attendingDoctor,
