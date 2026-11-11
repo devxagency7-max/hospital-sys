@@ -217,7 +217,7 @@ function exportReceiptsExcel(receipts) {
 
   exportStyledExcel({
     title: "سجل سندات قبض وتحصيلات الاستقبال",
-    period: `تاريخ التصدير: ${dateTime(new Date().toISOString())}`,
+    period: "سندات القبض المسددة بالاستقبال",
     headers,
     rows,
     totals,

@@ -713,7 +713,7 @@ function exportReceptionSummaryExcel(patient, summaryData) {
 
   exportStyledExcel({
     title: `كشف حساب ملخص للاستقبال — ${patient.name}`,
-    period: `تاريخ التصدير: ${dateTime(new Date().toISOString())} · ملف: ${patient.code}`,
+    period: `ملف: ${patient.code}`,
     headers,
     rows,
     totals,

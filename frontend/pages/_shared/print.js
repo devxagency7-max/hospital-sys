@@ -163,18 +163,37 @@ export function exportStyledExcel({
     return;
   }
 
-  const exportDate = dateTime(new Date().toISOString());
+  function formatExportDate(d = new Date()) {
+    const day = String(d.getDate()).padStart(2, "0");
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const year = d.getFullYear();
+    let hours = d.getHours();
+    const minutes = String(d.getMinutes()).padStart(2, "0");
+    const ampm = hours >= 12 ? "م" : "ص";
+    hours = hours % 12 || 12;
+    const hoursStr = String(hours).padStart(2, "0");
+    return `${day}/${month}/${year} — ${hoursStr}:${minutes} ${ampm}`;
+  }
+
+  const exportDate = formatExportDate(new Date());
   const user = currentUser()?.name ?? "إدارة المستشفى";
   const colCount = Math.max(headers.length, 3);
 
-  // حساب تقسيم الأعمدة للترويسة العلوية لتمتد على كامل عرض الشيت
-  let centerCols = Math.max(1, Math.round(colCount * 0.28));
+  // حساب تقسيم الأعمدة المتناسق للترويسة العلوية لتمتد بانسجام كامل عبر عرض الشيت
+  let centerCols = colCount >= 10 ? 2 : colCount >= 6 ? 1 : 1;
+  if (colCount % 2 === 0 && colCount >= 6) centerCols = 2;
   const rem = colCount - centerCols;
-  let rightCols = Math.ceil(rem / 2);
-  let leftCols = colCount - centerCols - rightCols;
-  if (leftCols < 1 && colCount >= 3) {
-    leftCols = 1;
-    rightCols = Math.max(1, colCount - centerCols - leftCols);
+  const rightCols = Math.ceil(rem / 2);
+  const leftCols = colCount - centerCols - rightCols;
+
+  // تنظيف نص الفترة وحذف أي تكرار لتاريخ التصدير
+  let cleanPeriod = period ? String(period).trim() : null;
+  if (cleanPeriod) {
+    cleanPeriod = cleanPeriod
+      .replace(/تاريخ\s+(التصدير|الإصدار)\s*:\s*[^\s·•\n\r,]+\s*[,،]?\s*[^\s·•\n\r]*\s*[·•-]?\s*/gi, "")
+      .replace(/^[\s·•-]+|[\s·•-]+$/g, "")
+      .trim();
+    if (!cleanPeriod) cleanPeriod = null;
   }
 
   const escapeXml = (str) =>
@@ -184,6 +203,16 @@ export function exportStyledExcel({
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&apos;");
+
+  const colWidths = headers.map((h) => {
+    const label = String(h?.label ?? h ?? "");
+    if (/بيان|خدمة|إجراء|وصف|اسم|تفاصيل|ملاحظات/.test(label)) return 260;
+    if (/قسم|إدارة|وظيفة|مركز|جهة/.test(label)) return 140;
+    if (/فاتورة|سند|كود|مرجع|رقم/.test(label)) return 130;
+    if (/تاريخ|وقت|استحقاق/.test(label)) return 110;
+    if (/مبلغ|تكلفة|إجمالي|تأمين|مطلوب|سعر|صافي|رصيد|مدين|دائن/.test(label)) return 130;
+    return 120;
+  });
 
   const rawBase64 = HOSPITAL_LOGO_BASE64.replace(/^data:image\/[^;]+;base64,/, "");
   const wrappedBase64 = rawBase64.match(/.{1,76}/g).join("\r\n");
@@ -227,48 +256,113 @@ export function exportStyledExcel({
 </head>
 <body dir="rtl">
   <table border="0" cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse; background-color: #ffffff;">
+    <colgroup>
+      ${colWidths.map((w) => `<col width="${w}" style="mso-width-source: userset; width: ${Math.round(w * 0.75)}pt;" />`).join("")}
+    </colgroup>
+
     <!-- 1. هامش علوي أبيض مفرغ بدون خطوط شبكة -->
-    <tr style="height: 14px; background-color: #ffffff;">
-      <td colspan="${colCount}" style="border: none; background-color: #ffffff; height: 14px;"></td>
+    <tr style="height: 10px; background-color: #ffffff;">
+      <td colspan="${colCount}" style="border: none; background-color: #ffffff; height: 10px;"></td>
     </tr>
 
-    <!-- 2. الترويسة الرئيسية ممتدة عبر كامل أعمدة الشيت بدون جداول متداخلة وبدون خطوط شبكة -->
-    <tr style="height: 85px; background-color: #ffffff;">
+    <!-- 2. الترويسة الرئيسية الملكية: اليمين هوية المستشفى، المنتصف الشعار المؤطر، واليسار كارت بيانات التقرير المنظم -->
+    <tr style="height: 105px; background-color: #ffffff;">
       <!-- اليمين: اسم المنشأة الطبية وبياناتها القانونية والضريبية -->
-      <td colspan="${rightCols}" style="border: none; background-color: #ffffff; text-align: right; vertical-align: middle; padding: 10px 16px;">
-        <div style="font-family: 'Segoe UI', Tahoma, Arial, sans-serif; font-size: 17pt; font-weight: bold; color: #1e3a8a; line-height: 1.3;">
-          ${escapeXml(company.name || "مستشفى أمان الحياة")}
-        </div>
-        <div style="font-family: 'Segoe UI', Tahoma, Arial, sans-serif; font-size: 9.5pt; color: #475569; margin-top: 3px;">
-          ${escapeXml(company.legalForm || "شركة مساهمة مصرية — منشأة طبية خاصة")}
-        </div>
-        <div style="font-family: 'Segoe UI', Tahoma, Arial, sans-serif; font-size: 8.5pt; color: #94a3b8; margin-top: 2px;">
-          س.ت: ${escapeXml(company.commercialRegister || "128470")} · ب.ض: ${escapeXml(company.taxId || "204-851-963")}
-        </div>
+      <td colspan="${rightCols}" style="border: none; background-color: #ffffff; text-align: right; vertical-align: middle; padding: 6px 16px;">
+        <table border="0" cellpadding="0" cellspacing="0" style="border-collapse: collapse; width: 100%; text-align: right; font-family: 'Segoe UI', Tahoma, Arial, sans-serif;">
+          <tr>
+            <td style="border: none; padding: 2px 0; font-size: 19pt; font-weight: bold; color: #1e3a8a; line-height: 1.2; white-space: nowrap;">
+              ${escapeXml(company.name || "مستشفى أمان الحياة")}
+            </td>
+          </tr>
+          <tr>
+            <td style="border: none; padding: 4px 0 3px 0; font-size: 9.5pt; color: #475569; font-weight: 600; white-space: nowrap;">
+              ${escapeXml(company.legalForm || "شركة مساهمة مصرية — منشأة طبية خاصة")}
+            </td>
+          </tr>
+          <tr>
+            <td style="border: none; padding: 2px 0; font-size: 8.5pt; color: #64748b; white-space: nowrap;">
+              <span>سجل تجاري: <strong style="color: #1e293b;">&lrm;${escapeXml(company.commercialRegister || "128470")}&lrm;</strong></span>
+              &nbsp;&nbsp;·&nbsp;&nbsp;
+              <span>بطاقة ضريبية: <strong style="color: #1e293b;">&lrm;${escapeXml(company.taxId || "204-851-963")}&lrm;</strong></span>
+            </td>
+          </tr>
+        </table>
       </td>
 
-      <!-- المنتصف: شعار مستشفى أمان الحياة بدقة عالية ومضمّن داخل الملف -->
+      <!-- المنتصف: شعار مستشفى أمان الحياة مؤطر داخل كارت أبيض أنيق بدقة عالية -->
       <td colspan="${centerCols}" style="border: none; background-color: #ffffff; text-align: center; vertical-align: middle; padding: 6px 10px;">
-        <img src="cid:logo.png@excel.export" width="70" height="70" alt="لوجو مستشفى أمان الحياة" style="border: none; vertical-align: middle;" />
+        <div style="display: inline-block; padding: 6px 8px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
+          <img src="cid:logo.png@excel.export" width="82" height="82" alt="لوجو مستشفى أمان الحياة" style="display: block; border: none; vertical-align: middle;" />
+        </div>
       </td>
 
-      <!-- اليسار: تاريخ وتوقيت التصدير والمُعِد والفترة وعدد السجلات -->
+      <!-- اليسار: كارت بيانات التقرير المنظم والمؤطر بدون أي تكدس أو تداخل -->
       ${
         leftCols > 0
           ? `
-      <td colspan="${leftCols}" style="border: none; background-color: #ffffff; text-align: left; vertical-align: middle; padding: 10px 16px; font-size: 9pt; color: #475569; line-height: 1.5;">
-        <div>تاريخ التصدير: <strong style="color: #0f172a;">${escapeXml(exportDate)}</strong></div>
-        <div>المُعِد / المسؤول: <strong style="color: #0f172a;">${escapeXml(user)}</strong></div>
-        ${period ? `<div>الفترة: ${escapeXml(period)}</div>` : ""}
-        <div>عدد السجلات: <strong style="color: #0284c7;">${rows.length} سجل</strong></div>
+      <td colspan="${leftCols}" style="border: none; background-color: #ffffff; text-align: left; vertical-align: middle; padding: 6px 14px;">
+        <table border="0" cellpadding="0" cellspacing="0" style="border-collapse: separate; border-spacing: 0; background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; width: 100%; max-width: 320px; margin-left: 0; margin-right: auto; font-family: 'Segoe UI', Tahoma, Arial, sans-serif;">
+          <tr style="height: 22px;">
+            <td style="border: none; border-bottom: 1px solid #e2e8f0; padding: 4px 8px; font-size: 8.5pt; color: #64748b; font-weight: 600; white-space: nowrap; text-align: right; width: 36%;">
+              تاريخ التصدير:
+            </td>
+            <td style="border: none; border-bottom: 1px solid #e2e8f0; padding: 4px 8px; font-size: 8.5pt; color: #0f172a; font-weight: bold; white-space: nowrap; text-align: left;" dir="ltr">
+              ${escapeXml(exportDate)}
+            </td>
+          </tr>
+          <tr style="height: 22px;">
+            <td style="border: none; border-bottom: 1px solid #e2e8f0; padding: 4px 8px; font-size: 8.5pt; color: #64748b; font-weight: 600; white-space: nowrap; text-align: right;">
+              المُعِد / المسؤول:
+            </td>
+            <td style="border: none; border-bottom: 1px solid #e2e8f0; padding: 4px 8px; font-size: 8.5pt; color: #0f172a; font-weight: bold; white-space: nowrap; text-align: left;">
+              ${escapeXml(user)}
+            </td>
+          </tr>
+          ${
+            cleanPeriod
+              ? `
+          <tr style="height: 22px;">
+            <td style="border: none; border-bottom: 1px solid #e2e8f0; padding: 4px 8px; font-size: 8.5pt; color: #64748b; font-weight: 600; white-space: nowrap; text-align: right;">
+              نطاق التقرير:
+            </td>
+            <td style="border: none; border-bottom: 1px solid #e2e8f0; padding: 4px 8px; font-size: 8.5pt; color: #1e40af; font-weight: bold; white-space: nowrap; text-align: left;">
+              ${escapeXml(cleanPeriod)}
+            </td>
+          </tr>`
+              : ""
+          }
+          <tr style="height: 22px;">
+            <td style="border: none; padding: 4px 8px; font-size: 8.5pt; color: #64748b; font-weight: 600; white-space: nowrap; text-align: right;">
+              عدد السجلات:
+            </td>
+            <td style="border: none; padding: 4px 8px; font-size: 8.5pt; color: #0284c7; font-weight: bold; white-space: nowrap; text-align: left;">
+              ${rows.length} سجل
+            </td>
+          </tr>
+        </table>
       </td>`
           : ""
       }
     </tr>
 
     <!-- 3. شريط عنوان التقرير البارز ممتد بعرض الشيت بالكامل -->
-    <tr style="height: 38px; background-color: #eff6ff;">
-      <td colspan="${colCount}" style="border-top: 1px solid #bfdbfe; border-bottom: 2px solid #1e40af; border-left: none; border-right: none; background-color: #eff6ff; text-align: center; vertical-align: middle; font-family: 'Segoe UI', Tahoma, Arial, sans-serif; font-size: 13.5pt; font-weight: bold; color: #1e40af; padding: 6px 12px; height: 38px;">
+    <tr style="height: 40px; background-color: #f0f7ff;">
+      <td colspan="${colCount}" style="
+        border-top: 1px solid #bfdbfe;
+        border-bottom: 2px solid #1e40af;
+        border-left: none;
+        border-right: none;
+        background-color: #f0f7ff;
+        text-align: center;
+        vertical-align: middle;
+        font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+        font-size: 13pt;
+        font-weight: bold;
+        color: #1e40af;
+        padding: 8px 16px;
+        height: 40px;
+      ">
         تقرير: ${escapeXml(title)}
       </td>
     </tr>
@@ -564,7 +658,7 @@ export function exportTableToExcel({ title = "تقرير", columns, rows, subtit
     headers,
     rows: formattedRows,
     totals,
-    period: period || `تاريخ الإصدار: ${formatDate(new Date().toISOString())}`,
+    period: period || subtitle || null,
   });
 }
 
