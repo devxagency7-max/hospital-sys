@@ -1,4 +1,4 @@
-﻿/**
+/**
  * بيانات المحاسبة المالية التجريبية:
  * العملاء والموردون ومستنداتهم، الخزائن والبنوك وحركاتها، الأصول الثابتة، والضرائب.
  *
@@ -614,10 +614,10 @@ export const cashReconciliations = [
    ============================================================================ */
 
 export const bankAccounts = [
-  { id: 1, code: "BNK-NBE-01", bankName: "البنك الأهلي المصري", branch: "فرع بني سويف الرئيسي", accountName: "مستشفى الحياة التخصصي", accountNumber: "4521003876091", iban: "EG380003004521003876091123", swift: "NBEGEGCX", accountId: 1121, currency: "EGP", type: "current", openingBalance: 1_840_000, balance: GL.bankNbe, overdraftLimit: 2_000_000, lastReconciledAt: "2026-10-31", status: "active" },
-  { id: 2, code: "BNK-BM-01", bankName: "بنك مصر", branch: "فرع بني سويف", accountName: "مستشفى الحياة التخصصي", accountNumber: "1100294517003", iban: "EG120002001100294517003456", swift: "BMISEGCX", accountId: 1122, currency: "EGP", type: "current", openingBalance: 960_000, balance: GL.bankMisr, overdraftLimit: 500_000, lastReconciledAt: "2026-10-31", status: "active" },
-  { id: 3, code: "BNK-CIB-01", bankName: "البنك التجاري الدولي", branch: "فرع بني سويف", accountName: "مستشفى الحياة التخصصي", accountNumber: "100078452100", iban: "EG450010000100078452100789", swift: "CIBEEGCX", accountId: 1123, currency: "EGP", type: "current", openingBalance: 420_000, balance: GL.bankCib, overdraftLimit: 0, lastReconciledAt: "2026-10-31", status: "active" },
-  { id: 4, code: "BNK-CAI-PR", bankName: "بنك القاهرة", branch: "فرع بني سويف", accountName: "مستشفى الحياة التخصصي — حساب الرواتب", accountNumber: "7700458120036", iban: "EG770007007700458120036012", swift: "CAIREGCX", accountId: 1124, currency: "EGP", type: "payroll", openingBalance: 180_000, balance: GL.bankCairo, overdraftLimit: 0, lastReconciledAt: "2026-10-31", status: "active" },
+  { id: 1, code: "BNK-NBE-01", bankName: "البنك الأهلي المصري", branch: "فرع بني سويف الرئيسي", accountName: "مستشفى أمان الحياة", accountNumber: "4521003876091", iban: "EG380003004521003876091123", swift: "NBEGEGCX", accountId: 1121, currency: "EGP", type: "current", openingBalance: 1_840_000, balance: GL.bankNbe, overdraftLimit: 2_000_000, lastReconciledAt: "2026-10-31", status: "active" },
+  { id: 2, code: "BNK-BM-01", bankName: "بنك مصر", branch: "فرع بني سويف", accountName: "مستشفى أمان الحياة", accountNumber: "1100294517003", iban: "EG120002001100294517003456", swift: "BMISEGCX", accountId: 1122, currency: "EGP", type: "current", openingBalance: 960_000, balance: GL.bankMisr, overdraftLimit: 500_000, lastReconciledAt: "2026-10-31", status: "active" },
+  { id: 3, code: "BNK-CIB-01", bankName: "البنك التجاري الدولي", branch: "فرع بني سويف", accountName: "مستشفى أمان الحياة", accountNumber: "100078452100", iban: "EG450010000100078452100789", swift: "CIBEEGCX", accountId: 1123, currency: "EGP", type: "current", openingBalance: 420_000, balance: GL.bankCib, overdraftLimit: 0, lastReconciledAt: "2026-10-31", status: "active" },
+  { id: 4, code: "BNK-CAI-PR", bankName: "بنك القاهرة", branch: "فرع بني سويف", accountName: "مستشفى أمان الحياة — حساب الرواتب", accountNumber: "7700458120036", iban: "EG770007007700458120036012", swift: "CAIREGCX", accountId: 1124, currency: "EGP", type: "payroll", openingBalance: 180_000, balance: GL.bankCairo, overdraftLimit: 0, lastReconciledAt: "2026-10-31", status: "active" },
 ];
 
 /**

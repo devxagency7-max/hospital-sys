@@ -118,7 +118,7 @@ export const employees = (() => {
         address: `${random.pick(GOVERNORATES)} — ${random.pick(["شارع المحطة", "شارع الجمهورية", "حي الزهور", "المنطقة الثامنة"])}`,
         phone: random.phone(),
         emergencyPhone: random.phone(),
-        email: `emp${id}@alhayah-hospital.example`,
+        email: `emp${id}@amanalhayah-hospital.example`,
 
         positionId: position.id,
         jobTitle: position.title,

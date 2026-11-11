@@ -15,8 +15,8 @@ const TODAY = REFERENCE_DATE.toISOString().slice(0, 10);
    ============================================================================ */
 
 export const companyInfo = {
-  name: "مستشفى الحياة التخصصي",
-  nameEn: "Al-Hayah Specialized Hospital",
+  name: "مستشفى أمان الحياة",
+  nameEn: "Aman Al-Hayah Hospital",
   legalForm: "شركة مساهمة مصرية — منشأة طبية خاصة",
   commercialRegister: "128470",
   taxId: "204-851-963",
@@ -31,8 +31,8 @@ export const companyInfo = {
   postalCode: "62511",
   phone: "0822401234",
   fax: "0822401235",
-  email: "info@alhayah-hospital.example",
-  website: "www.alhayah-hospital.example",
+  email: "info@amanalhayah-hospital.example",
+  website: "www.amanalhayah-hospital.example",
 
   logoUrl: "assets/logo.png",
   currency: "EGP",
@@ -42,7 +42,7 @@ export const companyInfo = {
   timeZone: "Africa/Cairo",
 
   /** يظهر في تذييل كل تقرير مطبوع. */
-  reportFooter: "مستشفى الحياة التخصصي — س.ت 128470 — ب.ض 204-851-963",
+  reportFooter: "مستشفى أمان الحياة — س.ت 128470 — ب.ض 204-851-963",
 };
 
 /* ============================================================================
@@ -79,7 +79,7 @@ export const users = USER_SEEDS.map((seed, index) => {
   return {
     ...seed,
     code: `USR-${String(seed.id).padStart(3, "0")}`,
-    email: `${seed.username}@alhayah-hospital.example`,
+    email: `${seed.username}@amanalhayah-hospital.example`,
     phone: random.phone(),
     roleName: ROLES[seed.role]?.label ?? seed.role,
     /** صلاحيات إضافية فوق الدور — استثناء مُعلَن لا تعديل صامت على الدور. */

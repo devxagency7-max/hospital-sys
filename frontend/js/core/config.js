@@ -10,7 +10,7 @@ export const APP = {
   nameAr: "نظام الإدارة المالية للمستشفى",
   tagline: "Hospital Financial Management System",
   /** اسم المنشأة — يظهر في الهيدر وترويسة كل تقرير مطبوع. */
-  organization: "مستشفى الحياة التخصصي",
+  organization: "مستشفى أمان الحياة",
   version: "1.0.0",
 };
 
