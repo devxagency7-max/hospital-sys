@@ -476,31 +476,9 @@ export function exportStyledExcel({
         : ""
     }
 
-    <!-- 8. فاصل وتوقيعات الاعتماد الرسمية بدون خطوط شبكة -->
-    <tr style="height: 20px; background-color: #ffffff;">
-      <td colspan="${colCount}" style="border: none; background-color: #ffffff; height: 20px;"></td>
-    </tr>
-    <tr style="background-color: #ffffff;">
-      <td colspan="${colCount}" style="background-color: #ffffff; border: none; border-top: 1px dashed #cbd5e1; padding: 16px 12px;">
-        <table border="0" cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse; border: none; font-size: 9.5pt; color: #475569;">
-          <tr>
-            <td style="border: none; text-align: right; width: 33%;">
-              <strong>المُعِد / المسؤول:</strong> ________________________
-            </td>
-            <td style="border: none; text-align: center; width: 33%;">
-              <strong>المراجعة والتدقيق:</strong> ________________________
-            </td>
-            <td style="border: none; text-align: left; width: 33%;">
-              <strong>الاعتماد المالي:</strong> ________________________
-            </td>
-          </tr>
-          <tr>
-            <td colspan="3" style="border: none; text-align: center; font-size: 8pt; color: #94a3b8; padding-top: 16px;">
-              نظام الإدارة المالية لمستشفى أمان الحياة — تم تصدير هذا المستند آلياً وهو معتمد وموثق
-            </td>
-          </tr>
-        </table>
-      </td>
+    <!-- 8. هامش سفلي بدون توقيعات -->
+    <tr style="height: 24px; background-color: #ffffff;">
+      <td colspan="${colCount}" style="border: none; background-color: #ffffff; height: 24px;"></td>
     </tr>
   </table>
 </body>
@@ -544,21 +522,34 @@ ${excelHtml}
 }
 
 /**
- * تصدير الصفوف كملف CSV خام مع علامة BOM.
+ * تصدير البيانات كملف CSV منسق ومُعرَّب بالكامل مع علامة BOM وترويسة واضحة.
  */
 export function exportCsv({ title, headers, rows, totals }) {
   if (!rows?.length) {
-    toast.warning("لا بيانات للتصدير.");
+    toast.warning("لا توجد بيانات متاحة للتصدير.");
     return;
   }
 
   const cell = (raw) => {
     const node = raw && typeof raw === "object" && raw.value !== undefined ? raw.value : raw;
-    const text = node instanceof Node ? (node.textContent ?? "") : String(node ?? "");
+    let text = "";
+    if (node instanceof Node) {
+      const primary = node.querySelector(".text-ink, div:first-child");
+      text = primary?.textContent?.trim() || node.textContent?.trim() || "";
+    } else {
+      text = String(node ?? "").trim();
+    }
     return `"${text.replace(/"/g, '""')}"`;
   };
 
+  const cleanTitle = String(title ?? "تقرير").trim();
+  const exportDate = formatDate(new Date().toISOString());
+
   const lines = [
+    `"${APP.organization || "مستشفى أمان الحياة"}"`,
+    `"تقرير: ${cleanTitle.replace(/"/g, '""')}"`,
+    `"تاريخ الإصدار والتصدير: ${exportDate}"`,
+    "",
     headers.map((header) => cell(header.label ?? header)).join(","),
     ...rows.map((row) => row.map(cell).join(",")),
     ...(totals ? [totals.map(cell).join(",")] : []),
@@ -567,9 +558,10 @@ export function exportCsv({ title, headers, rows, totals }) {
   const blob = new Blob([`\uFEFF${lines.join("\r\n")}`], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
 
+  const cleanName = cleanTitle.replace(/[\/\\?%*:|"<>]/g, "-").replace(/\s+/g, "_");
   const link = el("a", {
     href: url,
-    download: `${String(title ?? "report").replace(/\s+/g, "-")}-${formatDate(new Date().toISOString())}.csv`,
+    download: `مستشفى_أمان_الحياة_${cleanName}_${exportDate}.csv`,
   });
 
   document.body.appendChild(link);
@@ -577,7 +569,7 @@ export function exportCsv({ title, headers, rows, totals }) {
   link.remove();
   URL.revokeObjectURL(url);
 
-  toast.success(`صُدِّر ${rows.length} صف إلى ملف CSV.`);
+  toast.success(`تم تصدير ${rows.length} صف إلى ملف CSV منسق بنجاح.`);
 }
 
 /* ==========================================================================
