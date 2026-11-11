@@ -306,14 +306,16 @@ function renderReportFooter({ orgName, pageNumber, totalPages, date }) {
     },
     el("div", {}, orgName),
     el("div", { class: "tabular font-semibold" }, `صفحة ${pageNumber} من ${totalPages} — ${date}`),
-    // شعار DevX فقط (بدون Delmon إطلاقاً!)
+    // شعار DevX مكبّر باعتدال ومناسب للطباعة والـ PDF مع رابط المطور
     el(
       "div",
       { class: "flex items-center gap-1.5" },
+      el("span", { class: "text-[9.5px] font-semibold text-slate-500" }, "تطوير"),
       el("img", {
         src: "assets/devx_logo.jpg",
-        alt: "DevX",
-        class: "h-4 rounded object-contain border border-slate-200",
+        alt: "DevX (devsmartx.com)",
+        class: "rounded object-contain border border-slate-300 shadow-2xs",
+        style: "height: 25px; width: 25px;",
         onError: (e) => {
           e.target.style.display = "none";
         },

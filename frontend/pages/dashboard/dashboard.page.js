@@ -352,14 +352,41 @@ function render(host, data) {
     ),
   );
 
-  /* ================= تذييل: حالة النظام ================= */
+  /* ================= تذييل: حالة النظام والشركة المطورة ================= */
   host.appendChild(
     el(
-      "p",
-      { class: "text-[11px] text-faint text-center pt-1" },
-      `المؤشرات حتى ${dateTime(data.asOf)} · الفترة ${data.period} · ` +
-        `${integer(data.accounting.openPeriods)} فترة محاسبية مفتوحة · ` +
-        `${integer(data.accounting.postedThisMonth)} قيد مُرحَّل هذا الشهر`,
+      "div",
+      { class: "pt-4 pb-2 flex flex-col items-center justify-center gap-2.5 border-t border-line/40 mt-3" },
+      el(
+        "p",
+        { class: "text-[11px] text-faint text-center" },
+        `المؤشرات حتى ${dateTime(data.asOf)} · الفترة ${data.period} · ` +
+          `${integer(data.accounting.openPeriods)} فترة محاسبية مفتوحة · ` +
+          `${integer(data.accounting.postedThisMonth)} قيد مُرحَّل هذا الشهر`,
+      ),
+      el(
+        "a",
+        {
+          href: "https://devsmartx.com",
+          target: "_blank",
+          rel: "noopener noreferrer",
+          class:
+            "inline-flex items-center gap-3 px-4 py-2 rounded-2xl bg-surface border border-line " +
+            "shadow-2xs hover:shadow-xs hover:border-blue-500/50 hover:bg-surface-alt transition-all group cursor-pointer",
+          title: "شركة DevX للحلول البرمجية — devsmartx.com",
+        },
+        el("img", {
+          src: "assets/devx_logo.jpg",
+          alt: "DevX",
+          class: "size-8.5 rounded-lg object-contain shadow-xs border border-white/80 group-hover:scale-105 transition-transform",
+        }),
+        el(
+          "div",
+          { class: "flex flex-col text-right leading-tight" },
+          el("span", { class: "text-xs font-bold text-ink group-hover:text-blue-600 transition-colors" }, "DevX Software Solutions"),
+          el("span", { class: "text-[10px] font-semibold text-muted font-mono" }, "devsmartx.com"),
+        ),
+      ),
     ),
   );
 }
