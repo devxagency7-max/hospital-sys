@@ -85,13 +85,20 @@ export default async function hospitalServicesPage() {
       },
     ],
 
-    stats: (rows) => {
-      const totalServices = rows.length;
-      const stayServices = rows.filter((r) => r.category === "room" || r.category === "icu").length;
-      const surgeryServices = rows.filter((r) => r.category === "surgery").length;
+    stats: async (rows) => {
+      let data = Array.isArray(rows) && rows.length ? rows : [];
+      if (!data.length) {
+        try {
+          const res = await listServices({ limit: 200 });
+          data = res.data || [];
+        } catch {}
+      }
+      const totalServices = data.length;
+      const stayServices = data.filter((r) => r.category === "room" || r.category === "icu").length;
+      const surgeryServices = data.filter((r) => r.category === "surgery").length;
       const averagePrice =
         totalServices > 0
-          ? rows.reduce((s, r) => s + (r.price || 0), 0) / totalServices
+          ? data.reduce((s, r) => s + (r.price || 0), 0) / totalServices
           : 0;
 
       return [

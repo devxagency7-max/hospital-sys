@@ -91,6 +91,7 @@ export async function listPage(definition) {
     },
     reloadTable: () => table.reload(),
     getParams: () => table.getParams(),
+    getRows: () => (table?.getRows ? table.getRows() : []),
   };
 
   /* --- الترويسة --- */
@@ -109,7 +110,8 @@ export async function listPage(definition) {
     if (!stats) return;
 
     try {
-      const cards = await stats(context);
+      const rows = table?.getRows ? table.getRows() : [];
+      const cards = await stats(rows, context);
       clear(statsHost);
       if (cards?.length) statsHost.appendChild(statGrid(...cards.filter(Boolean)));
     } catch (error) {

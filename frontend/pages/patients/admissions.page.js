@@ -147,11 +147,18 @@ export default async function patientAdmissionsPage() {
       },
     ],
 
-    stats: (rows) => {
-      const activeCount = rows.filter((r) => r.status === "active").length;
-      const icuCount = rows.filter((r) => r.stayType === "icu" && r.status === "active").length;
-      const surgeryCount = rows.filter((r) => r.stayType === "surgery").length;
-      const totalEstimatedCost = rows.reduce(
+    stats: async (rows) => {
+      let data = Array.isArray(rows) && rows.length ? rows : [];
+      if (!data.length) {
+        try {
+          const res = await listAdmissions({ limit: 200 });
+          data = res.data || [];
+        } catch {}
+      }
+      const activeCount = data.filter((r) => r.status === "active").length;
+      const icuCount = data.filter((r) => r.stayType === "icu" && r.status === "active").length;
+      const surgeryCount = data.filter((r) => r.stayType === "surgery").length;
+      const totalEstimatedCost = data.reduce(
         (sum, r) => sum + (r.dailyRate || 0) * (r.daysCount || 1),
         0,
       );

@@ -117,11 +117,18 @@ export default async function patientInvoicesPage() {
 
     onRowClick: (row) => previewInvoiceBill(row),
 
-    stats: (rows) => {
-      const totalInvoices = rows.length;
-      const totalAmount = rows.reduce((s, r) => s + (r.patientAmount || 0), 0);
-      const totalInsurance = rows.reduce((s, r) => s + (r.insuranceAmount || 0), 0);
-      const totalRemaining = rows.reduce((s, r) => s + (r.remainingAmount || 0), 0);
+    stats: async (rows) => {
+      let data = Array.isArray(rows) && rows.length ? rows : [];
+      if (!data.length) {
+        try {
+          const res = await listPatientInvoices({ limit: 200 });
+          data = res.data || [];
+        } catch {}
+      }
+      const totalInvoices = data.length;
+      const totalAmount = data.reduce((s, r) => s + (r.patientAmount || 0), 0);
+      const totalInsurance = data.reduce((s, r) => s + (r.insuranceAmount || 0), 0);
+      const totalRemaining = data.reduce((s, r) => s + (r.remainingAmount || 0), 0);
 
       return [
         statTile({

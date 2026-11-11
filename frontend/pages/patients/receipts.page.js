@@ -99,10 +99,17 @@ export default async function patientReceiptsPage() {
 
     onRowClick: (row) => previewReceiptVoucher(row),
 
-    stats: (rows) => {
-      const totalCount = rows.length;
-      const totalAmount = rows.reduce((s, r) => s + (r.amount || 0), 0);
-      const cashAmount = rows
+    stats: async (rows) => {
+      let data = Array.isArray(rows) && rows.length ? rows : [];
+      if (!data.length) {
+        try {
+          const res = await listPatientReceipts({ limit: 200 });
+          data = res.data || [];
+        } catch {}
+      }
+      const totalCount = data.length;
+      const totalAmount = data.reduce((s, r) => s + (r.amount || 0), 0);
+      const cashAmount = data
         .filter((r) => r.paymentMethod === "cash")
         .reduce((s, r) => s + (r.amount || 0), 0);
       const bankAmount = totalAmount - cashAmount;
