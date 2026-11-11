@@ -179,9 +179,10 @@ export function exportStyledExcel({
   const user = currentUser()?.name ?? "إدارة المستشفى";
   const colCount = Math.max(headers.length, 3);
 
-  // حساب تقسيم الأعمدة المتناسق للترويسة العلوية لتمتد بانسجام كامل عبر عرض الشيت
-  let centerCols = colCount >= 10 ? 2 : colCount >= 6 ? 1 : 1;
-  if (colCount % 2 === 0 && colCount >= 6) centerCols = 2;
+  // حساب تقسيم الأعمدة المتناسق للترويسة العلوية لتمتد بانسجام كامل عبر عرض الشيت ويكون اللوجو في المنتصف تماماً
+  let centerCols = 2;
+  if (colCount >= 7) centerCols = 3;
+  if (colCount >= 10) centerCols = 4;
   const rem = colCount - centerCols;
   const rightCols = Math.ceil(rem / 2);
   const leftCols = colCount - centerCols - rightCols;
@@ -261,27 +262,27 @@ export function exportStyledExcel({
     </colgroup>
 
     <!-- 1. هامش علوي أبيض مفرغ بدون خطوط شبكة -->
-    <tr style="height: 10px; background-color: #ffffff;">
-      <td colspan="${colCount}" style="border: none; background-color: #ffffff; height: 10px;"></td>
+    <tr style="height: 12px; background-color: #ffffff;">
+      <td colspan="${colCount}" style="border: none; background-color: #ffffff; height: 12px;"></td>
     </tr>
 
-    <!-- 2. الترويسة الرئيسية الملكية: اليمين هوية المستشفى، المنتصف الشعار المؤطر، واليسار كارت بيانات التقرير المنظم -->
-    <tr style="height: 105px; background-color: #ffffff;">
+    <!-- 2. الترويسة الرئيسية: اليمين هوية المستشفى، المنتصف شعار المستشفى بحواف دائرية وبحجم كبير، واليسار كارت بيانات التقرير -->
+    <tr style="height: 145px; background-color: #ffffff;">
       <!-- اليمين: اسم المنشأة الطبية وبياناتها القانونية والضريبية -->
       <td colspan="${rightCols}" style="border: none; background-color: #ffffff; text-align: right; vertical-align: middle; padding: 6px 16px;">
         <table border="0" cellpadding="0" cellspacing="0" style="border-collapse: collapse; width: 100%; text-align: right; font-family: 'Segoe UI', Tahoma, Arial, sans-serif;">
           <tr>
-            <td style="border: none; padding: 2px 0; font-size: 19pt; font-weight: bold; color: #1e3a8a; line-height: 1.2; white-space: nowrap;">
+            <td style="border: none; padding: 2px 0; font-size: 20pt; font-weight: bold; color: #1e3a8a; line-height: 1.2; white-space: nowrap;">
               ${escapeXml(company.name || "مستشفى أمان الحياة")}
             </td>
           </tr>
           <tr>
-            <td style="border: none; padding: 4px 0 3px 0; font-size: 9.5pt; color: #475569; font-weight: 600; white-space: nowrap;">
+            <td style="border: none; padding: 5px 0 4px 0; font-size: 10pt; color: #475569; font-weight: 600; white-space: nowrap;">
               ${escapeXml(company.legalForm || "شركة مساهمة مصرية — منشأة طبية خاصة")}
             </td>
           </tr>
           <tr>
-            <td style="border: none; padding: 2px 0; font-size: 8.5pt; color: #64748b; white-space: nowrap;">
+            <td style="border: none; padding: 2px 0; font-size: 9pt; color: #64748b; white-space: nowrap;">
               <span>سجل تجاري: <strong style="color: #1e293b;">&lrm;${escapeXml(company.commercialRegister || "128470")}&lrm;</strong></span>
               &nbsp;&nbsp;·&nbsp;&nbsp;
               <span>بطاقة ضريبية: <strong style="color: #1e293b;">&lrm;${escapeXml(company.taxId || "204-851-963")}&lrm;</strong></span>
@@ -290,11 +291,9 @@ export function exportStyledExcel({
         </table>
       </td>
 
-      <!-- المنتصف: شعار مستشفى أمان الحياة مؤطر داخل كارت أبيض أنيق بدقة عالية -->
-      <td colspan="${centerCols}" style="border: none; background-color: #ffffff; text-align: center; vertical-align: middle; padding: 6px 10px;">
-        <div style="display: inline-block; padding: 6px 8px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
-          <img src="cid:logo.png@excel.export" width="82" height="82" alt="لوجو مستشفى أمان الحياة" style="display: block; border: none; vertical-align: middle;" />
-        </div>
+      <!-- المنتصف: شعار مستشفى أمان الحياة بحواف منحنية ملساء وبحجم كبير وبارز في منتصف الترويسة -->
+      <td colspan="${centerCols}" align="center" style="border: none; background-color: #ffffff; text-align: center; vertical-align: middle; padding: 4px 10px;">
+        <img src="cid:logo.png@excel.export" width="132" height="132" alt="شعار مستشفى أمان الحياة" style="display: inline-block; border: none; outline: none; vertical-align: middle; margin: 0 auto;" />
       </td>
 
       <!-- اليسار: كارت بيانات التقرير المنظم والمؤطر بدون أي تكدس أو تداخل -->
