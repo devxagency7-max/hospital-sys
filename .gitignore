@@ -13,3 +13,5 @@ desktop.ini
 # Archives / scratch
 *.zip
 *.log
+scratch/
+frontend/scratch/
