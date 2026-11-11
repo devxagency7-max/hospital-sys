@@ -58,7 +58,7 @@ export default async function hospitalServicesPage() {
 
     columns: [
       codeColumn("code", "كود الخدمة", { width: "9rem" }),
-      nameColumn("name", "department", "اسم الخدمة الطبية", { width: "18rem" }),
+      nameColumn("name", null, "اسم الخدمة الطبية", { width: "20rem" }),
       {
         key: "category",
         label: "التصنيف",
