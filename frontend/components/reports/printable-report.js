@@ -313,7 +313,7 @@ function renderReportFooter({ orgName, pageNumber, totalPages, date }) {
       el("span", { class: "text-[9.5px] font-semibold text-slate-500" }, "تطوير"),
       el("img", {
         src: "assets/devx_logo.jpg",
-        alt: "DevX (devsmartx.com)",
+        alt: "Dev SmartX",
         class: "rounded object-contain border border-slate-300 shadow-2xs",
         style: "height: 25px; width: 25px;",
         onError: (e) => {

@@ -428,11 +428,11 @@ function footer(collapsed) {
             target: "_blank",
             rel: "noopener noreferrer",
             class: "grid place-items-center size-9 rounded-xl hover:bg-white dark:hover:bg-slate-800 transition-all group cursor-pointer",
-            title: "DevX Software Solutions — devsmartx.com",
+            title: "Dev SmartX",
           },
           el("img", {
             src: "assets/devx_logo.jpg",
-            alt: "DevX",
+            alt: "Dev SmartX",
             class: "size-7 rounded-lg object-contain shadow-xs border border-white/80 group-hover:scale-110 transition-transform",
           }),
         ),
@@ -453,22 +453,17 @@ function footer(collapsed) {
           target: "_blank",
           rel: "noopener noreferrer",
           class:
-            "flex items-center gap-2.5 px-3 py-2 rounded-2xl bg-white/70 dark:bg-slate-800/70 " +
+            "flex items-center gap-2.5 px-3.5 py-2 rounded-2xl bg-white/70 dark:bg-slate-800/70 " +
             "border border-black/[0.05] dark:border-white/[0.08] shadow-2xs hover:shadow-xs hover:border-blue-500/40 " +
             "hover:bg-white dark:hover:bg-slate-800 transition-all duration-200 group cursor-pointer w-full justify-center",
-          title: "DevX Software Solutions — devsmartx.com",
+          title: "Dev SmartX",
         },
         el("img", {
           src: "assets/devx_logo.jpg",
-          alt: "DevX",
+          alt: "Dev SmartX",
           class: "size-8.5 rounded-lg object-contain shadow-xs border border-white/80 dark:border-white/20 group-hover:scale-105 transition-transform",
         }),
-        el(
-          "div",
-          { class: "flex flex-col items-start leading-tight" },
-          el("span", { class: "text-xs font-black tracking-wide text-slate-800 dark:text-slate-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors" }, "DevX Solutions"),
-          el("span", { class: "text-[10px] font-semibold text-slate-500 dark:text-slate-400 font-mono" }, "devsmartx.com"),
-        ),
+        el("span", { class: "text-xs font-black tracking-wide text-slate-800 dark:text-slate-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors" }, "Dev SmartX"),
       ),
     ),
     el(
