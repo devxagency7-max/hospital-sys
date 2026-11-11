@@ -484,6 +484,84 @@ const DYNAMIC = [
     permission: "reception.view",
     load: () => import("../../pages/reception/reception-billing.page.js"),
   },
+  {
+    path: "/gl/journal/:id",
+    title: "تفاصيل قيد اليومية",
+    permission: "gl.view",
+    load: () => import("../../pages/gl/journal-detail.page.js"),
+  },
+  {
+    path: "/fin/customers/:id",
+    title: "كشف حساب عميل",
+    permission: "fin.view",
+    load: () => import("../../pages/fin/customer-detail.page.js"),
+  },
+  {
+    path: "/fin/customer-invoices/:id",
+    title: "تفاصيل فاتورة عميل",
+    permission: "fin.view",
+    load: () => import("../../pages/fin/customer-invoice-detail.page.js"),
+  },
+  {
+    path: "/fin/suppliers/:id",
+    title: "كشف حساب مورد",
+    permission: "fin.view",
+    load: () => import("../../pages/fin/supplier-detail.page.js"),
+  },
+  {
+    path: "/fin/supplier-invoices/:id",
+    title: "تفاصيل فاتورة مورد",
+    permission: "fin.view",
+    load: () => import("../../pages/fin/supplier-invoice-detail.page.js"),
+  },
+  {
+    path: "/fin/cash-boxes/:id",
+    title: "كشف خزينة نقدية",
+    permission: "fin.view",
+    load: () => import("../../pages/fin/cashbox-detail.page.js"),
+  },
+  {
+    path: "/fin/banks/:id",
+    title: "كشف حساب بنكي",
+    permission: "fin.view",
+    load: () => import("../../pages/fin/bank-detail.page.js"),
+  },
+  {
+    path: "/fin/assets/:id",
+    title: "بطاقة أصل ثابت",
+    permission: "fin.asset.manage",
+    load: () => import("../../pages/fin/asset-detail.page.js"),
+  },
+  {
+    path: "/hr/employees/:id",
+    title: "ملف موظف",
+    permission: "hr.view",
+    load: () => import("../../pages/hr/employee-detail.page.js"),
+  },
+  {
+    path: "/hr/payroll/:id",
+    title: "تفاصيل مسيّر رواتب",
+    permission: "hr.payroll.view",
+    load: () => import("../../pages/hr/payroll-detail.page.js"),
+  },
+  {
+    path: "/hr/payslips/:id",
+    title: "قسيمة راتب",
+    permission: "hr.payroll.view",
+    load: () => import("../../pages/hr/payslip-detail.page.js"),
+  },
+  {
+    path: "/inv/items/:id",
+    title: "بطاقة صنف مخزني",
+    permission: "inv.view",
+    load: () => import("../../pages/inv/item-detail.page.js"),
+  },
+  {
+    path: "/inv/counts/:id",
+    title: "تفاصيل محضر جرد",
+    permission: "inv.count.manage",
+    load: () => import("../../pages/inv/count-detail.page.js"),
+  },
 ];
 
 /**
