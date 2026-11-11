@@ -20,6 +20,38 @@ const IMPLEMENTED = [
     load: () => import("../../pages/dashboard/dashboard.page.js"),
   },
 
+  /* ===================== حسابات المرضى والخدمات الطبية ===================== */
+  {
+    path: "/patients",
+    title: "سجل المرضى",
+    permission: "patients.view",
+    load: () => import("../../pages/patients/patients-list.page.js"),
+  },
+  {
+    path: "/patients/invoices",
+    title: "فواتير المرضى",
+    permission: "patients.view",
+    load: () => import("../../pages/patients/invoices.page.js"),
+  },
+  {
+    path: "/patients/receipts",
+    title: "سندات القبض والدفعات",
+    permission: "patients.receipt",
+    load: () => import("../../pages/patients/receipts.page.js"),
+  },
+  {
+    path: "/patients/admissions",
+    title: "الإقامة والعمليات والعناية",
+    permission: "patients.view",
+    load: () => import("../../pages/patients/admissions.page.js"),
+  },
+  {
+    path: "/patients/services",
+    title: "دليل الخدمات الطبية",
+    permission: "patients.services.manage",
+    load: () => import("../../pages/patients/services.page.js"),
+  },
+
   /* ===================== 1. المحاسبة العامة ===================== */
   {
     path: "/gl/accounts",
@@ -419,6 +451,12 @@ const DYNAMIC = [
     title: "كشف حساب",
     permission: "gl.ledger.view",
     load: () => import("../../pages/gl/ledger.page.js"),
+  },
+  {
+    path: "/patients/:id",
+    title: "ملف المريض وكشف الحساب",
+    permission: "patients.view",
+    load: () => import("../../pages/patients/patient-detail.page.js"),
   },
 ];
 

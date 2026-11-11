@@ -21,6 +21,23 @@ export const navigation = [
   },
 
   /* ======================================================================
+     حسابات المرضى والخدمات الطبية
+     ====================================================================== */
+  {
+    key: "patients",
+    label: "حسابات المرضى والخدمات",
+    icon: "hospital",
+    permission: "patients.view",
+    children: [
+      { label: "سجل المرضى", path: "/patients", permission: "patients.view" },
+      { label: "فواتير المرضى", path: "/patients/invoices", permission: "patients.view" },
+      { label: "سندات القبض والدفعات", path: "/patients/receipts", permission: "patients.receipt" },
+      { label: "الإقامة والعمليات والعناية", path: "/patients/admissions", permission: "patients.view" },
+      { label: "دليل الخدمات الطبية", path: "/patients/services", permission: "patients.services.manage" },
+    ],
+  },
+
+  /* ======================================================================
      1. المحاسبة العامة
      ====================================================================== */
   {

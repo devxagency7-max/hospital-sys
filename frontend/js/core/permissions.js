@@ -88,6 +88,14 @@ export const PERMISSIONS = {
   "inv.count.manage": "إدارة الجرد الفعلي",
   "inv.valuation.view": "عرض تقييم المخزون",
 
+  /* ===================== حسابات المرضى والخدمات الطبية ===================== */
+  "patients.view": "عرض حسابات المرضى والخدمات",
+  "patients.manage": "إدارة ملفات المرضى",
+  "patients.invoice": "إصدار فواتير المرضى",
+  "patients.receipt": "تسجيل سندات قبض ودفعات المرضى",
+  "patients.services.manage": "إدارة دليل الخدمات الطبية",
+  "patients.admissions.manage": "إدارة الإقامة والعمليات والعناية",
+
   /* ===================== التقارير ===================== */
   "reports.view": "عرض التقارير",
   "reports.financial.view": "عرض التقارير المالية",
@@ -156,6 +164,17 @@ export const ROLES = {
       "inv.*",
       "reports.view",
       "reports.inventory.view",
+      "reports.export",
+    ],
+  },
+
+  billing: {
+    label: "مسؤول حسابات المرضى والخدمات",
+    permissions: [
+      "dashboard.view",
+      "patients.*",
+      "reports.view",
+      "reports.financial.view",
       "reports.export",
     ],
   },

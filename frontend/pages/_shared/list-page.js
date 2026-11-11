@@ -20,7 +20,8 @@ import { card, statGrid } from "../../components/common/card.js";
 import { dataTable, summaryCells } from "../../components/tables/data-table.js";
 import { errorState } from "../../components/feedback/states.js";
 import { toast } from "../../components/feedback/toast.js";
-import { confirmAction } from "../../components/modals/overlay.js";
+import { button } from "../../components/common/button.js";
+import { exportTableToCsv, previewTableReport } from "./print.js";
 import { describeError } from "../../js/core/errors.js";
 
 /**
@@ -139,6 +140,36 @@ export async function listPage(definition) {
     }
   }
 
+  /* --- أزرار التصدير والمعاينة لكل جدول --- */
+  const exportBtn = button({
+    label: "تصدير Excel",
+    icon: "download",
+    variant: "secondary",
+    size: "md",
+    onClick: async () => {
+      let exportRows = table.getRows();
+      if (fetchPage && exportRows.length < 500) {
+        try {
+          const allRes = await fetchPage({ ...table.getParams(), page: 1, perPage: 1000 });
+          if (allRes?.data?.length) exportRows = allRes.data;
+        } catch {
+          // fallback
+        }
+      }
+      exportTableToCsv({ title, columns, rows: exportRows });
+    },
+  });
+
+  const printBtn = button({
+    label: "معاينة وطباعة",
+    icon: "print",
+    variant: "secondary",
+    size: "md",
+    onClick: () => {
+      previewTableReport({ title, columns, rows: table.getRows() });
+    },
+  });
+
   /* --- الجدول --- */
   const table = dataTable({
     id: tableId,
@@ -146,6 +177,7 @@ export async function listPage(definition) {
     fetch: fetchPage,
     filters,
     searchPlaceholder,
+    toolbarActions: [exportBtn, printBtn],
     rowActions: rowActions ? (row) => rowActions(row, context) : undefined,
     onRowClick,
     initialParams,

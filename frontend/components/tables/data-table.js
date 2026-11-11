@@ -745,6 +745,7 @@ export function dataTable({
     getParams: () => ({ ...params }),
     setParams,
     getRows: () => [...rows],
+    getVisibleColumns: () => visibleColumns(),
     getSelection: () => rows.filter((row) => selection.has(row.id)),
     destroy,
   };

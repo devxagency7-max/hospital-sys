@@ -28,6 +28,7 @@ import * as finance from "../mock/services/finance.service.js";
 import * as hr from "../mock/services/hr.service.js";
 import * as inventory from "../mock/services/inventory.service.js";
 import * as dashboard from "../mock/services/dashboard.service.js";
+import * as patients from "../mock/services/patients.service.js";
 
 /** المستخدم الحالي — يُمرَّر لكل عملية كتابة لتوثيقها في سجل التدقيق. */
 const actor = () => ({ user: currentUser() });
@@ -244,6 +245,38 @@ const ROUTES = {
 
   /* --- المطابقة مع الحسابات الرقابية --- */
   "GET /fin/reconciliation-summary": () => ({ data: finance.reconciliationSummary() }),
+
+  /* ======================================================================
+     حسابات المرضى والخدمات الطبية
+     ====================================================================== */
+
+  "GET /patients": ({ params }) => patients.listPatients(params),
+  "GET /patients/stats": () => ({ data: patients.getPatientStats() }),
+  "GET /patients/insurance-providers": () => ({ data: all("insuranceProviders") }),
+  "GET /patients/:id": ({ params }) => ({ data: patients.getPatient(params.id) }),
+  "POST /patients": ({ body }) => ({ data: patients.createPatient(body, actor()) }),
+  "PUT /patients/:id": ({ params, body }) => ({ data: patients.updatePatient(params.id, body, actor()) }),
+  "GET /patients/:id/statement": ({ params }) => ({ data: patients.getPatientStatement(params.id) }),
+
+  /* --- دليل الخدمات الطبية --- */
+  "GET /patients/services/list": ({ params }) => patients.listServices(params),
+  "GET /patients/services/:id": ({ params }) => ({ data: patients.getService(params.id) }),
+  "POST /patients/services": ({ body }) => ({ data: patients.createService(body, actor()) }),
+
+  /* --- الإقامة والعمليات والعناية المركزة --- */
+  "GET /patients/admissions/list": ({ params }) => patients.listAdmissions(params),
+  "GET /patients/admissions/:id": ({ params }) => ({ data: patients.getAdmission(params.id) }),
+  "POST /patients/admissions": ({ body }) => ({ data: patients.createAdmission(body, actor()) }),
+  "POST /patients/admissions/:id/discharge": ({ params, body }) => ({ data: patients.dischargeAdmission(params.id, body, actor()) }),
+
+  /* --- فواتير المرضى --- */
+  "GET /patients/invoices/list": ({ params }) => patients.listPatientInvoices(params),
+  "GET /patients/invoices/:id": ({ params }) => ({ data: patients.getPatientInvoice(params.id) }),
+  "POST /patients/invoices": ({ body }) => ({ data: patients.createPatientInvoice(body, actor()) }),
+
+  /* --- سندات القبض والدفعات --- */
+  "GET /patients/receipts/list": ({ params }) => patients.listPatientReceipts(params),
+  "POST /patients/receipts": ({ body }) => ({ data: patients.createPatientReceipt(body, actor()) }),
 
   /* ======================================================================
      3. الموارد البشرية

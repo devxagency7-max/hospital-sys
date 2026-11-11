@@ -176,6 +176,12 @@ export const bold = (value) => ({ value: String(value ?? ""), bold: true });
  * @param {object[]} data
  * @param {Array<{key:string, format?:(row:object)=>string}>} columns
  */
+/**
+ * يحوّل صفوف جدول البيانات إلى صفوف ورقة الطباعة.
+ *
+ * @param {object[]} data
+ * @param {Array<{key:string, format?:(row:object)=>string}>} columns
+ */
 export function toPrintRows(data, columns) {
   return data.map((row) =>
     columns.map((column) => {
@@ -184,3 +190,73 @@ export function toPrintRows(data, columns) {
     }),
   );
 }
+
+/**
+ * فتح معاينة رسمية قابلة للطباعة والتنزيل كـ PDF لأي جدول بيانات.
+ */
+export function previewTableReport({ title = "تقرير الجدول", columns, rows, subtitle, period }) {
+  if (!rows?.length) {
+    toast.warning("لا توجد بيانات متاحة للمعاينة والطباعة.");
+    return;
+  }
+
+  const visibleCols = columns.filter((col) => col && !col.hidden && col.key !== "actions");
+  const headers = visibleCols.map((c) => ({
+    label: c.label ?? c.key,
+    align: c.numeric ? "left" : (c.align ?? "right"),
+  }));
+
+  const formattedRows = rows.map((row) =>
+    visibleCols.map((col) => {
+      if (col.render) {
+        const rendered = col.render(row);
+        if (rendered instanceof Node) return rendered.textContent.trim();
+        return rendered !== null && rendered !== undefined ? String(rendered).trim() : "—";
+      }
+      const val = row[col.key];
+      return val !== null && val !== undefined && val !== "" ? String(val) : "—";
+    }),
+  );
+
+  return printReport({
+    company: {
+      name: "مستشفى أمان الحياة",
+      legalForm: "شركة مساهمة مصرية — منشأة طبية خاصة",
+      commercialRegister: "128470",
+      taxId: "204-851-963",
+    },
+    title,
+    subtitle: subtitle || "تقرير معتمد ومطابق للسجلات الرسمية للمستشفى",
+    period: period || `تاريخ الإصدار: ${formatDate(new Date().toISOString())}`,
+    headers,
+    rows: formattedRows,
+  });
+}
+
+/**
+ * تصدير بيانات أي جدول كشيت Excel (ملف CSV متوافق مع Excel بترميز UTF-8 مع BOM).
+ */
+export function exportTableToCsv({ title = "تقرير", columns, rows }) {
+  if (!rows?.length) {
+    toast.warning("لا توجد بيانات متاحة للتصدير.");
+    return;
+  }
+
+  const visibleCols = columns.filter((col) => col && !col.hidden && col.key !== "actions");
+  const headers = visibleCols.map((c) => ({ label: c.label ?? c.key }));
+
+  const formattedRows = rows.map((row) =>
+    visibleCols.map((col) => {
+      if (col.render) {
+        const rendered = col.render(row);
+        if (rendered instanceof Node) return rendered.textContent.trim();
+        return rendered !== null && rendered !== undefined ? String(rendered).trim() : "";
+      }
+      const val = row[col.key];
+      return val !== null && val !== undefined ? String(val) : "";
+    }),
+  );
+
+  exportCsv({ title, headers, rows: formattedRows });
+}
+

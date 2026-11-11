@@ -19,6 +19,7 @@ export const APP = {
  * والصلاحيات وترويسات التقارير.
  */
 export const MODULES = Object.freeze({
+  PATIENTS: "patients",
   ACCOUNTING: "accounting",
   FINANCE: "finance",
   HR: "hr",

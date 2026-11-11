@@ -82,6 +82,15 @@ import {
   documentSources,
 } from "./admin.mock.js";
 
+import {
+  patients,
+  hospitalServices,
+  admissions,
+  patientInvoices,
+  patientReceipts,
+  insuranceProviders,
+} from "./patients.mock.js";
+
 import { PAYMENT_METHODS, GOVERNORATES } from "./seed.js";
 
 /**
@@ -147,6 +156,14 @@ export const db = {
   auditLogs: [...auditLogs],
   documentSources: [...documentSources],
   notificationPreferences: [...notificationPreferences],
+
+  /* --- حسابات المرضى والخدمات الطبية --- */
+  patients: [...patients],
+  hospitalServices: [...hospitalServices],
+  admissions: [...admissions],
+  patientInvoices: [...patientInvoices],
+  patientReceipts: [...patientReceipts],
+  insuranceProviders: [...insuranceProviders],
 
   /* --- قوائم مرجعية --- */
   paymentMethods: [...PAYMENT_METHODS],
@@ -329,7 +346,16 @@ export function find(collection, id) {
 
 /** يُعيد كل السجلات المطابقة لمُرشِّح — للقوائم المرجعية والتجميعات. */
 export function where(collection, predicate) {
-  return (db[collection] ?? []).filter(predicate);
+  const rows = db[collection] ?? [];
+  if (typeof predicate === "function") {
+    return rows.filter(predicate);
+  }
+  if (predicate && typeof predicate === "object") {
+    return rows.filter((item) =>
+      Object.entries(predicate).every(([k, v]) => String(item[k]) === String(v)),
+    );
+  }
+  return [...rows];
 }
 
 /** يُعيد كل السجلات دون ترقيم — للقوائم المنسدلة والحساب في طبقة المجال. */
