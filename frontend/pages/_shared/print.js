@@ -206,7 +206,8 @@ export function exportStyledExcel({
 
   const colWidths = headers.map((h) => {
     const label = String(h?.label ?? h ?? "");
-    if (/بيان|خدمة|إجراء|وصف|اسم|تفاصيل|ملاحظات|مريض|صنف|جهة|عميل|مورد|موظف/.test(label)) return 300;
+    if (/وصف|بيان|تفاصيل|ملاحظات|شرح|موضوع/.test(label)) return 420;
+    if (/خدمة|إجراء|اسم|مريض|صنف|جهة|عميل|مورد|موظف/.test(label)) return 320;
     if (/قسم|إدارة|وظيفة|مركز|جهة/.test(label)) return 160;
     if (/فاتورة|سند|كود|مرجع|رقم/.test(label)) return 140;
     if (/تاريخ|وقت|استحقاق/.test(label)) return 125;
@@ -407,7 +408,7 @@ export function exportStyledExcel({
         const isEven = rIdx % 2 === 1;
         const rowBg = isEven ? "#f8fafc" : "#ffffff";
         return `
-        <tr style="height: 30px; background-color: ${rowBg};">
+        <tr style="background-color: ${rowBg};">
           ${row
             .map((cellVal, cIdx) => {
               const raw =
@@ -430,11 +431,12 @@ export function exportStyledExcel({
                 background-color: ${rowBg};
                 color: #0f172a;
                 font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
-                font-size: 10pt;
+                font-size: 10.5pt;
                 text-align: ${align};
                 vertical-align: middle;
                 border: 1px solid #e2e8f0;
-                padding: 7px 12px;
+                padding: 8px 14px;
+                white-space: nowrap;
                 ${msoFormat}
               ">
                 ${escapeXml(text)}
@@ -648,7 +650,7 @@ export function exportTableToExcel({ title = "تقرير", columns, rows, subtit
         col.key &&
         row[col.key] !== undefined &&
         typeof row[col.key] === "string" &&
-        /name|title|description/i.test(col.key)
+        /name|title|description|desc|notes|details|statement|subject|item/i.test(col.key)
       ) {
         return row[col.key].trim();
       }
