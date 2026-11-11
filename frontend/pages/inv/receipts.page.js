@@ -122,17 +122,99 @@ export default async function receiptsPage() {
 /* ========================================================================== */
 
 function openReceiptModal(context, { items, warehouses }) {
+  const initialItem = items[0];
   const form = {
-    itemId: items[0]?.id ?? 1,
+    itemId: initialItem?.id ?? 1,
     warehouseId: warehouses[0]?.id ?? 1,
     quantity: 10,
-    unitCost: 5000,
+    unitCost: initialItem?.costPrice ?? 50,
     batchNumber: `BATCH-${Date.now().toString().slice(-4)}`,
     expiryDate: new Date(Date.now() + 365 * 24 * 3600 * 1000).toISOString().slice(0, 10),
     date: new Date().toISOString().slice(0, 10),
     reason: "استلام توريد محلي",
     notes: "",
   };
+
+  const getSelectedItem = () => items.find((i) => Number(i.id) === Number(form.itemId)) || items[0];
+
+  const infoHost = el("div");
+  const alertHost = el("div");
+
+  function updatePricingHints() {
+    const itm = getSelectedItem();
+    if (!itm) return;
+
+    const prevCost = itm.costPrice ?? 0;
+    const salePrice = itm.sellingPrice ?? 0;
+
+    infoHost.replaceChildren(
+      el(
+        "div",
+        {
+          class:
+            "p-3 rounded-[var(--radius-card)] bg-surface-subtle border border-line text-xs grid grid-cols-1 sm:grid-cols-2 gap-3",
+        },
+        el(
+          "div",
+          { class: "flex items-center gap-1.5" },
+          el("span", { class: "text-faint" }, "سعر الشراء المسجل سابقاً:"),
+          el("span", { class: "font-semibold text-ink num text-sm" }, amount(prevCost)),
+        ),
+        el(
+          "div",
+          { class: "flex flex-col gap-0.5" },
+          el(
+            "div",
+            { class: "flex items-center gap-1.5" },
+            el("span", { class: "text-faint" }, "سعر البيع المعتمد للمرضى:"),
+            el("span", { class: "font-semibold text-brand-400 num text-sm" }, amount(salePrice)),
+          ),
+          el(
+            "span",
+            { class: "text-[10px] text-faint" },
+            "🔒 معتمد من مدير الحسابات — لا يملك أمين المخزن صلاحية تغييره",
+          ),
+        ),
+      ),
+    );
+
+    const enteredCost = Number(form.unitCost || 0);
+    if (enteredCost > 0 && prevCost > 0 && enteredCost !== prevCost) {
+      const diff = Number((((enteredCost - prevCost) / prevCost) * 100).toFixed(1));
+      const diffSign = diff > 0 ? `+${diff}%` : `${diff}%`;
+      const isIncrease = diff > 0;
+
+      alertHost.replaceChildren(
+        el(
+          "div",
+          {
+            class:
+              "p-3 rounded-[var(--radius-card)] border text-xs flex items-start gap-2.5 " +
+              (isIncrease
+                ? "bg-warning-50 text-warning-800 border-warning-200"
+                : "bg-surface-subtle text-ink border-line"),
+          },
+          el("span", { class: "text-base shrink-0 leading-none" }, "⚠️"),
+          el(
+            "div",
+            { class: "space-y-0.5 leading-relaxed" },
+            el(
+              "p",
+              { class: "font-semibold" },
+              `تنبيه تغير سعر الشراء: يختلف السعر المدخل (${amount(enteredCost)}) عن السابق (${amount(prevCost)}) بنسبة (${diffSign}).`,
+            ),
+            el(
+              "p",
+              { class: "text-[11px] opacity-90" },
+              "سعر بيع الصنف للمريض سيبقى ثابتاً كما هو، وسيتم إرسال إشعار فوري لمدير الحسابات لمراجعة التكلفة وتحديد السعر أو تثبيته.",
+            ),
+          ),
+        ),
+      );
+    } else {
+      alertHost.replaceChildren();
+    }
+  }
 
   formModal({
     title: "إنشاء إذن إضافة مخزني",
@@ -141,19 +223,28 @@ function openReceiptModal(context, { items, warehouses }) {
     submitLabel: "ترحيل إذن الإضافة",
     success: "تم إنشاء إذن الإضافة وترحيل القيد المحاسبي بنجاح.",
 
-    body: () =>
-      el(
+    body: () => {
+      updatePricingHints();
+
+      return el(
         "div",
         { class: "space-y-4" },
         el(
           "div",
           { class: "grid grid-cols-1 md:grid-cols-2 gap-3.5" },
           selectField({
-            label: "الصنف",
+            label: "الصنف المستلم",
             required: true,
             value: String(form.itemId),
             options: items.map((i) => ({ value: i.id, label: `${i.code} — ${i.name}` })),
-            onChange: value((v) => (form.itemId = Number(v))),
+            onChange: value((v) => {
+              form.itemId = Number(v);
+              const selected = getSelectedItem();
+              if (selected?.costPrice) {
+                form.unitCost = selected.costPrice;
+              }
+              updatePricingHints();
+            }),
           }),
           selectField({
             label: "المستودع المستلم",
@@ -163,6 +254,9 @@ function openReceiptModal(context, { items, warehouses }) {
             onChange: value((v) => (form.warehouseId = Number(v))),
           }),
         ),
+
+        infoHost,
+        alertHost,
 
         el(
           "div",
@@ -175,10 +269,13 @@ function openReceiptModal(context, { items, warehouses }) {
             onInput: numberValue((v) => (form.quantity = v)),
           }),
           moneyField({
-            label: "تكلفة الوحدة (قروش)",
+            label: "سعر الشراء للتوريد (ج.م)",
             required: true,
             value: form.unitCost,
-            onChange: (cents) => (form.unitCost = cents),
+            onChange: (val) => {
+              form.unitCost = val;
+              updatePricingHints();
+            },
           }),
           dateFieldWithLabel({
             label: "تاريخ الاستلام",
@@ -208,7 +305,8 @@ function openReceiptModal(context, { items, warehouses }) {
           value: form.reason,
           onInput: value((v) => (form.reason = v)),
         }),
-      ),
+      );
+    },
 
     onSubmit: () =>
       createReceipt({

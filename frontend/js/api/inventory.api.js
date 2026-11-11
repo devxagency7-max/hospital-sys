@@ -174,3 +174,22 @@ export async function closeStockCount(id, payload_) {
   const payload = await http.post(`/inv/counts/${encodeURIComponent(id)}/close`, payload_);
   return payload.data;
 }
+
+/* ==========================================================================
+   مراجعة وتحديث أسعار البيع (خاص بمدير الحسابات)
+   ========================================================================== */
+
+export function listPriceReviews(params = {}) {
+  return fetchList("/inv/price-reviews", params);
+}
+
+export async function getPriceReview(id) {
+  const payload = await http.get(`/inv/price-reviews/${encodeURIComponent(id)}`);
+  return payload.data;
+}
+
+export async function approvePriceReview(id, decision) {
+  const payload = await http.post(`/inv/price-reviews/${encodeURIComponent(id)}/decide`, decision);
+  return payload.data;
+}
+

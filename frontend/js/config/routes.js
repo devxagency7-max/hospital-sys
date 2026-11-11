@@ -326,6 +326,12 @@ const IMPLEMENTED = [
     load: () => import("../../pages/inv/warehouses.page.js"),
   },
   {
+    path: "/inv/price-reviews",
+    title: "مراجعة وتحديث أسعار البيع",
+    permission: "pricing.manage",
+    load: () => import("../../pages/inv/price-reviews.page.js"),
+  },
+  {
     path: "/inv/receipts",
     title: "إذن إضافة",
     permission: "inv.receipt.create",

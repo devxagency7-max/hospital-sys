@@ -99,6 +99,7 @@ export const navigation = [
 
       { label: "الضرائب والإقرارات", path: "/fin/taxes", permission: "fin.tax.manage" },
       { label: "القوائم المالية", path: "/fin/statements", permission: "fin.statements.view" },
+      { label: "تسعير الأصناف وهوامش الربح", path: "/inv/price-reviews", permission: "pricing.manage" },
     ],
   },
 
@@ -137,6 +138,7 @@ export const navigation = [
     permission: "inv.view",
     children: [
       { label: "الأصناف", path: "/inv/items", permission: "inv.view" },
+      { label: "مراجعة أسعار البيع", path: "/inv/price-reviews", permission: "pricing.manage" },
       { label: "التصنيفات", path: "/inv/categories", permission: "inv.item.manage" },
       { label: "المخازن", path: "/inv/warehouses", permission: "inv.view" },
 

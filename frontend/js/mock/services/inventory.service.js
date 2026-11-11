@@ -288,6 +288,59 @@ export function createReceipt(payload, { user } = {}) {
 
   const balance = refreshBalance(item.id, warehouse.id);
 
+  /*
+   * كشف تغير سعر الشراء عن السعر السابق:
+   * إذا ورد الصنف بسعر شراء يختلف عن آخر سعر شراء مسجل، لا يتغير سعر البيع تلقائيًا،
+   * بل يُنشأ طلب مراجعة وتحديث سعر بيع للمريض خاص بمدير الحسابات مع إشعار فوري.
+   */
+  const previousCost = item.lastPurchasePrice ?? item.costPrice;
+  if (previousCost && Number(unitCost) !== Number(previousCost)) {
+    const changePercent = Number((((unitCost - previousCost) / previousCost) * 100).toFixed(1));
+    const currentMarginPct = previousCost > 0
+      ? Number((((item.sellingPrice - previousCost) / previousCost) * 100).toFixed(1))
+      : 0;
+    const suggestedSellingPrice = previousCost > 0
+      ? money.round(unitCost * (1 + currentMarginPct / 100))
+      : unitCost;
+
+    insert("priceReviews", {
+      itemId: item.id,
+      itemCode: item.code,
+      itemName: item.name,
+      category: item.category,
+      unit: item.unit,
+      receiptReference: movement.reference,
+      receiptId: movement.id,
+      date: movement.date,
+      oldPurchasePrice: previousCost,
+      newPurchasePrice: unitCost,
+      changePercent,
+      currentSellingPrice: item.sellingPrice,
+      currentMarginPct,
+      suggestedSellingPrice,
+      status: "pending",
+      approvedPrice: null,
+      approvedMarginPct: null,
+      decisionNotes: null,
+      decidedBy: null,
+      decidedAt: null,
+      createdAt: new Date().toISOString(),
+    });
+
+    audit({
+      action: "pricing.review.created",
+      actionLabel: "طلب مراجعة سعر بيع",
+      module: "المخازن",
+      entity: "price_review",
+      entityId: movement.id,
+      details: `تغير سعر شراء «${item.name}» من ${previousCost} إلى ${unitCost} ج.م في إذن ${movement.reference}. إشعار لمدير الحسابات.`,
+      user,
+    });
+  }
+
+  // تحديث آخر سعر شراء للصنف لمتابعة التوريدات القادمة
+  update("items", item.id, { lastPurchasePrice: unitCost });
+
   const posting = postDocument({
     sourceType: SourceType.INVENTORY_RECEIPT,
     sourceId: movement.id,
@@ -806,6 +859,8 @@ export function getAlerts() {
     nearExpiryDays: db.systemPreferences.nearExpiryWarningDays,
   });
 
+  const pendingReviews = all("priceReviews").filter((r) => r.status === "pending");
+
   const stockRow = (row) => ({
     itemId: row.itemId,
     name: row.itemName,
@@ -828,12 +883,27 @@ export function getAlerts() {
     value: row.value,
   });
 
+  const priceReviewRow = (row) => ({
+    id: row.id,
+    itemId: row.itemId,
+    name: row.itemName,
+    itemName: row.itemName,
+    code: row.itemCode,
+    oldPurchasePrice: row.oldPurchasePrice,
+    newPurchasePrice: row.newPurchasePrice,
+    changePercent: row.changePercent,
+    currentSellingPrice: row.currentSellingPrice,
+    receiptReference: row.receiptReference,
+  });
+
   return {
+    priceReviews: pendingReviews.map(priceReviewRow),
     outOfStock: balances.filter((row) => row.status === "out_of_stock").map(stockRow),
     lowStock: balances.filter((row) => row.status === "low_stock").map(stockRow),
     expired: exposure.expired.map(batchRow),
     nearExpiry: exposure.nearExpiry.map(batchRow),
     totals: {
+      priceReviews: pendingReviews.length,
       outOfStock: balances.filter((row) => row.status === "out_of_stock").length,
       lowStock: balances.filter((row) => row.status === "low_stock").length,
       expired: exposure.expired.length,
@@ -981,4 +1051,136 @@ export function closeStockCount(id, payload, { user } = {}) {
   });
 
   return { count: getStockCount(id), adjustments };
+}
+
+/* ==========================================================================
+   6) مراجعة وتحديث أسعار البيع (خاص بمدير الحسابات)
+   ========================================================================== */
+
+/**
+ * قائمة طلبات مراجعة وتحديث أسعار البيع بعد ورود الأصناف بتكاليف شراء جديدة.
+ */
+export function listPriceReviews(params = {}) {
+  const allReviews = all("priceReviews");
+  const filtered = allReviews.filter((row) => {
+    if (params.status && params.status !== "all" && row.status !== params.status) return false;
+    if (params.itemId && String(row.itemId) !== String(params.itemId)) return false;
+    if (params.search) {
+      const q = String(params.search).toLowerCase();
+      const match =
+        String(row.itemName || "").toLowerCase().includes(q) ||
+        String(row.itemCode || "").toLowerCase().includes(q) ||
+        String(row.receiptReference || "").toLowerCase().includes(q) ||
+        String(row.category || "").toLowerCase().includes(q);
+      if (!match) return false;
+    }
+    return true;
+  });
+
+  // فرز الأحدث أولاً
+  filtered.sort((a, b) => {
+    if (a.status === "pending" && b.status !== "pending") return -1;
+    if (b.status === "pending" && a.status !== "pending") return 1;
+    return (b.id || 0) - (a.id || 0);
+  });
+
+  const page = Number(params.page || 1);
+  const perPage = Number(params.perPage || 20);
+  const start = (page - 1) * perPage;
+  const paged = filtered.slice(start, start + perPage);
+
+  const pendingRows = allReviews.filter((r) => r.status === "pending");
+  const approvedRows = allReviews.filter((r) => r.status === "approved");
+  const keptRows = allReviews.filter((r) => r.status === "kept_unchanged");
+
+  const avgMargin =
+    approvedRows.length > 0
+      ? Number(
+          (approvedRows.reduce((sum, r) => sum + (r.approvedMarginPct || 0), 0) / approvedRows.length).toFixed(1),
+        )
+      : 35.0;
+
+  return {
+    data: paged,
+    meta: {
+      total: filtered.length,
+      page,
+      perPage,
+      totalPages: Math.ceil(filtered.length / perPage) || 1,
+      pendingCount: pendingRows.length,
+      approvedCount: approvedRows.length,
+      keptCount: keptRows.length,
+      averageMargin: avgMargin,
+    },
+  };
+}
+
+export function getPriceReview(id) {
+  const review = find("priceReviews", id);
+  if (!review) throw notFound("طلب مراجعة السعر غير موجود.");
+  return review;
+}
+
+/**
+ * اعتماد وتحديث سعر البيع للصنف من مدير الحسابات.
+ *
+ * المدير يقرر إما:
+ * 1) تحديث سعر البيع بقيمة جديدة أو نسبة هامش ربح محددة.
+ * 2) تثبيت السعر الحالي دون تغيير وتحمل فارق التكلفة.
+ */
+export function approvePriceReview(id, payload, { user } = {}) {
+  const review = find("priceReviews", id);
+  if (!review) throw notFound("طلب مراجعة السعر غير موجود.");
+
+  const item = find("items", review.itemId);
+  if (!item) throw notFound("الصنف المرتبط غير موجود.");
+
+  const action = payload?.action ?? "update_price"; // "update_price" | "keep_price"
+  let newSellingPrice = item.sellingPrice;
+
+  if (action === "update_price") {
+    newSellingPrice = money.round(Number(payload?.newSellingPrice));
+    if (!money.isPositive(newSellingPrice)) {
+      throw validationError({ newSellingPrice: "سعر البيع الجديد يجب أن يكون قيمة رقمية موجبة." });
+    }
+  }
+
+  const approvedMarginPct =
+    review.newPurchasePrice > 0
+      ? Number((((newSellingPrice - review.newPurchasePrice) / review.newPurchasePrice) * 100).toFixed(1))
+      : 0;
+
+  // تحديث الصنف الفعلي ليصبح سعر البيع المعتمد متاحاً لفواتير وخدمات المرضى
+  update("items", item.id, {
+    sellingPrice: newSellingPrice,
+    costPrice: review.newPurchasePrice,
+  });
+
+  const status = action === "update_price" ? "approved" : "kept_unchanged";
+  const notes =
+    payload?.decisionNotes?.trim() ||
+    (action === "update_price"
+      ? `تم تعديل واعتماد سعر البيع إلى ${newSellingPrice} ج.م بهامش ربح ${approvedMarginPct}%`
+      : "تم تثبيت سعر البيع الحالي للمريض دون زيادة بقرار مدير الحسابات");
+
+  const updatedReview = update("priceReviews", id, {
+    status,
+    approvedPrice: newSellingPrice,
+    approvedMarginPct,
+    decisionNotes: notes,
+    decidedBy: user?.name ?? "أحمد منصور (مدير الحسابات)",
+    decidedAt: new Date().toISOString(),
+  });
+
+  audit({
+    action: action === "update_price" ? "pricing.review.approved" : "pricing.review.kept",
+    actionLabel: action === "update_price" ? "اعتماد تحديث سعر البيع" : "تثبيت سعر البيع بدون تغيير",
+    module: "المخازن",
+    entity: "price_review",
+    entityId: review.id,
+    details: `${item.name} — سعر البيع: ${newSellingPrice} ج.م (هامش ربح ${approvedMarginPct}%)`,
+    user,
+  });
+
+  return { review: updatedReview, item: find("items", item.id) };
 }

@@ -88,6 +88,9 @@ export const PERMISSIONS = {
   "inv.count.manage": "إدارة الجرد الفعلي",
   "inv.valuation.view": "عرض تقييم المخزون",
 
+  /* ===================== التسعير وهوامش الربح ===================== */
+  "pricing.manage": "مراجعة واعتماد أسعار البيع وهوامش الربح للأصناف",
+
   /* ===================== حسابات المرضى والخدمات الطبية ===================== */
   "patients.view": "عرض حسابات المرضى والخدمات",
   "patients.manage": "إدارة ملفات المرضى",
@@ -140,10 +143,12 @@ export const ROLES = {
   },
 
   gl: {
-    label: "محاسب عام",
+    label: "محاسب عام ومدير حسابات",
     permissions: [
       "dashboard.view",
       "gl.*",
+      "pricing.*",
+      "inv.view",
       "reports.view",
       "reports.financial.view",
       "reports.export",
@@ -155,6 +160,7 @@ export const ROLES = {
     permissions: [
       "dashboard.view",
       "fin.*",
+      "pricing.*",
       "reports.view",
       "reports.financial.view",
       "reports.export",
@@ -189,6 +195,7 @@ export const ROLES = {
       "dashboard.view",
       "patients.*",
       "reception.*",
+      "pricing.*",
       "reports.view",
       "reports.financial.view",
       "reports.export",

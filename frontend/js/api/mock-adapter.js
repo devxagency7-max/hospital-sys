@@ -416,6 +416,13 @@ const ROUTES = {
     data: inventory.closeStockCount(params.id, body, actor()),
   }),
 
+  /* --- مراجعة وتحديث أسعار البيع (خاص بمدير الحسابات) --- */
+  "GET /inv/price-reviews": ({ params }) => inventory.listPriceReviews(params),
+  "GET /inv/price-reviews/:id": ({ params }) => ({ data: inventory.getPriceReview(params.id) }),
+  "POST /inv/price-reviews/:id/decide": ({ params, body }) => ({
+    data: inventory.approvePriceReview(params.id, body, actor()),
+  }),
+
   /* ======================================================================
      5. الإدارة والنظام
      ====================================================================== */

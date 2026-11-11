@@ -109,6 +109,7 @@ export function notificationsPanel() {
     }
 
     const groups = [
+      { key: "priceReviews", title: "مراجعة وتحديث أسعار البيع", tone: "warning", kind: "pricing", path: "/inv/price-reviews" },
       { key: "outOfStock", title: "أصناف نافدة", tone: "danger", kind: "stock", path: "/inv/balances?status=out_of_stock" },
       { key: "lowStock", title: "رصيد منخفض", tone: "warning", kind: "stock", path: "/inv/balances?status=low_stock" },
       { key: "expired", title: "تشغيلات منتهية", tone: "danger", kind: "expiry", path: "/inv/expiry?status=expired" },
@@ -127,7 +128,7 @@ export function notificationsPanel() {
           icon("success", { size: 18 }),
         ),
         el("p", { class: "text-sm text-ink font-medium" }, "لا تنبيهات حاليًا"),
-        el("p", { class: "text-xs text-muted mt-0.5" }, "كل أرصدة المخزون وصلاحياته ضمن الحدود الطبيعية."),
+        el("p", { class: "text-xs text-muted mt-0.5" }, "كل أرصدة المخزون وصلاحياته وأسعار البيع معتمدة ومستقرة."),
       );
     }
 
@@ -160,13 +161,10 @@ export function notificationsPanel() {
           el(
             "span",
             { class: "text-[11px] text-faint shrink-0" },
-            // التمييز بنوع المجموعة لا بوجود الحقل: التشغيلات (kind="expiry")
-            // تحمل quantity أيضًا، فالاعتماد على وجوده وحده كان يُحوِّل صفوف
-            // الانتهاء خطأً لعرض نسبة رصيد بلا حدٍّ أدنى (مثل "40 / —").
-            // range() تعزل الرقمين اتجاهيًا — بلا ذلك يُعاد ترتيبهما بصريًا في
-            // فقرة RTL فيُقرأ صنف نافد (0 من 10) كأن رصيده 10 من حدٍّ أدنى صفر.
             kind === "stock"
               ? range(fmt.integer(row.quantity), fmt.integer(row.minimumQuantity), "/")
+              : kind === "pricing"
+              ? `${fmt.amount(row.newPurchasePrice)} (سابقاً ${fmt.amount(row.oldPurchasePrice)})`
               : fmt.date(row.expiryDate),
           ),
         ),

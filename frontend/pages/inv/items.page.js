@@ -25,6 +25,7 @@ import { formModal, selectField, value, numberValue, moneyField } from "../_shar
 import { textField } from "../../components/forms/fields.js";
 import { listItems, createItem } from "../../js/api/inventory.api.js";
 import { getItemCategories, getUnits, getWarehouses, toOptions, invalidateLookups } from "../../js/api/lookups.api.js";
+import { can } from "../../js/core/permissions.js";
 
 export default async function itemsPage() {
   const [categories, units, warehouses] = await Promise.all([
@@ -82,8 +83,11 @@ export default async function itemsPage() {
       quantityColumn("available", "المتاح", {
         tooltip: "ما يمكن صرفه الآن = الرصيد الفعلي − المحجوز لأذون صرف معتمدة لم تُسلَّم بعد.",
       }),
-      moneyColumn("costPrice", "سعر التكلفة", {
+      moneyColumn("costPrice", "سعر الشراء / التكلفة", {
         tooltip: "تكلفة شراء الوحدة الواحدة من المورد — وليست سعر الخدمة للمريض.",
+      }),
+      moneyColumn("sellingPrice", "سعر البيع المعتمد", {
+        tooltip: "سعر بيع الصنف للمريض المعتمد حصرياً من مدير الحسابات.",
       }),
       moneyColumn("totalValue", "القيمة الإجمالية", {
         tooltip: "الكمية الموجودة × تكلفتها = أموال المستشفى المجمّدة في هذا الصنف على الرف.",
@@ -255,15 +259,42 @@ function openItemModal(context, { categories, units, warehouses }) {
           "div",
           { class: "grid grid-cols-1 md:grid-cols-2 gap-3.5 pt-2 border-t border-line" },
           moneyField({
-            label: "سعر التكلفة التقديري",
+            label: "سعر الشراء / التكلفة التقديرية",
             value: form.costPrice,
             onChange: (cents) => (form.costPrice = cents),
           }),
-          moneyField({
-            label: "سعر البيع الافتراضي",
-            value: form.sellingPrice,
-            onChange: (cents) => (form.sellingPrice = cents),
-          }),
+          can("pricing.manage")
+            ? moneyField({
+                label: "سعر البيع المعتمد للمريض",
+                value: form.sellingPrice,
+                onChange: (cents) => (form.sellingPrice = cents),
+              })
+            : el(
+                "div",
+                { class: "flex flex-col gap-1.5" },
+                el("label", { class: "text-xs font-medium text-faint" }, "سعر البيع المعتمد للمريض"),
+                el(
+                  "div",
+                  {
+                    class:
+                      "px-3 py-2 rounded-[var(--radius-input)] bg-surface-subtle border border-line text-xs flex items-center justify-between",
+                  },
+                  el("span", { class: "font-semibold text-ink num" }, amount(form.sellingPrice || 0)),
+                  el(
+                    "span",
+                    {
+                      class:
+                        "text-[10px] text-warning-700 bg-warning-50 border border-warning-200 px-1.5 py-0.5 rounded",
+                    },
+                    "🔒 خاص بمدير الحسابات",
+                  ),
+                ),
+                el(
+                  "p",
+                  { class: "text-[11px] text-faint" },
+                  "غير مسموح لأمين المخزن بتحديد سعر البيع — يتم تحديده واعتماده حصرياً من مدير الحسابات.",
+                ),
+              ),
         ),
       ),
 
