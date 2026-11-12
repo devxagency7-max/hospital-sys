@@ -21,8 +21,8 @@ import {
   dateColumn,
   totalCell,
 } from "../_shared/cells.js";
-import { formModal, selectField, value, numberValue } from "../_shared/forms.js";
-import { textField, textarea } from "../../components/forms/fields.js";
+import { formModal, selectField, notesField, value, numberValue } from "../_shared/forms.js";
+import { textField } from "../../components/forms/fields.js";
 import { toast } from "../../components/feedback/toast.js";
 import { listMovements, createReceipt, createIssue } from "../../js/api/inventory.api.js";
 import { getWarehouses, getItems, toOptions, invalidateLookups } from "../../js/api/lookups.api.js";
@@ -192,191 +192,205 @@ export default async function movementsPage() {
  */
 function openDirectReceiptModal(context, { items, warehouses }) {
   const itemOptions = items.map((i) => ({
-    value: i.id,
+    value: String(i.id),
     label: `${i.name} (آخر تكلفة: ${i.lastPurchasePrice || i.costPrice || 0} ج.م)`,
   }));
 
-  const warehouseOptions = warehouses.map((w) => ({ value: w.id, label: w.name }));
+  const warehouseOptions = warehouses.map((w) => ({ value: String(w.id), label: w.name }));
 
-  const form = el("form", { class: "space-y-4 text-sm" });
+  const form = {
+    itemId: itemOptions[0]?.value ?? "1",
+    warehouseId: warehouseOptions[0]?.value ?? "1",
+    invoiceQty: 10,
+    actualQty: 10,
+    unitCost: 100,
+    batchNumber: "",
+    notes: "",
+  };
 
-  const itemField = selectField({
-    label: "الصنف المستلم",
-    options: itemOptions,
-    required: true,
-  });
-
-  const warehouseField = selectField({
-    label: "المستودع المستقبل",
-    options: warehouseOptions,
-    required: true,
-  });
-
-  const invoiceQtyField = textField({
-    label: "الكمية المذكورة في فاتورة المورد",
-    type: "number",
-    value: "10",
-    required: true,
-  });
-
-  const actualQtyField = textField({
-    label: "الكمية المستلمة فعلياً (بعد العد والفحص)",
-    type: "number",
-    value: "10",
-    required: true,
-  });
-
-  const costField = textField({
-    label: "سعر شراء الوحدة في الفاتورة (ج.م)",
-    type: "number",
-    value: "100",
-    required: true,
-  });
-
-  const batchField = textField({
-    label: "رقم التشغيلة (إن وُجد)",
-    placeholder: "مثال: BATCH-884",
-  });
-
-  const notesField = textarea({
-    label: "ملاحظات الاستلام / إثبات أي عجز",
-    placeholder: "اكتب أي ملاحظات على الفحص أو النقص…",
-  });
-
-  form.appendChild(itemField.element);
-  form.appendChild(warehouseField.element);
-  form.appendChild(
-    el("div", { class: "grid grid-cols-1 md:grid-cols-2 gap-3" }, [
-      invoiceQtyField.element,
-      actualQtyField.element,
-    ]),
-  );
-  form.appendChild(costField.element);
-  form.appendChild(batchField.element);
-  form.appendChild(notesField.element);
-
-  const modal = formModal({
+  formModal({
     title: "تسجيل إذن إضافة بضاعة من المورد",
-    content: form,
+    subtitle: "إضافة المخزون المستلم وتوثيق أي عجز أو فروقات في الفاتورة",
+    size: "md",
     submitLabel: "حفظ إذن الإضافة",
+    success: "تم تسجيل إذن الإضافة بنجاح",
+
+    body: () =>
+      el(
+        "div",
+        { class: "space-y-4 text-sm" },
+        selectField({
+          label: "الصنف المستلم",
+          required: true,
+          value: form.itemId,
+          options: itemOptions,
+          onChange: value((v) => (form.itemId = v)),
+        }),
+        selectField({
+          label: "المستودع المستقبل",
+          required: true,
+          value: form.warehouseId,
+          options: warehouseOptions,
+          onChange: value((v) => (form.warehouseId = v)),
+        }),
+        el("div", { class: "grid grid-cols-1 md:grid-cols-2 gap-3" }, [
+          textField({
+            label: "الكمية المذكورة في فاتورة المورد",
+            type: "number",
+            value: String(form.invoiceQty),
+            required: true,
+            onInput: numberValue((v) => (form.invoiceQty = v)),
+          }),
+          textField({
+            label: "الكمية المستلمة فعلياً (بعد العد والفحص)",
+            type: "number",
+            value: String(form.actualQty),
+            required: true,
+            onInput: numberValue((v) => (form.actualQty = v)),
+          }),
+        ]),
+        textField({
+          label: "سعر شراء الوحدة في الفاتورة (ج.م)",
+          type: "number",
+          value: String(form.unitCost),
+          required: true,
+          onInput: numberValue((v) => (form.unitCost = v)),
+        }),
+        textField({
+          label: "رقم التشغيلة (إن وُجد)",
+          value: form.batchNumber,
+          placeholder: "مثال: BATCH-884",
+          onInput: value((v) => (form.batchNumber = v)),
+        }),
+        notesField({
+          label: "ملاحظات الاستلام / إثبات أي عجز",
+          value: form.notes,
+          placeholder: "اكتب أي ملاحظات على الفحص أو النقص…",
+          onInput: value((v) => (form.notes = v)),
+        }),
+      ),
+
     onSubmit: async () => {
-      const iId = Number(value(itemField));
-      const wId = Number(value(warehouseField));
-      const invoiceQty = numberValue(invoiceQtyField);
-      const actualQty = numberValue(actualQtyField);
-      const unitCost = numberValue(costField);
+      const iId = Number(form.itemId);
+      const wId = Number(form.warehouseId);
+      const invoiceQty = Number(form.invoiceQty);
+      const actualQty = Number(form.actualQty);
+      const unitCost = Number(form.unitCost);
 
       if (!iId || !wId || !(actualQty > 0) || !(unitCost > 0)) {
-        toast.error("يرجى ملء جميع الحقول الإلزامية بالقيم الصحيحة.");
-        return;
+        throw new Error("يرجى ملء جميع الحقول الإلزامية بالقيم الصحيحة.");
       }
 
       const discrepancy = invoiceQty - actualQty;
-      let finalNotes = value(notesField) || "";
+      let finalNotes = form.notes || "";
       if (discrepancy > 0) {
         finalNotes = `عجز مثبت: في الفاتورة ${invoiceQty} والمستلم فعلياً ${actualQty} (نقص ${discrepancy}). ${finalNotes}`;
       }
 
-      await runAction(context, async () => {
-        await createReceipt({
-          itemId: iId,
-          warehouseId: wId,
-          quantity: actualQty,
-          unitCost,
-          batchNumber: value(batchField) || null,
-          notes: finalNotes || null,
-        });
-        invalidateLookups("items");
-        modal.close();
-        toast.success(
-          discrepancy > 0
-            ? `تم تسجيل إذن الإضافة بالكمية الفعلية (${actualQty}) مع توثيق عجز (${discrepancy})`
-            : "تم تسجيل إذن الإضافة وتحديث المخزون بنجاح",
-        );
+      await createReceipt({
+        itemId: iId,
+        warehouseId: wId,
+        quantity: actualQty,
+        unitCost,
+        batchNumber: form.batchNumber || null,
+        notes: finalNotes || null,
       });
+      invalidateLookups("items");
+      context.refresh?.();
+      toast.success(
+        discrepancy > 0
+          ? `تم تسجيل إذن الإضافة بالكمية الفعلية (${actualQty}) مع توثيق عجز (${discrepancy})`
+          : "تم تسجيل إذن الإضافة وتحديث المخزون بنجاح",
+      );
     },
   });
-
-  document.body.appendChild(modal.element);
 }
 
 /**
  * نافذة سريعة ومبسطة لإنشاء إذن صرف مخزني.
  */
 function openDirectIssueModal(context, { items, warehouses }) {
-  const itemOptions = items.map((i) => ({ value: i.id, label: `${i.name} (${i.code || ""})` }));
-  const warehouseOptions = warehouses.map((w) => ({ value: w.id, label: w.name }));
+  const itemOptions = items.map((i) => ({ value: String(i.id), label: `${i.name} (${i.code || ""})` }));
+  const warehouseOptions = warehouses.map((w) => ({ value: String(w.id), label: w.name }));
 
-  const form = el("form", { class: "space-y-4 text-sm" });
+  const form = {
+    itemId: itemOptions[0]?.value ?? "1",
+    warehouseId: warehouseOptions[0]?.value ?? "1",
+    quantity: 5,
+    reason: "صرف تشغيل وأقسام",
+    notes: "",
+  };
 
-  const itemField = selectField({
-    label: "الصنف المطلوب صرفه",
-    options: itemOptions,
-    required: true,
-  });
-
-  const warehouseField = selectField({
-    label: "المخزن المنصرف منه",
-    options: warehouseOptions,
-    required: true,
-  });
-
-  const qtyField = textField({
-    label: "الكمية المصروفة",
-    type: "number",
-    value: "5",
-    required: true,
-  });
-
-  const reasonField = selectField({
-    label: "سبب الصرف",
-    options: [
-      { value: "صرف تشغيل وأقسام", label: "صرف تشغيل وأقسام داخلية" },
-      { value: "صرف لفرع خارجي", label: "صرف وتغذية فرع خارجي" },
-      { value: "صرف علاجي للمرضى", label: "صرف علاجي ومستهلكات طبية" },
-      { value: "صرف صيانة وتشغيل", label: "صرف صيانة وقطع غيار" },
-    ],
-  });
-
-  const notesField = textarea({
-    label: "ملاحظات إذن الصرف",
-    placeholder: "رقم إذن الصرف اليدوي أو الجهة المستلمة…",
-  });
-
-  form.appendChild(itemField.element);
-  form.appendChild(warehouseField.element);
-  form.appendChild(qtyField.element);
-  form.appendChild(reasonField.element);
-  form.appendChild(notesField.element);
-
-  const modal = formModal({
+  formModal({
     title: "تسجيل إذن صرف مخزني",
-    content: form,
+    subtitle: "صرف أصناف من المخزن للأقسام أو الفروع وخصم الرصيد",
+    size: "md",
     submitLabel: "حفظ إذن الصرف",
+    success: "تم تسجيل إذن الصرف وخصم الرصيد بنجاح",
+
+    body: () =>
+      el(
+        "div",
+        { class: "space-y-4 text-sm" },
+        selectField({
+          label: "الصنف المطلوب صرفه",
+          required: true,
+          value: form.itemId,
+          options: itemOptions,
+          onChange: value((v) => (form.itemId = v)),
+        }),
+        selectField({
+          label: "المخزن المنصرف منه",
+          required: true,
+          value: form.warehouseId,
+          options: warehouseOptions,
+          onChange: value((v) => (form.warehouseId = v)),
+        }),
+        textField({
+          label: "الكمية المصروفة",
+          type: "number",
+          value: String(form.quantity),
+          required: true,
+          onInput: numberValue((v) => (form.quantity = v)),
+        }),
+        selectField({
+          label: "سبب الصرف",
+          value: form.reason,
+          options: [
+            { value: "صرف تشغيل وأقسام", label: "صرف تشغيل وأقسام داخلية" },
+            { value: "صرف لفرع خارجي", label: "صرف وتغذية فرع خارجي" },
+            { value: "صرف علاجي للمرضى", label: "صرف علاجي ومستهلكات طبية" },
+            { value: "صرف صيانة وتشغيل", label: "صرف صيانة وقطع غيار" },
+          ],
+          onChange: value((v) => (form.reason = v)),
+        }),
+        notesField({
+          label: "ملاحظات إذن الصرف",
+          value: form.notes,
+          placeholder: "رقم إذن الصرف اليدوي أو الجهة المستلمة…",
+          onInput: value((v) => (form.notes = v)),
+        }),
+      ),
+
     onSubmit: async () => {
-      const iId = Number(value(itemField));
-      const wId = Number(value(warehouseField));
-      const qty = numberValue(qtyField);
+      const iId = Number(form.itemId);
+      const wId = Number(form.warehouseId);
+      const qty = Number(form.quantity);
 
       if (!iId || !wId || !(qty > 0)) {
-        toast.error("يرجى تحديد الصنف والمخزن والكمية المصروفة.");
-        return;
+        throw new Error("يرجى تحديد الصنف والمخزن والكمية المصروفة.");
       }
 
-      await runAction(context, async () => {
-        await createIssue({
-          itemId: iId,
-          warehouseId: wId,
-          quantity: qty,
-          reason: value(reasonField) || "صرف مخزني",
-          notes: value(notesField) || null,
-        });
-        invalidateLookups("items");
-        modal.close();
-        toast.success("تم تسجيل إذن الصرف وخصم الرصيد بنجاح");
+      await createIssue({
+        itemId: iId,
+        warehouseId: wId,
+        quantity: qty,
+        reason: form.reason || "صرف مخزني",
+        notes: form.notes || null,
       });
+      invalidateLookups("items");
+      context.refresh?.();
+      toast.success("تم تسجيل إذن الصرف وخصم الرصيد بنجاح");
     },
   });
-
-  document.body.appendChild(modal.element);
 }

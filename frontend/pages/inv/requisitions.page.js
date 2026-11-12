@@ -13,22 +13,22 @@ import { el, cx } from "../../js/core/dom.js";
 import { button, buttonGroup } from "../../components/common/button.js";
 import { badge } from "../../components/common/badge.js";
 import { statTile } from "../../components/common/card.js";
-import { listPage, runAction } from "../_shared/list-page.js";
-import { codeColumn, nameColumn, textColumn, dateColumn } from "../_shared/cells.js";
-import { formModal, selectField, value, numberValue } from "../_shared/forms.js";
-import { textField, textarea } from "../../components/forms/fields.js";
+import { listPage } from "../_shared/list-page.js";
+import { codeColumn, nameColumn, dateColumn } from "../_shared/cells.js";
+import { formModal, selectField, notesField, value, numberValue } from "../_shared/forms.js";
+import { openModal } from "../../components/modals/overlay.js";
+import { textField } from "../../components/forms/fields.js";
 import { toast } from "../../components/feedback/toast.js";
 import {
   listRequisitions,
   getRequisition,
   createRequisition,
-  checkItemAvailability,
   fulfillFromHub,
   fulfillByBranchTransfer,
   orderFromSupplier,
   branchInspectAndReceive,
 } from "../../js/api/inventory.api.js";
-import { getWarehouses, getItems, toOptions } from "../../js/api/lookups.api.js";
+import { getWarehouses, getItems } from "../../js/api/lookups.api.js";
 
 const STATUS_CONFIG = {
   pending_review: {
@@ -274,249 +274,264 @@ async function openRequisitionDetailsModal(reqId, ctx, { warehouses }) {
   const canFulfillHub = availability.canFulfillFromHub;
   const hasSurplus = availability.hasSurplusBranches;
 
-  const content = el("div", { class: "space-y-6 text-sm" });
+  openModal({
+    title: `تفاصيل ومسار طلب النواقص: ${req.code}`,
+    subtitle: `الفرع الطالب: ${req.branchName} · أنشئ في: ${formatIsoTimestamp(req.createdAt)}`,
+    size: "lg",
+    body: (close) => {
+      const content = el("div", { class: "space-y-6 text-sm" });
 
-  /* 1) كارت ترويسة الطلب */
-  content.appendChild(
-    el(
-      "div",
-      {
-        class:
-          "p-4 rounded-xl bg-surface-50 dark:bg-surface-800/60 border border-surface-200 dark:border-surface-700 flex flex-wrap items-center justify-between gap-4",
-      },
-      [
-        el("div", { class: "space-y-1" }, [
-          el("div", { class: "flex items-center gap-2" }, [
-            el("span", { class: "text-xs text-text-muted font-mono num" }, req.code),
-            badge(STATUS_CONFIG[req.status]?.label || req.status, {
-              tone: STATUS_CONFIG[req.status]?.tone || "neutral",
-              size: "sm",
-            }),
-          ]),
-          el(
-            "h3",
-            { class: "text-base font-bold text-text-primary" },
-            `${req.itemName} — مطلوب: ${req.requestedQty} ${req.unit}`,
-          ),
-          el(
-            "p",
-            { class: "text-xs text-text-secondary" },
-            `الفرع الطالب: ${req.branchName} · أنشأه: ${req.createdBy} · ملاحظات: ${req.notes || "لا توجد"}`,
-          ),
-        ]),
-      ],
-    ),
-  );
-
-  /* 2) كارت مسار التوفير الذكي (Smart Inter-Branch Balancing Card) */
-  if (req.status === "pending_review") {
-    const balanceCard = el(
-      "div",
-      {
-        class:
-          "p-4 rounded-xl border border-brand-500/30 bg-brand-500/5 dark:bg-brand-950/20 space-y-4",
-      },
-      [
-        el("div", { class: "flex items-center justify-between" }, [
-          el("h4", { class: "font-bold text-brand-700 dark:text-brand-300 flex items-center gap-2" }, [
-            el("span", { class: "text-base" }, "💡"),
-            "فحص التوفر وفائض الفروع الذكي (توفير الشراء الخارجي)",
-          ]),
-          el(
-            "span",
-            { class: "text-xs text-brand-600 dark:text-brand-400 font-semibold num" },
-            `رصيد المخزن الرئيسي: ${availability.hubAvailable} ${req.unit}`,
-          ),
-        ]),
+      /* 1) كارت ترويسة الطلب */
+      content.appendChild(
         el(
-          "p",
-          { class: "text-xs text-text-secondary leading-relaxed" },
-          hasSurplus
-            ? `تنبيه ذكي: يوجد فائض عن الاستهلاك في المخازن الفرعية الأخرى (${availability.surplusBranches
-                .map((b) => `${b.warehouseName}: متوفر ${b.available} ${req.unit}`)
-                .join(" · ")}). يمكنك تحويل الكمية فوراً دون الحاجة لشراء جديد وتوفير السيولة للمؤسسة.`
-            : "لا توجد فروع أخرى لديها فائض كبير من هذا الصنف. يمكنك الصرف من الرئيسي أو إرسال أمر شراء للمورد.",
+          "div",
+          {
+            class:
+              "p-4 rounded-xl bg-surface-50 dark:bg-surface-800/60 border border-surface-200 dark:border-surface-700 flex flex-wrap items-center justify-between gap-4",
+          },
+          [
+            el("div", { class: "space-y-1" }, [
+              el("div", { class: "flex items-center gap-2" }, [
+                el("span", { class: "text-xs text-text-muted font-mono num" }, req.code),
+                badge(STATUS_CONFIG[req.status]?.label || req.status, {
+                  tone: STATUS_CONFIG[req.status]?.tone || "neutral",
+                  size: "sm",
+                }),
+              ]),
+              el(
+                "h3",
+                { class: "text-base font-bold text-text-primary" },
+                `${req.itemName} — مطلوب: ${req.requestedQty} ${req.unit}`,
+              ),
+              el(
+                "p",
+                { class: "text-xs text-text-secondary" },
+                `الفرع الطالب: ${req.branchName} · أنشأه: ${req.createdBy} · ملاحظات: ${req.notes || "لا توجد"}`,
+              ),
+            ]),
+          ],
         ),
-        el("div", { class: "flex flex-wrap items-center gap-2 pt-2 border-t border-brand-500/20" }, [
-          canFulfillHub
-            ? button({
-                label: `صرف فوري من المخزن الرئيسي (${req.requestedQty} ${req.unit})`,
-                variant: "primary",
+      );
+
+      /* 2) كارت مسار التوفير الذكي (Smart Inter-Branch Balancing Card) */
+      if (req.status === "pending_review") {
+        const balanceCard = el(
+          "div",
+          {
+            class:
+              "p-4 rounded-xl border border-brand-500/30 bg-brand-500/5 dark:bg-brand-950/20 space-y-4",
+          },
+          [
+            el("div", { class: "flex items-center justify-between" }, [
+              el("h4", { class: "font-bold text-brand-700 dark:text-brand-300 flex items-center gap-2" }, [
+                el("span", { class: "text-base" }, "💡"),
+                "فحص التوفر وفائض الفروع الذكي (توفير الشراء الخارجي)",
+              ]),
+              el(
+                "span",
+                { class: "text-xs text-brand-600 dark:text-brand-400 font-semibold num" },
+                `رصيد المخزن الرئيسي: ${availability.hubAvailable} ${req.unit}`,
+              ),
+            ]),
+            el(
+              "p",
+              { class: "text-xs text-text-secondary leading-relaxed" },
+              hasSurplus
+                ? `تنبيه ذكي: يوجد فائض عن الاستهلاك في المخازن الفرعية الأخرى (${availability.surplusBranches
+                    .map((b) => `${b.warehouseName}: متوفر ${b.available} ${req.unit}`)
+                    .join(" · ")}). يمكنك تحويل الكمية فوراً دون الحاجة لشراء جديد وتوفير السيولة للمؤسسة.`
+                : "لا توجد فروع أخرى لديها فائض كبير من هذا الصنف. يمكنك الصرف من الرئيسي أو إرسال أمر شراء للمورد.",
+            ),
+            el("div", { class: "flex flex-wrap items-center gap-2 pt-2 border-t border-brand-500/20" }, [
+              canFulfillHub
+                ? button({
+                    label: `صرف فوري من المخزن الرئيسي (${req.requestedQty} ${req.unit})`,
+                    variant: "primary",
+                    size: "sm",
+                    icon: "check",
+                    onClick: async () => {
+                      await fulfillFromHub(req.id, { dispatchedQty: req.requestedQty });
+                      close();
+                      ctx.refresh?.();
+                      toast.success("تم اعتماد الصرف والشحن من المخزن الرئيسي وتثبيت الختم الزمني");
+                    },
+                  })
+                : null,
+              hasSurplus
+                ? button({
+                    label: `تحويل داخلي من ${availability.surplusBranches[0].warehouseName}`,
+                    variant: "secondary",
+                    size: "sm",
+                    icon: "refresh",
+                    onClick: async () => {
+                      await fulfillByBranchTransfer(req.id, {
+                        sourceBranchId: availability.surplusBranches[0].warehouseId,
+                        dispatchedQty: req.requestedQty,
+                      });
+                      close();
+                      ctx.refresh?.();
+                      toast.success("تم اعتماد المناقلة الداخلية بين الفروع وتوفير الشراء");
+                    },
+                  })
+                : null,
+              button({
+                label: "إصدار أمر شراء للمورد",
+                variant: "ghost",
+                size: "sm",
+                icon: "plus",
+                onClick: async () => {
+                  await orderFromSupplier(req.id, { supplierId: 2 });
+                  close();
+                  ctx.refresh?.();
+                  toast.success("تم إصدار طلبية التوريد للمورد المعتمد بنجاح");
+                },
+              }),
+            ]),
+          ],
+        );
+        content.appendChild(balanceCard);
+      }
+
+      /* 3) شاشة فحص واستلام الفرع (Branch Receiving & Discrepancy Inspection Card) */
+      if (req.status === "in_transit" || req.status === "under_inspection") {
+        const qtyInput = el("input", {
+          type: "number",
+          class:
+            "w-32 px-3 py-1.5 rounded-lg border border-surface-300 dark:border-surface-600 bg-surface-0 dark:bg-surface-800 text-text-primary text-center font-bold num",
+          value: String(req.dispatchedQty || req.requestedQty),
+          min: "0",
+          max: "9999",
+        });
+
+        const notesInput = el("input", {
+          type: "text",
+          class:
+            "flex-1 px-3 py-1.5 rounded-lg border border-surface-300 dark:border-surface-600 bg-surface-0 dark:bg-surface-800 text-text-primary text-xs",
+          placeholder: "اكتب ملاحظات الفحص أو سبب العجز/التلف إن وجد…",
+        });
+
+        const inspectCard = el(
+          "div",
+          {
+            class:
+              "p-4 rounded-xl border border-warning-500/30 bg-warning-500/5 dark:bg-warning-950/20 space-y-4",
+          },
+          [
+            el("div", { class: "flex items-center justify-between" }, [
+              el("h4", { class: "font-bold text-warning-700 dark:text-warning-300 flex items-center gap-2" }, [
+                el("span", { class: "text-base" }, "📦"),
+                "فحص واستلام الشحنة في مخزن الفرع (بالعد الفعلي)",
+              ]),
+              el(
+                "span",
+                { class: "text-xs font-semibold text-text-secondary num" },
+                `المشحون من الرئيسي: ${req.dispatchedQty || req.requestedQty} ${req.unit}`,
+              ),
+            ]),
+            el(
+              "p",
+              { class: "text-xs text-text-secondary leading-relaxed" },
+              "أمين مخزن الفرع: قم بعد الحبات الفعلية المستلمة. إذا كان هناك عجز أو كسر، اكتب المستلم الفعلي وسيتم توثيق العجز لحظياً بالساعة وإضافته فقط لعهدتك.",
+            ),
+            el("div", { class: "flex flex-wrap items-center gap-3 pt-1" }, [
+              el("label", { class: "text-xs font-semibold text-text-primary" }, "المستلم الفعلي:"),
+              qtyInput,
+              el("label", { class: "text-xs font-semibold text-text-primary" }, "ملاحظات الفحص:"),
+              notesInput,
+            ]),
+            el("div", { class: "flex items-center gap-2 pt-2 border-t border-warning-500/20" }, [
+              button({
+                label: "اعتماد استلام مطابق 100%",
+                variant: "success",
                 size: "sm",
                 icon: "check",
                 onClick: async () => {
-                  await runAction(ctx, async () => {
-                    await fulfillFromHub(req.id, { dispatchedQty: req.requestedQty });
-                    modal.close();
-                    toast.success("تم اعتماد الصرف والشحن من المخزن الرئيسي وتثبيت الختم الزمني");
+                  await branchInspectAndReceive(req.id, {
+                    receivedQty: Number(qtyInput.value),
+                    notes: notesInput.value,
                   });
+                  close();
+                  ctx.refresh?.();
+                  toast.success("تم اعتماد استلام الشحنة ومطابقتها ودخولها عهدة الفرع");
                 },
-              })
-            : null,
-          hasSurplus
-            ? button({
-                label: `تحويل داخلي من ${availability.surplusBranches[0].warehouseName}`,
-                variant: "secondary",
+              }),
+              button({
+                label: "إثبات استلام مع عجز / خلاف رقابي",
+                variant: "danger",
                 size: "sm",
-                icon: "refresh",
+                icon: "alert",
                 onClick: async () => {
-                  await runAction(ctx, async () => {
-                    await fulfillByBranchTransfer(req.id, {
-                      sourceBranchId: availability.surplusBranches[0].warehouseId,
-                      dispatchedQty: req.requestedQty,
-                    });
-                    modal.close();
-                    toast.success("تم اعتماد المناقلة الداخلية بين الفروع وتوفير الشراء");
+                  const val = Number(qtyInput.value);
+                  const dispatched = Number(req.dispatchedQty || req.requestedQty);
+                  if (val >= dispatched) {
+                    toast.warning("لتسجيل عجز، يجب أن تكون الكمية المستلمة أقل من المشحونة.");
+                    return;
+                  }
+                  await branchInspectAndReceive(req.id, {
+                    receivedQty: val,
+                    notes: notesInput.value || `عجز بعدد ${dispatched - val} ${req.unit}`,
                   });
+                  close();
+                  ctx.refresh?.();
+                  toast.warning("تم إثبات العجز الرقابي بالثانية وحماية عهدة الفرع");
                 },
-              })
-            : null,
-          button({
-            label: "إصدار أمر شراء للمورد",
-            variant: "ghost",
-            size: "sm",
-            icon: "plus",
-            onClick: async () => {
-              await runAction(ctx, async () => {
-                await orderFromSupplier(req.id, { supplierId: 2 });
-                modal.close();
-                toast.success("تم إصدار طلبية التوريد للمورد المعتمد بنجاح");
-              });
-            },
-          }),
-        ]),
-      ],
-    );
-    content.appendChild(balanceCard);
-  }
+              }),
+            ]),
+          ],
+        );
+        content.appendChild(inspectCard);
+      }
 
-  /* 3) شاشة فحص واستلام الفرع (Branch Receiving & Discrepancy Inspection Card) */
-  if (req.status === "in_transit" || req.status === "under_inspection") {
-    const qtyInput = el("input", {
-      type: "number",
-      class:
-        "w-32 px-3 py-1.5 rounded-lg border border-surface-300 dark:border-surface-600 bg-surface-0 dark:bg-surface-800 text-text-primary text-center font-bold num",
-      value: String(req.dispatchedQty || req.requestedQty),
-      min: "0",
-      max: "9999",
-    });
-
-    const notesInput = el("input", {
-      type: "text",
-      class:
-        "flex-1 px-3 py-1.5 rounded-lg border border-surface-300 dark:border-surface-600 bg-surface-0 dark:bg-surface-800 text-text-primary text-xs",
-      placeholder: "اكتب ملاحظات الفحص أو سبب العجز/التلف إن وجد…",
-    });
-
-    const inspectCard = el(
-      "div",
-      {
-        class:
-          "p-4 rounded-xl border border-warning-500/30 bg-warning-500/5 dark:bg-warning-950/20 space-y-4",
-      },
-      [
-        el("div", { class: "flex items-center justify-between" }, [
-          el("h4", { class: "font-bold text-warning-700 dark:text-warning-300 flex items-center gap-2" }, [
-            el("span", { class: "text-base" }, "📦"),
-            "فحص واستلام الشحنة في مخزن الفرع (بالعد الفعلي)",
-          ]),
-          el(
-            "span",
-            { class: "text-xs font-semibold text-text-secondary num" },
-            `المشحون من الرئيسي: ${req.dispatchedQty || req.requestedQty} ${req.unit}`,
-          ),
-        ]),
+      /* 4) خط السير والختم الزمني غير القابل للتعديل (Tamper-Proof Timeline Audit Trail) */
+      const timelineCard = el("div", { class: "space-y-3 pt-2" }, [
         el(
-          "p",
-          { class: "text-xs text-text-secondary leading-relaxed" },
-          "أمين مخزن الفرع: قم بعد الحبات الفعلية المستلمة. إذا كان هناك عجز أو كسر، اكتب المستلم الفعلي وسيتم توثيق العجز لحظياً بالساعة وإضافته فقط لعهدتك.",
+          "div",
+          { class: "flex items-center justify-between border-b border-surface-200 dark:border-surface-700 pb-2" },
+          [
+            el("h4", { class: "font-bold text-text-primary flex items-center gap-2" }, [
+              el("span", { class: "text-base" }, "🔒"),
+              "سجل المسار الزمني الموثق بالثانية (مؤمّن ضد التلاعب)",
+            ]),
+            el("span", { class: "text-[11px] text-text-muted" }, "مأخوذ آلياً من الخادم"),
+          ],
         ),
-        el("div", { class: "flex flex-wrap items-center gap-3 pt-1" }, [
-          el("label", { class: "text-xs font-semibold text-text-primary" }, "المستلم الفعلي:"),
-          qtyInput,
-          el("label", { class: "text-xs font-semibold text-text-primary" }, "ملاحظات الفحص:"),
-          notesInput,
-        ]),
-        el("div", { class: "flex items-center gap-2 pt-2 border-t border-warning-500/20" }, [
-          button({
-            label: "اعتماد استلام مطابق 100%",
-            variant: "success",
-            size: "sm",
-            icon: "check",
-            onClick: async () => {
-              await runAction(ctx, async () => {
-                await branchInspectAndReceive(req.id, {
-                  receivedQty: Number(qtyInput.value),
-                  notes: notesInput.value,
-                });
-                modal.close();
-                toast.success("تم اعتماد استلام الشحنة ومطابقتها ودخولها عهدة الفرع");
-              });
-            },
-          }),
-          button({
-            label: "إثبات استلام مع عجز / خلاف رقابي",
-            variant: "danger",
-            size: "sm",
-            icon: "alert",
-            onClick: async () => {
-              const val = Number(qtyInput.value);
-              const dispatched = Number(req.dispatchedQty || req.requestedQty);
-              if (val >= dispatched) {
-                toast.warning("لتسجيل عجز، يجب أن تكون الكمية المستلمة أقل من المشحونة.");
-                return;
-              }
-              await runAction(ctx, async () => {
-                await branchInspectAndReceive(req.id, {
-                  receivedQty: val,
-                  notes: notesInput.value || `عجز بعدد ${dispatched - val} ${req.unit}`,
-                });
-                modal.close();
-                toast.warning("تم إثبات العجز الرقابي بالثانية وحماية عهدة الفرع");
-              });
-            },
-          }),
-        ]),
-      ],
-    );
-    content.appendChild(inspectCard);
-  }
-
-  /* 4) خط السير والختم الزمني غير القابل للتعديل (Tamper-Proof Timeline Audit Trail) */
-  const timelineCard = el("div", { class: "space-y-3 pt-2" }, [
-    el("div", { class: "flex items-center justify-between border-b border-surface-200 dark:border-surface-700 pb-2" }, [
-      el("h4", { class: "font-bold text-text-primary flex items-center gap-2" }, [
-        el("span", { class: "text-base" }, "🔒"),
-        "سجل المسار الزمني الموثق بالثانية (مؤمّن ضد التلاعب)",
-      ]),
-      el("span", { class: "text-[11px] text-text-muted" }, "مأخوذ آلياً من الخادم"),
-    ]),
-    el("div", { class: "space-y-3 relative before:absolute before:right-3 before:top-2 before:bottom-2 before:w-0.5 before:bg-surface-200 dark:before:bg-surface-700 pr-2" },
-      (req.timeline || []).map((t) =>
-        el("div", { class: "relative pr-6 flex flex-col gap-0.5" }, [
-          el("span", {
+        el(
+          "div",
+          {
             class:
-              "absolute right-1.5 top-1.5 w-3.5 h-3.5 rounded-full bg-brand-500 border-2 border-surface-0 dark:border-surface-900",
-          }),
-          el("div", { class: "flex items-center gap-2" }, [
-            el("span", { class: "font-bold text-xs text-text-primary" }, t.title),
-            el("span", { class: "text-[11px] text-brand-600 dark:text-brand-400 font-mono num" }, formatIsoTimestamp(t.timestamp)),
-          ]),
-          el("p", { class: "text-xs text-text-secondary" }, `المسؤول: ${t.user} · ${t.notes || ""}`),
-        ]),
-      ),
-    ),
-  ]);
-  content.appendChild(timelineCard);
+              "space-y-3 relative before:absolute before:right-3 before:top-2 before:bottom-2 before:w-0.5 before:bg-surface-200 dark:before:bg-surface-700 pr-2",
+          },
+          (req.timeline || []).map((t) =>
+            el("div", { class: "relative pr-6 flex flex-col gap-0.5" }, [
+              el("span", {
+                class:
+                  "absolute right-1.5 top-1.5 w-3.5 h-3.5 rounded-full bg-brand-500 border-2 border-surface-0 dark:border-surface-900",
+              }),
+              el("div", { class: "flex items-center gap-2" }, [
+                el("span", { class: "font-bold text-xs text-text-primary" }, t.title),
+                el(
+                  "span",
+                  { class: "text-[11px] text-brand-600 dark:text-brand-400 font-mono num" },
+                  formatIsoTimestamp(t.timestamp),
+                ),
+              ]),
+              el("p", { class: "text-xs text-text-secondary" }, `المسؤول: ${t.user} · ${t.notes || ""}`),
+            ]),
+          ),
+        ),
+      ]);
+      content.appendChild(timelineCard);
 
-  const modal = formModal({
-    title: `تفاصيل ومسار طلب النواقص: ${req.code}`,
-    content,
-    submitLabel: null,
-    cancelLabel: "إغلاق",
+      return content;
+    },
+    footer: (close) => [
+      button({
+        label: "إغلاق النافذة",
+        variant: "ghost",
+        onClick: () => close(),
+      }),
+    ],
   });
-
-  document.body.appendChild(modal.element);
 }
 
 /**
@@ -525,91 +540,96 @@ async function openRequisitionDetailsModal(reqId, ctx, { warehouses }) {
 function openNewRequisitionModal(ctx, { warehouses, items }) {
   const branchOptions = warehouses
     .filter((w) => !w.isHub && w.id !== 1)
-    .map((w) => ({ value: w.id, label: w.name }));
+    .map((w) => ({ value: String(w.id), label: w.name }));
 
   const itemOptions = items.map((i) => ({
-    value: i.id,
+    value: String(i.id),
     label: `${i.name} (${i.code || ""})`,
   }));
 
-  const form = el("form", { class: "space-y-4 text-sm" });
+  const form = {
+    branchId: branchOptions[0]?.value ?? "2",
+    itemId: itemOptions[0]?.value ?? "1",
+    requestedQty: 10,
+    urgency: "normal",
+    notes: "طلب احتياج رصيد للفرع",
+  };
 
-  const branchSel = selectField({
-    label: "الفرع الطالب (المخزن الفرعي)",
-    options: branchOptions,
-    required: true,
-  });
-
-  const itemSel = selectField({
-    label: "الصنف المطلوب",
-    options: itemOptions,
-    required: true,
-  });
-
-  const qtyInput = textField({
-    label: "الكمية المطلوبة",
-    type: "number",
-    value: "10",
-    required: true,
-    placeholder: "مثال: 15",
-  });
-
-  const urgencySel = selectField({
-    label: "درجة الأهمية",
-    options: [
-      { value: "normal", label: "عادي" },
-      { value: "high", label: "مرتفع" },
-      { value: "urgent", label: "عاجل وطارئ" },
-    ],
-  });
-
-  const notesInput = textarea({
-    label: "ملاحظات وتبرير الاحتياج",
-    placeholder: "سبب طلب النواقص أو ضغط الحالات بالفرع…",
-  });
-
-  form.appendChild(branchSel.element);
-  form.appendChild(itemSel.element);
-  form.appendChild(qtyInput.element);
-  form.appendChild(urgencySel.element);
-  form.appendChild(notesInput.element);
-
-  const modal = formModal({
+  formModal({
     title: "إنشاء طلب نواقص واحتياج للفرع",
-    content: form,
+    subtitle: "إرسال طلب عاجل من الفرع للمخزن الرئيسي بتوثيق زمني لحظي",
+    size: "md",
     submitLabel: "إرسال الطلب للمخزن الرئيسي",
+    success: "تم إنشاء طلب النواقص بنجاح وإشعار المخزن الرئيسي",
+
+    body: () =>
+      el(
+        "div",
+        { class: "space-y-4" },
+        selectField({
+          label: "الفرع الطالب (المخزن الفرعي)",
+          required: true,
+          value: form.branchId,
+          options: branchOptions,
+          onChange: value((v) => (form.branchId = v)),
+        }),
+        selectField({
+          label: "الصنف المطلوب",
+          required: true,
+          value: form.itemId,
+          options: itemOptions,
+          onChange: value((v) => (form.itemId = v)),
+        }),
+        textField({
+          label: "الكمية المطلوبة",
+          type: "number",
+          value: String(form.requestedQty),
+          required: true,
+          onInput: numberValue((v) => (form.requestedQty = v)),
+        }),
+        selectField({
+          label: "درجة الأهمية",
+          value: form.urgency,
+          options: [
+            { value: "normal", label: "عادي" },
+            { value: "high", label: "مرتفع" },
+            { value: "urgent", label: "عاجل وطارئ" },
+          ],
+          onChange: value((v) => (form.urgency = v)),
+        }),
+        notesField({
+          label: "ملاحظات وتبرير الاحتياج",
+          value: form.notes,
+          placeholder: "سبب طلب النواقص أو ضغط الحالات بالفرع…",
+          onInput: value((v) => (form.notes = v)),
+        }),
+      ),
+
     onSubmit: async () => {
-      const bId = value(branchSel);
-      const iId = value(itemSel);
-      const q = numberValue(qtyInput);
-
-      if (!bId || !iId || !(q > 0)) {
-        toast.error("يرجى تحديد الفرع والصنف والكمية المطلوبة بدقة.");
-        return;
+      if (!form.branchId || !form.itemId || !(Number(form.requestedQty) > 0)) {
+        throw new Error("يرجى تحديد الفرع والصنف والكمية المطلوبة بدقة.");
       }
-
-      await runAction(ctx, async () => {
-        const created = await createRequisition({
-          branchId: Number(bId),
-          itemId: Number(iId),
-          requestedQty: q,
-          urgency: value(urgencySel) || "normal",
-          notes: value(notesInput) || "",
-        });
-        modal.close();
-        toast.success(`تم إنشاء طلب النواقص بنجاح برقم ${created.code} وإشعار المخزن الرئيسي`);
+      await createRequisition({
+        branchId: Number(form.branchId),
+        itemId: Number(form.itemId),
+        requestedQty: Number(form.requestedQty),
+        urgency: form.urgency,
+        notes: form.notes,
       });
+      ctx.refresh?.();
     },
   });
-
-  document.body.appendChild(modal.element);
 }
 
 function formatIsoTimestamp(iso) {
   if (!iso) return "—";
   try {
     const d = new Date(iso);
-    return `${d.toLocaleDateString("ar-EG")} ${d.toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}`;
+    return `${d.toLocaleDateString("ar-EG")} ${d.toLocaleTimeString("ar-EG", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    })}`;
   } catch {
     return iso;
   }
