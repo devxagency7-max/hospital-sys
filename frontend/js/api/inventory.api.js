@@ -193,3 +193,51 @@ export async function approvePriceReview(id, decision) {
   return payload.data;
 }
 
+export async function reviewPriceByAccountant(id, reviewData) {
+  const payload = await http.post(`/inv/price-reviews/${encodeURIComponent(id)}/accountant-review`, reviewData);
+  return payload.data;
+}
+
+/* ==========================================================================
+   طلبات النواقص والتوريد وتوزيع المخزون
+   ========================================================================== */
+
+export function listRequisitions(params = {}) {
+  return fetchList("/inv/requisitions", params);
+}
+
+export async function getRequisition(id) {
+  const payload = await http.get(`/inv/requisitions/${encodeURIComponent(id)}`);
+  return payload.data;
+}
+
+export async function createRequisition(requisition) {
+  const payload = await http.post("/inv/requisitions", requisition);
+  return payload.data;
+}
+
+export async function checkItemAvailability(itemId) {
+  const payload = await http.get(`/inv/requisitions/check-availability/${encodeURIComponent(itemId)}`);
+  return payload.data;
+}
+
+export async function fulfillFromHub(id, data = {}) {
+  const payload = await http.post(`/inv/requisitions/${encodeURIComponent(id)}/fulfill-hub`, data);
+  return payload.data;
+}
+
+export async function fulfillByBranchTransfer(id, data = {}) {
+  const payload = await http.post(`/inv/requisitions/${encodeURIComponent(id)}/transfer-branch`, data);
+  return payload.data;
+}
+
+export async function orderFromSupplier(id, data = {}) {
+  const payload = await http.post(`/inv/requisitions/${encodeURIComponent(id)}/order-supplier`, data);
+  return payload.data;
+}
+
+export async function branchInspectAndReceive(id, data = {}) {
+  const payload = await http.post(`/inv/requisitions/${encodeURIComponent(id)}/inspect-receive`, data);
+  return payload.data;
+}
+

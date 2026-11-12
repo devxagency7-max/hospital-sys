@@ -1184,3 +1184,443 @@ export function approvePriceReview(id, payload, { user } = {}) {
 
   return { review: updatedReview, item: find("items", item.id) };
 }
+
+/**
+ * مراجعة المحاسب لطلب تغير سعر الشراء مع المورد قبل اعتماده من مدير الحسابات.
+ */
+export function reviewPriceByAccountant(id, payload, { user } = {}) {
+  const review = find("priceReviews", id);
+  if (!review) throw notFound("طلب مراجعة السعر غير موجود.");
+
+  const supplierReason = payload?.supplierReason?.trim();
+  const accountantNotes = payload?.accountantNotes?.trim();
+
+  if (!supplierReason) {
+    throw validationError({ supplierReason: "سبب زيادة المورد مطلوب لتوثيق المراجعة المحاسبية." });
+  }
+
+  const updatedReview = update("priceReviews", id, {
+    status: "reviewed_by_accountant",
+    supplierReason,
+    accountantNotes: accountantNotes || "تمت المراجعة مع المورد والتأكد من مبررات فرق السعر",
+    reviewedBy: user?.name ?? "محمد إبراهيم (المحاسب المسؤول)",
+    reviewedAt: new Date().toISOString(),
+  });
+
+  audit({
+    action: "pricing.review.accountant_verified",
+    actionLabel: "مراجعة المحاسب لفارق السعر",
+    module: "المخازن",
+    entity: "price_review",
+    entityId: review.id,
+    details: `${review.itemName} — مبرر المورد: ${supplierReason}`,
+    user,
+  });
+
+  return updatedReview;
+}
+
+/* ==========================================================================
+   7) دورة طلبات النواقص وتوزيع المخزون بين الفروع (Smart Supply Chain)
+   ========================================================================== */
+
+/**
+ * قائمة طلبات النواقص والتوريد مع الفلترة والإحصائيات اللحظية.
+ */
+export function listRequisitions(params = {}) {
+  const allReqs = all("requisitions");
+  const filtered = allReqs.filter((row) => {
+    if (params.status && params.status !== "all" && row.status !== params.status) return false;
+    if (params.branchId && String(row.branchId) !== String(params.branchId)) return false;
+    if (params.urgency && params.urgency !== "all" && row.urgency !== params.urgency) return false;
+    if (params.search) {
+      const q = String(params.search).toLowerCase();
+      const match =
+        String(row.code || "").toLowerCase().includes(q) ||
+        String(row.itemName || "").toLowerCase().includes(q) ||
+        String(row.itemCode || "").toLowerCase().includes(q) ||
+        String(row.branchName || "").toLowerCase().includes(q) ||
+        String(row.notes || "").toLowerCase().includes(q);
+      if (!match) return false;
+    }
+    return true;
+  });
+
+  // فرز الأحدث والأكثر إلحاحاً أولاً
+  filtered.sort((a, b) => {
+    if (a.status === "pending_review" && b.status !== "pending_review") return -1;
+    if (b.status === "pending_review" && a.status !== "pending_review") return 1;
+    if (a.urgency === "urgent" && b.urgency !== "urgent") return -1;
+    if (b.urgency === "urgent" && a.urgency !== "urgent") return 1;
+    return (b.id || 0) - (a.id || 0);
+  });
+
+  const page = Number(params.page || 1);
+  const perPage = Number(params.perPage || 20);
+  const start = (page - 1) * perPage;
+  const paged = filtered.slice(start, start + perPage);
+
+  const pendingCount = allReqs.filter((r) => r.status === "pending_review").length;
+  const inTransitCount = allReqs.filter((r) => r.status === "in_transit" || r.status === "under_inspection").length;
+  const discrepancyCount = allReqs.filter((r) => r.status === "discrepancy").length;
+  const completedCount = allReqs.filter((r) => r.status === "completed").length;
+
+  return {
+    data: paged,
+    meta: {
+      total: filtered.length,
+      page,
+      perPage,
+      totalPages: Math.ceil(filtered.length / perPage) || 1,
+      pendingCount,
+      inTransitCount,
+      discrepancyCount,
+      completedCount,
+    },
+  };
+}
+
+export function getRequisition(id) {
+  const req = find("requisitions", id);
+  if (!req) throw notFound("طلب النواقص غير موجود.");
+  const availability = checkItemAvailability(req.itemId);
+  return { ...req, availability };
+}
+
+/**
+ * فحص رصيد الصنف عبر كل المخازن (الرئيسي والفروع) لاكتشاف الفائض.
+ */
+export function checkItemAvailability(itemId) {
+  const item = find("items", itemId);
+  if (!item) throw notFound("الصنف غير موجود.");
+
+  const allWh = all("warehouses");
+  const balances = all("stockBalances");
+
+  const results = allWh.map((wh) => {
+    const bal = balances.find(
+      (b) => String(b.itemId) === String(itemId) && String(b.warehouseId) === String(wh.id),
+    );
+    const onHand = bal?.onHand || 0;
+    const available = bal?.available || onHand;
+    const hasSurplus = available > 15; // فائض يتيح المناقلة وتوفير الشراء
+
+    return {
+      warehouseId: wh.id,
+      warehouseCode: wh.code,
+      warehouseName: wh.name,
+      isHub: Boolean(wh.isHub || wh.id === 1),
+      onHand,
+      available,
+      hasSurplus,
+    };
+  });
+
+  const hubBalance = results.find((r) => r.isHub) || results[0];
+  const surplusBranches = results.filter((r) => !r.isHub && r.hasSurplus);
+
+  return {
+    itemId: item.id,
+    itemName: item.name,
+    itemCode: item.code,
+    unit: item.unit,
+    hubAvailable: hubBalance?.available || 0,
+    canFulfillFromHub: (hubBalance?.available || 0) > 0,
+    hasSurplusBranches: surplusBranches.length > 0,
+    surplusBranches,
+    allWarehouses: results,
+  };
+}
+
+/**
+ * إنشاء طلب نواقص جديد من فرع بتوقيت لحظي غير قابل للتعديل.
+ */
+export function createRequisition(payload, { user } = {}) {
+  const errors = {};
+  if (!payload?.itemId) errors.itemId = "الصنف مطلوب.";
+  if (!payload?.branchId) errors.branchId = "الفرع الطالب مطلوب.";
+  if (!(Number(payload?.requestedQty) > 0)) errors.requestedQty = "الكمية المطلوبة يجب أن تكون أكبر من صفر.";
+  if (Object.keys(errors).length) throw validationError(errors);
+
+  const item = find("items", payload.itemId);
+  if (!item) throw notFound("الصنف غير موجود.");
+  const branch = find("warehouses", payload.branchId);
+  if (!branch) throw notFound("مخزن الفرع غير موجود.");
+
+  const sequence = all("requisitions").length + 1;
+  const now = new Date().toISOString();
+  const userName = user?.name || "أمين مخزن الفرع";
+
+  const newReq = insert("requisitions", {
+    code: `REQ-2026-${String(sequence).padStart(3, "0")}`,
+    branchId: branch.id,
+    branchName: branch.name,
+    itemId: item.id,
+    itemCode: item.code,
+    itemName: item.name,
+    category: item.category || "أدوية ومستلزمات",
+    unit: item.unit,
+    requestedQty: Number(payload.requestedQty),
+    status: "pending_review",
+    urgency: payload?.urgency || "normal",
+    fulfillmentSource: null,
+    sourceBranchId: null,
+    sourceBranchName: null,
+    supplierId: null,
+    supplierName: null,
+    poReference: null,
+    dispatchedQty: null,
+    dispatchedAt: null,
+    dispatchedBy: null,
+    driverName: null,
+    receivedQty: null,
+    discrepancyCount: null,
+    discrepancyNotes: null,
+    inspectedAt: null,
+    inspectedBy: null,
+    createdAt: now,
+    createdBy: userName,
+    notes: payload?.notes?.trim() || "طلب احتياج رصيد للفرع",
+    timeline: [
+      {
+        stage: "created",
+        title: "إنشاء طلب النواقص بالفرع",
+        timestamp: now,
+        user: userName,
+        notes: `طلب احتياج ${payload.requestedQty} ${item.unit}`,
+        statusLabel: "قيد المراجعة بالرئيسي",
+      },
+    ],
+  });
+
+  audit({
+    action: "requisition.created",
+    actionLabel: "إنشاء طلب نواقص",
+    module: "المخازن",
+    entity: "requisition",
+    entityId: newReq.id,
+    details: `${newReq.code} — ${branch.name} — ${item.name} (${payload.requestedQty} ${item.unit})`,
+    user,
+  });
+
+  return newReq;
+}
+
+/**
+ * صرف مباشر وتجهيز شحن من المخزن الرئيسي للفرع.
+ */
+export function fulfillFromHub(id, payload = {}, { user } = {}) {
+  const req = find("requisitions", id);
+  if (!req) throw notFound("طلب النواقص غير موجود.");
+
+  const now = new Date().toISOString();
+  const qty = Number(payload.dispatchedQty || req.requestedQty);
+  const driver = payload.driverName?.trim() || "سائق الحركة والتوصيل";
+  const userName = user?.name || "أمين المخزن الرئيسي";
+
+  const timeline = [...(req.timeline || [])];
+  timeline.push({
+    stage: "dispatched",
+    title: "شحن البضاعة وإذن خروج للفرع",
+    timestamp: now,
+    user: userName,
+    notes: `تم شحن ${qty} ${req.unit} مع السائق ${driver}. الختم الزمني مسجل لحظياً لمنع التلاعب`,
+    statusLabel: "في الطريق للفرع",
+  });
+
+  const updated = update("requisitions", id, {
+    status: "in_transit",
+    fulfillmentSource: "hub",
+    dispatchedQty: qty,
+    dispatchedAt: now,
+    dispatchedBy: userName,
+    driverName: driver,
+    timeline,
+  });
+
+  audit({
+    action: "requisition.dispatched_hub",
+    actionLabel: "شحن طلبية من الرئيسي للفرع",
+    module: "المخازن",
+    entity: "requisition",
+    entityId: req.id,
+    details: `${req.code} — تم الشحن إلى ${req.branchName} (${qty} ${req.unit})`,
+    user,
+  });
+
+  return updated;
+}
+
+/**
+ * تحويل داخلي ذكي بين الفروع (استغلال الفائض وتوفير الشراء).
+ */
+export function fulfillByBranchTransfer(id, payload = {}, { user } = {}) {
+  const req = find("requisitions", id);
+  if (!req) throw notFound("طلب النواقص غير موجود.");
+
+  const sourceBranchId = payload.sourceBranchId;
+  if (!sourceBranchId) throw validationError({ sourceBranchId: "الفرع المصدر مطلوب للمناقلة." });
+  const sourceBranch = find("warehouses", sourceBranchId);
+  if (!sourceBranch) throw notFound("الفرع المحول منه غير موجود.");
+
+  const now = new Date().toISOString();
+  const qty = Number(payload.dispatchedQty || req.requestedQty);
+  const userName = user?.name || "أمين المخزن الرئيسي";
+
+  const timeline = [...(req.timeline || [])];
+  timeline.push({
+    stage: "branch_transfer",
+    title: "تحويل داخلي ذكي من فرع آخر",
+    timestamp: now,
+    user: userName,
+    notes: `تم اعتماد المناقلة من ${sourceBranch.name} لوجود فائض، وتوفير الشراء الخارجي`,
+    statusLabel: "في الطريق بين الفروع",
+  });
+
+  const updated = update("requisitions", id, {
+    status: "in_transit",
+    fulfillmentSource: "branch_transfer",
+    sourceBranchId: sourceBranch.id,
+    sourceBranchName: sourceBranch.name,
+    dispatchedQty: qty,
+    dispatchedAt: now,
+    dispatchedBy: userName,
+    driverName: payload.driverName || "سيارة التوزيع الداخلي",
+    timeline,
+  });
+
+  audit({
+    action: "requisition.transfer_branch",
+    actionLabel: "مناقلة داخلية بين الفروع",
+    module: "المخازن",
+    entity: "requisition",
+    entityId: req.id,
+    details: `${req.code} — تحويل من ${sourceBranch.name} إلى ${req.branchName}`,
+    user,
+  });
+
+  return updated;
+}
+
+/**
+ * طلب الصنف من المورد الخارجي في حالة العجز العام.
+ */
+export function orderFromSupplier(id, payload = {}, { user } = {}) {
+  const req = find("requisitions", id);
+  if (!req) throw notFound("طلب النواقص غير موجود.");
+
+  const supplierId = payload.supplierId || 2;
+  const supplier = find("suppliers", supplierId);
+  const now = new Date().toISOString();
+  const userName = user?.name || "المخزن الرئيسي / المشتريات";
+  const poRef = payload.poReference || `PO-2026-${String(Math.floor(100 + Math.random() * 900))}`;
+
+  const timeline = [...(req.timeline || [])];
+  timeline.push({
+    stage: "supplier_ordered",
+    title: "إصدار أمر شراء للمورد",
+    timestamp: now,
+    user: userName,
+    notes: `تم ضم النواقص لطلبية المورد (${supplier?.name || "المورد المعتمد"}) بأمر شراء ${poRef}`,
+    statusLabel: "تم الطلب من المورد",
+  });
+
+  const updated = update("requisitions", id, {
+    status: "supplier_ordered",
+    fulfillmentSource: "supplier",
+    supplierId: supplier?.id || null,
+    supplierName: supplier?.name || "المورد المعتمد",
+    poReference: poRef,
+    timeline,
+  });
+
+  audit({
+    action: "requisition.ordered_supplier",
+    actionLabel: "طلب نواقص من المورد",
+    module: "المخازن",
+    entity: "requisition",
+    entityId: req.id,
+    details: `${req.code} — طلبية توريد ${poRef} للمورد ${supplier?.name}`,
+    user,
+  });
+
+  return updated;
+}
+
+/**
+ * فحص واستلام الشحنة في مخزن الفرع (مع كشف وتوثيق العجز والتلف بالثانية).
+ */
+export function branchInspectAndReceive(id, payload = {}, { user } = {}) {
+  const req = find("requisitions", id);
+  if (!req) throw notFound("طلب النواقص غير موجود.");
+
+  const receivedQty = Number(payload.receivedQty);
+  if (isNaN(receivedQty) || receivedQty < 0) {
+    throw validationError({ receivedQty: "الكمية المستلمة فعلياً مطلوبة ويجب أن تكون صفراً أو أكثر." });
+  }
+
+  const dispatchedQty = Number(req.dispatchedQty || req.requestedQty);
+  const now = new Date().toISOString();
+  const userName = user?.name || "أمين مخزن الفرع المستلم";
+  const isMatch = receivedQty === dispatchedQty;
+  const discrepancyCount = Math.max(0, dispatchedQty - receivedQty);
+  const discrepancyNotes = payload.notes?.trim() || (isMatch ? null : `عجز بعدد ${discrepancyCount} ${req.unit} لم يتم استلامها`);
+
+  const timeline = [...(req.timeline || [])];
+
+  if (isMatch) {
+    timeline.push({
+      stage: "completed",
+      title: "✅ فحص مطابق 100% واستلام كامل",
+      timestamp: now,
+      user: userName,
+      notes: `تم استلام الكمية بالكامل (${receivedQty} ${req.unit}) بحالة سليمة وإضافتها لعهدة مخزن الفرع`,
+      statusLabel: "مكتمل ومطابق 100%",
+    });
+  } else {
+    timeline.push({
+      stage: "inspection_discrepancy",
+      title: "⚠️ إثبات عجز وخلاف رقابي بالثانية",
+      timestamp: now,
+      user: userName,
+      notes: `المحول من الرئيسي: ${dispatchedQty} — المستلم الفعلي: ${receivedQty}. تم تسجيل عجز (${discrepancyCount} ${req.unit}). ملاحظات: ${discrepancyNotes}`,
+      statusLabel: "استلام مع عجز وخلاف رقابي",
+    });
+  }
+
+  const updated = update("requisitions", id, {
+    status: isMatch ? "completed" : "discrepancy",
+    receivedQty,
+    discrepancyCount,
+    discrepancyNotes,
+    inspectedAt: now,
+    inspectedBy: userName,
+    timeline,
+  });
+
+  // إضافة المستلم الفعلي فقط لعهدة الفرع لحمايته من أي عجز ليس مسؤوليته
+  if (receivedQty > 0) {
+    const branchBal = all("stockBalances").find(
+      (b) => String(b.itemId) === String(req.itemId) && String(b.warehouseId) === String(req.branchId),
+    );
+    if (branchBal) {
+      update("stockBalances", branchBal.id, {
+        onHand: (branchBal.onHand || 0) + receivedQty,
+        available: (branchBal.available || 0) + receivedQty,
+      });
+    }
+  }
+
+  audit({
+    action: isMatch ? "requisition.completed" : "requisition.discrepancy",
+    actionLabel: isMatch ? "استلام مطابق بالفرع" : "استلام مع تقرير عجز",
+    module: "المخازن",
+    entity: "requisition",
+    entityId: req.id,
+    details: `${req.code} — استلم الفرع ${receivedQty} من ${dispatchedQty} ${req.unit}`,
+    user,
+  });
+
+  return updated;
+}
+

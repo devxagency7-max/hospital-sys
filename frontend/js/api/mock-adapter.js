@@ -416,11 +416,34 @@ const ROUTES = {
     data: inventory.closeStockCount(params.id, body, actor()),
   }),
 
-  /* --- مراجعة وتحديث أسعار البيع (خاص بمدير الحسابات) --- */
+  /* --- مراجعة وتحديث أسعار البيع (خاص بمدير الحسابات والمحاسب) --- */
   "GET /inv/price-reviews": ({ params }) => inventory.listPriceReviews(params),
   "GET /inv/price-reviews/:id": ({ params }) => ({ data: inventory.getPriceReview(params.id) }),
+  "POST /inv/price-reviews/:id/accountant-review": ({ params, body }) => ({
+    data: inventory.reviewPriceByAccountant(params.id, body, actor()),
+  }),
   "POST /inv/price-reviews/:id/decide": ({ params, body }) => ({
     data: inventory.approvePriceReview(params.id, body, actor()),
+  }),
+
+  /* --- طلبات النواقص وتوزيع المخزون بين الفروع --- */
+  "GET /inv/requisitions": ({ params }) => inventory.listRequisitions(params),
+  "GET /inv/requisitions/:id": ({ params }) => ({ data: inventory.getRequisition(params.id) }),
+  "POST /inv/requisitions": ({ body }) => ({ data: inventory.createRequisition(body, actor()) }),
+  "GET /inv/requisitions/check-availability/:itemId": ({ params }) => ({
+    data: inventory.checkItemAvailability(params.itemId),
+  }),
+  "POST /inv/requisitions/:id/fulfill-hub": ({ params, body }) => ({
+    data: inventory.fulfillFromHub(params.id, body, actor()),
+  }),
+  "POST /inv/requisitions/:id/transfer-branch": ({ params, body }) => ({
+    data: inventory.fulfillByBranchTransfer(params.id, body, actor()),
+  }),
+  "POST /inv/requisitions/:id/order-supplier": ({ params, body }) => ({
+    data: inventory.orderFromSupplier(params.id, body, actor()),
+  }),
+  "POST /inv/requisitions/:id/inspect-receive": ({ params, body }) => ({
+    data: inventory.branchInspectAndReceive(params.id, body, actor()),
   }),
 
   /* ======================================================================

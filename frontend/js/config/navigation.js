@@ -137,21 +137,11 @@ export const navigation = [
     icon: "inventory",
     permission: "inv.view",
     children: [
-      { label: "الأصناف", path: "/inv/items", permission: "inv.view" },
-      { label: "مراجعة أسعار البيع", path: "/inv/price-reviews", permission: "pricing.manage" },
-      { label: "التصنيفات", path: "/inv/categories", permission: "inv.item.manage" },
-      { label: "المخازن", path: "/inv/warehouses", permission: "inv.view" },
-
-      { label: "أرصدة المخزون", path: "/inv/balances", permission: "inv.view" },
+      { label: "طلبات النواقص والتوريد", path: "/inv/requisitions", permission: "inv.view" },
       { label: "حركات المخزون", path: "/inv/movements", permission: "inv.view" },
-      { label: "إذن إضافة", path: "/inv/receipts", permission: "inv.receipt.create" },
-      { label: "إذن صرف", path: "/inv/issues", permission: "inv.issue.create" },
-      { label: "تحويل مخزني", path: "/inv/transfers", permission: "inv.transfer.create" },
-      { label: "التسويات المخزنية", path: "/inv/adjustments", permission: "inv.view" },
-
-      { label: "التشغيلات", path: "/inv/batches", permission: "inv.view" },
-      { label: "تتبّع الصلاحية", path: "/inv/expiry", permission: "inv.view" },
-      { label: "الجرد الفعلي", path: "/inv/counts", permission: "inv.count.manage" },
+      { label: "الأصناف والمخزون", path: "/inv/items", permission: "inv.view" },
+      { label: "مراجعة وتسعير الأصناف", path: "/inv/price-reviews", permission: "pricing.manage" },
+      { label: "المستودعات والفروع", path: "/inv/warehouses", permission: "inv.view" },
     ],
   },
 

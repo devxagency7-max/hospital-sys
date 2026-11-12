@@ -296,8 +296,14 @@ const IMPLEMENTED = [
 
   /* ===================== 4. المخازن ===================== */
   {
+    path: "/inv/requisitions",
+    title: "طلبات النواقص والتوريد",
+    permission: "inv.view",
+    load: () => import("../../pages/inv/requisitions.page.js"),
+  },
+  {
     path: "/inv/items",
-    title: "الأصناف",
+    title: "الأصناف والمخزون",
     permission: "inv.view",
     load: () => import("../../pages/inv/items.page.js"),
   },

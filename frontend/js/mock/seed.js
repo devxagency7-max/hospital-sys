@@ -234,11 +234,11 @@ export const COST_CENTERS = [
    -------------------------------------------------------------------------- */
 
 export const WAREHOUSES = [
-  { id: 1, code: "WH-MAIN", name: "المخزن الرئيسي — مستلزمات طبية", nameEn: "Main Medical Supplies Store", managerId: 13, location: "المستشفى الرئيسي — البدروم", inventoryAccountId: 11411, costingMethod: "weighted_average", allowNegative: false, status: "active" },
-  { id: 2, code: "WH-RAW", name: "مخزن الصيدلية المركزية", nameEn: "Central Pharmacy Store", managerId: 14, location: "المستشفى الرئيسي — الصيدلية المركزية", inventoryAccountId: 11412, costingMethod: "fifo", allowNegative: false, status: "active" },
-  { id: 3, code: "WH-FIN", name: "مخزن مستلزمات العمليات", nameEn: "Operating Theatre Supplies", managerId: 14, location: "المستشفى الرئيسي — مبنى العمليات", inventoryAccountId: 11413, costingMethod: "fifo", allowNegative: false, status: "active" },
-  { id: 4, code: "WH-SPR", name: "مخزن قطع غيار الأجهزة الطبية", nameEn: "Medical Equipment Spares", managerId: 24, location: "المستشفى الرئيسي — ورشة الصيانة", inventoryAccountId: 11414, costingMethod: "weighted_average", allowNegative: false, status: "active" },
-  { id: 6, code: "WH-OFF", name: "مخزن المستلزمات المكتبية", nameEn: "Office Supplies", managerId: 23, location: "المستشفى الرئيسي — الدور الأرضي", inventoryAccountId: 11411, costingMethod: "weighted_average", allowNegative: false, status: "active" },
+  { id: 1, code: "WH-MAIN", name: "المخزن الرئيسي (المركزي)", nameEn: "Main Central Store", managerId: 13, location: "المستشفى الرئيسي — البدروم", inventoryAccountId: 11411, costingMethod: "weighted_average", allowNegative: false, status: "active", isHub: true },
+  { id: 2, code: "WH-BR1", name: "مخزن فرع 1 (الصيدلية المركزية)", nameEn: "Branch 1 Pharmacy", managerId: 14, location: "مبنى فرع 1", inventoryAccountId: 11412, costingMethod: "fifo", allowNegative: false, status: "active", isBranch: true },
+  { id: 3, code: "WH-BR2", name: "مخزن فرع 2 (العيادات الخارجية)", nameEn: "Branch 2 Clinics", managerId: 14, location: "مبنى فرع 2", inventoryAccountId: 11413, costingMethod: "fifo", allowNegative: false, status: "active", isBranch: true },
+  { id: 4, code: "WH-BR3", name: "مخزن فرع 3 (الطوارئ والرعاية)", nameEn: "Branch 3 Emergency", managerId: 24, location: "المبنى الطبي — الدور الأرضي", inventoryAccountId: 11414, costingMethod: "weighted_average", allowNegative: false, status: "active", isBranch: true },
+  { id: 6, code: "WH-BR4", name: "مخزن فرع 4 (المستلزمات العامة)", nameEn: "Branch 4 General Supplies", managerId: 23, location: "المبنى الطبي — الدور الأول", inventoryAccountId: 11411, costingMethod: "weighted_average", allowNegative: false, status: "active", isBranch: true },
 ];
 
 export const UNITS = [

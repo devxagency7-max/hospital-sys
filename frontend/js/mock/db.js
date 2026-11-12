@@ -70,6 +70,7 @@ import {
   batches,
   stockCounts,
   stockCountLines,
+  requisitions,
 } from "./inventory.mock.js";
 
 import {
@@ -149,6 +150,7 @@ export const db = {
   batches: [...batches],
   stockCounts: [...stockCounts],
   stockCountLines: [...stockCountLines],
+  requisitions: [...requisitions],
   priceReviews: [
     {
       id: 1,
