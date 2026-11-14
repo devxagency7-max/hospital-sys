@@ -32,44 +32,44 @@ import { getWarehouses, getItems } from "../../js/api/lookups.api.js";
 
 const STATUS_CONFIG = {
   pending_review: {
-    label: "🟡 بانتظار مراجعة الرئيسي",
+    label: "بانتظار المراجعة",
+    fullLabel: "بانتظار مراجعة المخزن الرئيسي",
     tone: "warning",
-    badgeClass: "bg-warning-500/10 text-warning-400 border border-warning-500/30",
   },
   supplier_ordered: {
-    label: "🟣 تم الطلب من المورد",
-    tone: "info",
-    badgeClass: "bg-purple-500/10 text-purple-400 border border-purple-500/30",
+    label: "مطلوب من المورد",
+    fullLabel: "تم إصدار أمر شراء للمورد",
+    tone: "brand",
   },
   hub_received: {
-    label: "🟠 وصل الرئيسي - جاري التوجيه",
+    label: "وصل الرئيسي",
+    fullLabel: "وصل المخزن الرئيسي - جاري التوجيه",
     tone: "info",
-    badgeClass: "bg-amber-500/10 text-amber-400 border border-amber-500/30",
   },
   in_transit: {
-    label: "🚚 في الطريق للفرع",
-    tone: "brand",
-    badgeClass: "bg-blue-500/10 text-blue-400 border border-blue-500/30",
+    label: "في الطريق للفرع",
+    fullLabel: "في الطريق لمقر الفرع",
+    tone: "info",
   },
   under_inspection: {
-    label: "🔍 قيد الفحص والعد بالفرع",
+    label: "قيد الفحص والعد",
+    fullLabel: "وصل الفرع - قيد الفحص والعد الفعلي",
     tone: "info",
-    badgeClass: "bg-cyan-500/10 text-cyan-400 border border-cyan-500/30",
   },
   discrepancy: {
-    label: "⚠️ استلام به عجز / خلاف رقابي",
+    label: "عجز / خلاف رقابي",
+    fullLabel: "استلام به عجز أو خلاف رقابي",
     tone: "danger",
-    badgeClass: "bg-danger-500/10 text-danger-400 border border-danger-500/30 font-bold",
   },
   completed: {
-    label: "✅ مكتمل ومطابق 100%",
+    label: "مكتمل ومطابق 100%",
+    fullLabel: "مكتمل ومطابق 100%",
     tone: "success",
-    badgeClass: "bg-success-500/10 text-success-400 border border-success-500/30",
   },
   rejected: {
-    label: "❌ ملغي / مرفوض",
+    label: "ملغي / مرفوض",
+    fullLabel: "طلب ملغي أو مرفوض",
     tone: "neutral",
-    badgeClass: "bg-slate-500/10 text-slate-400 border border-slate-500/30",
   },
 };
 
@@ -100,12 +100,12 @@ export default async function requisitionsPage() {
         label: "حالة الطلب",
         options: [
           { value: "all", label: "جميع الحالات" },
-          { value: "pending_review", label: "🟡 بانتظار مراجعة الرئيسي (جديد)" },
-          { value: "in_transit", label: "🚚 في الطريق للفرع" },
-          { value: "under_inspection", label: "🔍 وصلت الفرع - قيد الفحص والعد" },
-          { value: "discrepancy", label: "⚠️ استلامات بها عجز وخلاف رقابي" },
-          { value: "completed", label: "✅ مكتمل ومطابق 100%" },
-          { value: "supplier_ordered", label: "🟣 مطلوب من المورد" },
+          { value: "pending_review", label: "بانتظار مراجعة الرئيسي (جديد)" },
+          { value: "in_transit", label: "في الطريق للفرع" },
+          { value: "under_inspection", label: "وصلت الفرع - قيد الفحص والعد" },
+          { value: "discrepancy", label: "استلامات بها عجز وخلاف رقابي" },
+          { value: "completed", label: "مكتمل ومطابق 100%" },
+          { value: "supplier_ordered", label: "مطلوب من المورد" },
         ],
       },
       {
@@ -128,9 +128,13 @@ export default async function requisitionsPage() {
       },
     ],
 
-    stats: (result) => {
-      const meta = result?.meta ?? {};
-      const pending = meta.pendingCount ?? 0;
+    stats: (rows) => {
+      const list = Array.isArray(rows) ? rows : (rows?.data || []);
+      const pending = list.filter((r) => r.status === "pending_review").length;
+      const inTransit = list.filter((r) => r.status === "in_transit" || r.status === "under_inspection").length;
+      const discrepancy = list.filter((r) => r.status === "discrepancy").length;
+      const completed = list.filter((r) => r.status === "completed").length;
+
       return [
         statTile({
           title: "بانتظار مراجعة الرئيسي",
@@ -140,19 +144,19 @@ export default async function requisitionsPage() {
         }),
         statTile({
           title: "في الطريق للفروع",
-          value: meta.inTransitCount ?? 0,
+          value: inTransit,
           tone: "brand",
           hint: "شحنات جاري توصيلها للمخازن الفرعية",
         }),
         statTile({
           title: "استلامات بها عجز / خلاف",
-          value: meta.discrepancyCount ?? 0,
-          tone: meta.discrepancyCount > 0 ? "danger" : "neutral",
+          value: discrepancy,
+          tone: discrepancy > 0 ? "danger" : "neutral",
           hint: "فروقات بين المحول والمستلم الفعلي",
         }),
         statTile({
           title: "طلبات مكتملة ومطابقة",
-          value: meta.completedCount ?? 0,
+          value: completed,
           tone: "success",
           hint: "تم استلامها ومطابقتها 100% بالفرع",
         }),
@@ -183,63 +187,66 @@ export default async function requisitionsPage() {
       {
         key: "status",
         label: "حالة الطلب",
-        width: "12rem",
+        width: "11rem",
         align: "center",
         render: (row) => {
           const cfg = STATUS_CONFIG[row.status] || { label: row.status, tone: "neutral" };
-          return el(
-            "span",
-            {
-              class: cx(
-                "inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium shadow-xs",
-                cfg.badgeClass || "bg-surface-200 text-text-secondary",
-              ),
-            },
-            cfg.label,
-          );
+          return badge(cfg.label, {
+            tone: cfg.tone,
+            dot: true,
+            size: "sm",
+            class: "shadow-2xs font-medium whitespace-nowrap px-2.5 py-0.5",
+          });
         },
       },
       {
         key: "fulfillmentSource",
         label: "مسار التوفير",
-        width: "10rem",
+        width: "11rem",
+        align: "center",
         render: (row) => {
           if (row.fulfillmentSource === "hub") {
-            return badge("صرف من الرئيسي", { tone: "brand", size: "sm" });
+            return badge("صرف من الرئيسي", { tone: "brand", size: "sm", dot: true });
           }
           if (row.fulfillmentSource === "branch_transfer") {
-            return badge(`مناقلة من ${row.sourceBranchName || "فرع"}`, { tone: "info", size: "sm" });
+            const branchName = row.sourceBranchName || "فرع آخر";
+            const shortName = branchName.replace(/مخزن\s*/, "");
+            return badge(`مناقلة: ${shortName}`, {
+              tone: "info",
+              size: "sm",
+              dot: true,
+            });
           }
           if (row.fulfillmentSource === "supplier") {
-            return badge("أمر شراء مورد", { tone: "warning", size: "sm" });
+            return badge("أمر شراء مورد", { tone: "warning", size: "sm", dot: true });
           }
-          return el("span", { class: "text-text-muted text-xs" }, "— قيد التحديد");
+          return el("span", { class: "text-muted text-xs font-medium" }, "— قيد التحديد");
         },
       },
       {
         key: "deliveryStatus",
         label: "المشحون / المستلم",
-        width: "8.5rem",
+        width: "10rem",
         align: "center",
         render: (row) => {
           if (row.status === "completed") {
-            return el(
-              "span",
-              { class: "text-xs font-semibold text-success-600 num" },
-              `${row.receivedQty} / ${row.dispatchedQty} (مطابق)`,
-            );
+            return badge(`${row.receivedQty} / ${row.dispatchedQty} (مطابق)`, {
+              tone: "success",
+              size: "sm",
+              class: "font-mono num font-semibold",
+            });
           }
           if (row.status === "discrepancy") {
-            return el(
-              "span",
-              { class: "text-xs font-bold text-danger-600 num" },
-              `${row.receivedQty} / ${row.dispatchedQty} (عجز ${row.discrepancyCount})`,
-            );
+            return badge(`${row.receivedQty} / ${row.dispatchedQty} (عجز ${row.discrepancyCount})`, {
+              tone: "danger",
+              size: "sm",
+              class: "font-mono num font-bold",
+            });
           }
           if (row.dispatchedQty) {
-            return el("span", { class: "text-xs text-text-muted num" }, `مشحون: ${row.dispatchedQty}`);
+            return el("span", { class: "text-xs text-muted num font-mono" }, `مشحون: ${row.dispatchedQty}`);
           }
-          return el("span", { class: "text-xs text-text-muted" }, "—");
+          return el("span", { class: "text-faint text-xs" }, "—");
         },
       },
       dateColumn("createdAt", "تاريخ ووقت الطلب", { width: "9.5rem" }),
@@ -293,8 +300,9 @@ async function openRequisitionDetailsModal(reqId, ctx, { warehouses }) {
             el("div", { class: "space-y-1" }, [
               el("div", { class: "flex items-center gap-2" }, [
                 el("span", { class: "text-xs text-text-muted font-mono num" }, req.code),
-                badge(STATUS_CONFIG[req.status]?.label || req.status, {
+                badge(STATUS_CONFIG[req.status]?.fullLabel || STATUS_CONFIG[req.status]?.label || req.status, {
                   tone: STATUS_CONFIG[req.status]?.tone || "neutral",
+                  dot: true,
                   size: "sm",
                 }),
               ]),
