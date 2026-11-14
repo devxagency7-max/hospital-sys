@@ -1283,14 +1283,14 @@ export function listRequisitions(params = {}) {
 export function getRequisition(id) {
   const req = find("requisitions", id);
   if (!req) throw notFound("طلب النواقص غير موجود.");
-  const availability = checkItemAvailability(req.itemId);
+  const availability = checkItemAvailability(req.itemId, req.branchId);
   return { ...req, availability };
 }
 
 /**
- * فحص رصيد الصنف عبر كل المخازن (الرئيسي والفروع) لاكتشاف الفائض.
+ * فحص رصيد الصنف عبر كل المخازن (الرئيسي والفروع) لاكتشاف الفائض وتوفير الشراء.
  */
-export function checkItemAvailability(itemId) {
+export function checkItemAvailability(itemId, requestingBranchId = null) {
   const item = find("items", itemId);
   if (!item) throw notFound("الصنف غير موجود.");
 
@@ -1317,7 +1317,9 @@ export function checkItemAvailability(itemId) {
   });
 
   const hubBalance = results.find((r) => r.isHub) || results[0];
-  const surplusBranches = results.filter((r) => !r.isHub && r.hasSurplus);
+  const surplusBranches = results.filter(
+    (r) => !r.isHub && r.hasSurplus && (!requestingBranchId || String(r.warehouseId) !== String(requestingBranchId)),
+  );
 
   return {
     itemId: item.id,

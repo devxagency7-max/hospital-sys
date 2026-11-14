@@ -286,74 +286,140 @@ async function openRequisitionDetailsModal(reqId, ctx, { warehouses }) {
     subtitle: `الفرع الطالب: ${req.branchName} · أنشئ في: ${formatIsoTimestamp(req.createdAt)}`,
     size: "lg",
     body: (close) => {
-      const content = el("div", { class: "space-y-6 text-sm" });
+      const content = el("div", { class: "space-y-5 text-sm" });
 
-      /* 1) كارت ترويسة الطلب */
-      content.appendChild(
-        el(
-          "div",
-          {
-            class:
-              "p-4 rounded-xl bg-surface-50 dark:bg-surface-800/60 border border-surface-200 dark:border-surface-700 flex flex-wrap items-center justify-between gap-4",
-          },
-          [
-            el("div", { class: "space-y-1" }, [
-              el("div", { class: "flex items-center gap-2" }, [
-                el("span", { class: "text-xs text-text-muted font-mono num" }, req.code),
-                badge(STATUS_CONFIG[req.status]?.fullLabel || STATUS_CONFIG[req.status]?.label || req.status, {
-                  tone: STATUS_CONFIG[req.status]?.tone || "neutral",
-                  dot: true,
-                  size: "sm",
-                }),
-              ]),
+      /* 1) بطاقة بيانات الطلب والصنف */
+      const headerCard = el(
+        "div",
+        {
+          class:
+            "p-5 rounded-2xl bg-subtle/50 dark:bg-subtle/30 border border-line space-y-4 shadow-2xs",
+        },
+        [
+          /* الشريط العلوي للبطاقة: الكود، الحالة، درجة الأهمية */
+          el("div", { class: "flex flex-wrap items-center justify-between gap-3" }, [
+            el("div", { class: "flex items-center gap-2" }, [
               el(
-                "h3",
-                { class: "text-base font-bold text-text-primary" },
-                `${req.itemName} — مطلوب: ${req.requestedQty} ${req.unit}`,
+                "span",
+                {
+                  class:
+                    "font-mono font-bold text-xs px-2.5 py-1 rounded-md bg-white dark:bg-slate-800 border border-line text-ink num shadow-2xs",
+                },
+                req.code,
               ),
-              el(
-                "p",
-                { class: "text-xs text-text-secondary" },
-                `الفرع الطالب: ${req.branchName} · أنشأه: ${req.createdBy} · ملاحظات: ${req.notes || "لا توجد"}`,
-              ),
+              badge(STATUS_CONFIG[req.status]?.fullLabel || STATUS_CONFIG[req.status]?.label || req.status, {
+                tone: STATUS_CONFIG[req.status]?.tone || "neutral",
+                dot: true,
+                size: "sm",
+              }),
             ]),
-          ],
-        ),
-      );
+            badge(
+              req.urgency === "urgent"
+                ? "أهمية: عاجل جداً"
+                : req.urgency === "high"
+                  ? "أهمية: مرتفعة"
+                  : "أهمية: عادي",
+              {
+                tone: req.urgency === "urgent" ? "danger" : req.urgency === "high" ? "warning" : "neutral",
+                size: "sm",
+              },
+            ),
+          ]),
 
-      /* 2) كارت مسار التوفير الذكي (Smart Inter-Branch Balancing Card) */
+          /* اسم الصنف والكمية */
+          el("div", { class: "flex flex-wrap items-center justify-between gap-3 pt-1" }, [
+            el("div", { class: "space-y-0.5" }, [
+              el("h3", { class: "text-base font-bold text-ink" }, req.itemName),
+              req.itemCode ? el("span", { class: "text-xs font-mono text-muted num" }, req.itemCode) : null,
+            ]),
+            badge(`الكمية المطلوبة: ${req.requestedQty} ${req.unit}`, {
+              tone: "brand",
+              size: "md",
+              class: "font-bold text-xs px-3 py-1",
+            }),
+          ]),
+
+          /* شبكة البيانات الوصفية (3 أعمدة) */
+          el(
+            "div",
+            {
+              class:
+                "grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-line/60 text-xs",
+            },
+            [
+              el("div", { class: "space-y-1" }, [
+                el("span", { class: "text-muted block" }, "الفرع الطالب:"),
+                el("span", { class: "font-semibold text-ink block" }, req.branchName),
+              ]),
+              el("div", { class: "space-y-1" }, [
+                el("span", { class: "text-muted block" }, "المسؤول المُنشئ:"),
+                el("span", { class: "font-semibold text-ink block" }, req.createdBy),
+              ]),
+              el("div", { class: "space-y-1" }, [
+                el("span", { class: "text-muted block" }, "تاريخ وتوقيت الطلب:"),
+                el("span", { class: "font-mono font-semibold text-ink block num" }, formatIsoTimestamp(req.createdAt)),
+              ]),
+            ],
+          ),
+
+          /* الملاحظات إن وجدت */
+          req.notes
+            ? el(
+                "div",
+                {
+                  class:
+                    "p-3 rounded-xl bg-white/70 dark:bg-slate-800/70 border border-line/60 text-xs text-muted leading-relaxed flex items-start gap-2",
+                },
+                [
+                  el("span", { class: "font-bold text-ink shrink-0" }, "ملاحظات الطلب:"),
+                  el("span", {}, req.notes),
+                ],
+              )
+            : null,
+        ],
+      );
+      content.appendChild(headerCard);
+
+      /* 2) كارت مسار التوفير والقرار الذكي (Smart Decision Cockpit) */
       if (req.status === "pending_review") {
         const balanceCard = el(
           "div",
           {
             class:
-              "p-4 rounded-xl border border-brand-500/30 bg-brand-500/5 dark:bg-brand-950/20 space-y-4",
+              "p-5 rounded-2xl border-2 border-brand-500/25 bg-brand-50/40 dark:bg-brand-950/20 space-y-4 shadow-2xs",
           },
           [
-            el("div", { class: "flex items-center justify-between" }, [
-              el("h4", { class: "font-bold text-brand-700 dark:text-brand-300 flex items-center gap-2" }, [
+            el("div", { class: "flex flex-wrap items-center justify-between gap-3" }, [
+              el("h4", { class: "font-bold text-ink text-sm flex items-center gap-2" }, [
                 el("span", { class: "text-base" }, "💡"),
-                "فحص التوفر وفائض الفروع الذكي (توفير الشراء الخارجي)",
+                "مركز القرار وتوفير الاحتياج (فحص التوفر الذكي)",
               ]),
-              el(
-                "span",
-                { class: "text-xs text-brand-600 dark:text-brand-400 font-semibold num" },
-                `رصيد المخزن الرئيسي: ${availability.hubAvailable} ${req.unit}`,
+              badge(
+                canFulfillHub
+                  ? `متوفر بالمخزن الرئيسي: ${availability.hubAvailable} ${req.unit}`
+                  : `المخزن الرئيسي: غير متوفر (رصيد 0)`,
+                {
+                  tone: canFulfillHub ? "success" : "warning",
+                  dot: true,
+                  size: "sm",
+                },
               ),
             ]),
             el(
               "p",
-              { class: "text-xs text-text-secondary leading-relaxed" },
-              hasSurplus
-                ? `تنبيه ذكي: يوجد فائض عن الاستهلاك في المخازن الفرعية الأخرى (${availability.surplusBranches
-                    .map((b) => `${b.warehouseName}: متوفر ${b.available} ${req.unit}`)
-                    .join(" · ")}). يمكنك تحويل الكمية فوراً دون الحاجة لشراء جديد وتوفير السيولة للمؤسسة.`
-                : "لا توجد فروع أخرى لديها فائض كبير من هذا الصنف. يمكنك الصرف من الرئيسي أو إرسال أمر شراء للمورد.",
+              { class: "text-xs text-muted leading-relaxed" },
+              canFulfillHub
+                ? `الكمية المطلوبة متوفرة بالكامل داخل المخزن الرئيسي. يمكنك اعتماد الصرف المباشر والشحن الفوري للفرع الطالب.`
+                : hasSurplus
+                  ? `تنبيه التوزيع الذكي: المخزن الرئيسي لا يملك رصيداً كافياً، لكن يوجد فائض عن الاستهلاك في (${availability.surplusBranches
+                      .map((b) => `${b.warehouseName}: متوفر ${b.available} ${req.unit}`)
+                      .join(" · ")}). يمكنك المناقلة الداخلية فوراً وتوفير السيولة للمؤسسة دون الحاجة لشراء خارجي جديد.`
+                  : "الصنف غير متوفر بالمخزن الرئيسي ولا يوجد أي فائض في الفروع الأخرى. يُرجى إصدار أمر شراء وتوريد للمورد المعتمد.",
             ),
-            el("div", { class: "flex flex-wrap items-center gap-2 pt-2 border-t border-brand-500/20" }, [
+            el("div", { class: "flex flex-wrap items-center gap-2.5 pt-2 border-t border-brand-500/20" }, [
               canFulfillHub
                 ? button({
-                    label: `صرف فوري من المخزن الرئيسي (${req.requestedQty} ${req.unit})`,
+                    label: `صرف فوري وشحن من المخزن الرئيسي (${req.requestedQty} ${req.unit})`,
                     variant: "primary",
                     size: "sm",
                     icon: "check",
@@ -367,7 +433,7 @@ async function openRequisitionDetailsModal(reqId, ctx, { warehouses }) {
                 : null,
               hasSurplus
                 ? button({
-                    label: `تحويل داخلي من ${availability.surplusBranches[0].warehouseName}`,
+                    label: `مناقلة وتحويل من ${availability.surplusBranches[0].warehouseName}`,
                     variant: "secondary",
                     size: "sm",
                     icon: "refresh",
@@ -384,7 +450,7 @@ async function openRequisitionDetailsModal(reqId, ctx, { warehouses }) {
                 : null,
               button({
                 label: "إصدار أمر شراء للمورد",
-                variant: "ghost",
+                variant: canFulfillHub ? "ghost" : "primary",
                 size: "sm",
                 icon: "plus",
                 onClick: async () => {
@@ -405,7 +471,7 @@ async function openRequisitionDetailsModal(reqId, ctx, { warehouses }) {
         const qtyInput = el("input", {
           type: "number",
           class:
-            "w-32 px-3 py-1.5 rounded-lg border border-surface-300 dark:border-surface-600 bg-surface-0 dark:bg-surface-800 text-text-primary text-center font-bold num",
+            "w-32 px-3 py-1.5 rounded-lg border border-line bg-white dark:bg-slate-800 text-ink text-center font-bold num shadow-2xs focus:border-brand-500",
           value: String(req.dispatchedQty || req.requestedQty),
           min: "0",
           max: "9999",
@@ -414,7 +480,7 @@ async function openRequisitionDetailsModal(reqId, ctx, { warehouses }) {
         const notesInput = el("input", {
           type: "text",
           class:
-            "flex-1 px-3 py-1.5 rounded-lg border border-surface-300 dark:border-surface-600 bg-surface-0 dark:bg-surface-800 text-text-primary text-xs",
+            "flex-1 px-3 py-1.5 rounded-lg border border-line bg-white dark:bg-slate-800 text-ink text-xs shadow-2xs focus:border-brand-500",
           placeholder: "اكتب ملاحظات الفحص أو سبب العجز/التلف إن وجد…",
         });
 
@@ -422,32 +488,31 @@ async function openRequisitionDetailsModal(reqId, ctx, { warehouses }) {
           "div",
           {
             class:
-              "p-4 rounded-xl border border-warning-500/30 bg-warning-500/5 dark:bg-warning-950/20 space-y-4",
+              "p-5 rounded-2xl border-2 border-warning-500/25 bg-warning-50/40 dark:bg-warning-950/20 space-y-4 shadow-2xs",
           },
           [
             el("div", { class: "flex items-center justify-between" }, [
-              el("h4", { class: "font-bold text-warning-700 dark:text-warning-300 flex items-center gap-2" }, [
+              el("h4", { class: "font-bold text-ink flex items-center gap-2" }, [
                 el("span", { class: "text-base" }, "📦"),
                 "فحص واستلام الشحنة في مخزن الفرع (بالعد الفعلي)",
               ]),
-              el(
-                "span",
-                { class: "text-xs font-semibold text-text-secondary num" },
-                `المشحون من الرئيسي: ${req.dispatchedQty || req.requestedQty} ${req.unit}`,
-              ),
+              badge(`المشحون من الرئيسي: ${req.dispatchedQty || req.requestedQty} ${req.unit}`, {
+                tone: "info",
+                size: "sm",
+              }),
             ]),
             el(
               "p",
-              { class: "text-xs text-text-secondary leading-relaxed" },
+              { class: "text-xs text-muted leading-relaxed" },
               "أمين مخزن الفرع: قم بعد الحبات الفعلية المستلمة. إذا كان هناك عجز أو كسر، اكتب المستلم الفعلي وسيتم توثيق العجز لحظياً بالساعة وإضافته فقط لعهدتك.",
             ),
             el("div", { class: "flex flex-wrap items-center gap-3 pt-1" }, [
-              el("label", { class: "text-xs font-semibold text-text-primary" }, "المستلم الفعلي:"),
+              el("label", { class: "text-xs font-semibold text-ink" }, "المستلم الفعلي:"),
               qtyInput,
-              el("label", { class: "text-xs font-semibold text-text-primary" }, "ملاحظات الفحص:"),
+              el("label", { class: "text-xs font-semibold text-ink" }, "ملاحظات الفحص:"),
               notesInput,
             ]),
-            el("div", { class: "flex items-center gap-2 pt-2 border-t border-warning-500/20" }, [
+            el("div", { class: "flex items-center gap-2.5 pt-2 border-t border-warning-500/20" }, [
               button({
                 label: "اعتماد استلام مطابق 100%",
                 variant: "success",
@@ -491,39 +556,39 @@ async function openRequisitionDetailsModal(reqId, ctx, { warehouses }) {
       }
 
       /* 4) خط السير والختم الزمني غير القابل للتعديل (Tamper-Proof Timeline Audit Trail) */
-      const timelineCard = el("div", { class: "space-y-3 pt-2" }, [
+      const timelineCard = el("div", { class: "space-y-4 pt-3 border-t border-line" }, [
         el(
           "div",
-          { class: "flex items-center justify-between border-b border-surface-200 dark:border-surface-700 pb-2" },
+          { class: "flex items-center justify-between pb-1" },
           [
-            el("h4", { class: "font-bold text-text-primary flex items-center gap-2" }, [
-              el("span", { class: "text-base" }, "🔒"),
+            el("h4", { class: "font-bold text-ink flex items-center gap-2 text-xs" }, [
+              el("span", { class: "text-sm" }, "🔒"),
               "سجل المسار الزمني الموثق بالثانية (مؤمّن ضد التلاعب)",
             ]),
-            el("span", { class: "text-[11px] text-text-muted" }, "مأخوذ آلياً من الخادم"),
+            el("span", { class: "text-[11px] text-muted font-medium" }, "مأخوذ آلياً من الخادم"),
           ],
         ),
         el(
           "div",
           {
             class:
-              "space-y-3 relative before:absolute before:right-3 before:top-2 before:bottom-2 before:w-0.5 before:bg-surface-200 dark:before:bg-surface-700 pr-2",
+              "space-y-4 relative before:absolute before:right-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-line-strong pr-1",
           },
           (req.timeline || []).map((t) =>
-            el("div", { class: "relative pr-6 flex flex-col gap-0.5" }, [
+            el("div", { class: "relative pr-6 flex flex-col gap-1" }, [
               el("span", {
                 class:
-                  "absolute right-1.5 top-1.5 w-3.5 h-3.5 rounded-full bg-brand-500 border-2 border-surface-0 dark:border-surface-900",
+                  "absolute right-[3px] top-1.5 w-2.5 h-2.5 rounded-full bg-brand-500 ring-4 ring-white dark:ring-slate-900",
               }),
               el("div", { class: "flex items-center gap-2" }, [
-                el("span", { class: "font-bold text-xs text-text-primary" }, t.title),
+                el("span", { class: "font-bold text-xs text-ink" }, t.title),
                 el(
                   "span",
-                  { class: "text-[11px] text-brand-600 dark:text-brand-400 font-mono num" },
+                  { class: "text-[11px] text-muted font-mono num bg-subtle px-1.5 py-0.5 rounded border border-line/60" },
                   formatIsoTimestamp(t.timestamp),
                 ),
               ]),
-              el("p", { class: "text-xs text-text-secondary" }, `المسؤول: ${t.user} · ${t.notes || ""}`),
+              el("p", { class: "text-xs text-muted" }, `المسؤول: ${t.user} · ${t.notes || ""}`),
             ]),
           ),
         ),

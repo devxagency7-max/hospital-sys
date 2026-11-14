@@ -41,7 +41,7 @@ export function openOverlay({ panel, onClose, dismissible = true, align = "cente
 
   const backdrop = el("div", {
     class: cx(
-      "hx-backdrop fixed inset-0 z-50 bg-ink/40 backdrop-blur-[1px] flex no-print",
+      "hx-backdrop fixed inset-0 z-50 bg-slate-950/65 backdrop-blur-sm flex no-print",
       ALIGN[align] ?? ALIGN.center,
     ),
   });
@@ -132,7 +132,7 @@ export function openModal({
         "div",
         {
           class: cx(
-            "hx-rise bg-surface w-full rounded-[var(--radius-card)] shadow-overlay flex flex-col",
+            "hx-rise bg-white dark:bg-slate-900 text-ink border border-line-strong/60 shadow-2xl w-full rounded-[var(--radius-card)] flex flex-col",
             "max-h-[min(90vh,52rem)]",
             SIZES[size] ?? SIZES.md,
           ),
@@ -143,36 +143,36 @@ export function openModal({
         },
         el(
           "header",
-          { class: "flex items-start justify-between gap-4 px-5 py-3.5 border-b border-line shrink-0" },
+          { class: "flex items-start justify-between gap-4 px-6 py-4 border-b border-line bg-subtle/50 shrink-0" },
           el(
             "div",
             { class: "min-w-0" },
-            el("h2", { id: titleId, class: "text-sm font-semibold text-ink" }, title),
-            subtitle ? el("p", { class: "text-xs text-muted mt-0.5" }, subtitle) : null,
+            el("h2", { id: titleId, class: "text-base font-bold text-ink" }, title),
+            subtitle ? el("p", { class: "text-xs text-muted mt-1 font-medium" }, subtitle) : null,
           ),
           dismissible
             ? el(
                 "button",
                 {
                   type: "button",
-                  class: "shrink-0 text-faint hover:text-ink transition-colors p-1 -m-1 rounded",
+                  class: "shrink-0 text-faint hover:text-ink transition-colors p-1.5 -m-1.5 rounded-lg hover:bg-subtle",
                   "aria-label": "إغلاق",
                   onClick: () => close(undefined),
                 },
-                icon("close", { size: 17 }),
+                icon("close", { size: 18 }),
               )
             : null,
         ),
         // المحتوى هو ما يتمدد ويُمرَّر — الرأس والتذييل يبقيان ثابتين.
         el(
           "div",
-          { class: "px-5 py-4 overflow-y-auto grow" },
+          { class: "px-6 py-5 overflow-y-auto grow" },
           typeof body === "function" ? body(close) : body,
         ),
         footer
           ? el(
               "footer",
-              { class: "flex items-center justify-start gap-2 px-5 py-3.5 border-t border-line bg-subtle shrink-0 rounded-b-[var(--radius-card)]" },
+              { class: "flex items-center justify-start gap-2.5 px-6 py-4 border-t border-line bg-subtle shrink-0 rounded-b-[var(--radius-card)]" },
               ...[typeof footer === "function" ? footer(close) : footer].flat().filter(Boolean),
             )
           : null,
