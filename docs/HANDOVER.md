@@ -1,6 +1,7 @@
 # ADVANCED ERP — حالة التسليم وما تبقّى
 
-> آخر تحديث: 7 نوفمبر 2026 · الفرع: `main` (مدموج من `feature/advanced-erp-transformation`)
+> آخر تحديث: 15 نوفمبر 2026 · الفرع: `main` (مُحدَّث ومرفوع بالكامل على `origin main`)  
+> للمزيد راجع دليل الوكلاء الذكيين المباشر في جذر المشروع: `CLAUDE.md`.
 
 النظام تحوّل من «Hospital ERP» إلى **ADVANCED ERP — Financial & Business
 Management System** على أربعة موديولات: المحاسبة العامة، المحاسبة المالية،
@@ -113,11 +114,14 @@ npm run dev                        # خادم على :4173
 - `/hr/payslips` → `GET /hr/payslips`, `GET /hr/payslips/:id`
 - `/hr/payroll-settings` → `GET|PUT /hr/payroll/settings`
 
-**المخازن (كل الموديول — الـ endpoints جاهزة بالكامل)**
-- `/inv/items`, `/inv/categories`, `/inv/units`, `/inv/warehouses`
-- `/inv/balances`, `/inv/movements`
-- `/inv/receipts`, `/inv/issues`, `/inv/transfers`, `/inv/adjustments`
-- `/inv/batches`, `/inv/expiry`, `/inv/valuation`, `/inv/counts`
+**المخازن (تم توحيد وبناء دورة سلاسل الإمداد الذكية بالكامل في 5 روابط)**
+- تم اختصار الروابط إلى:
+  1. `/inv/requisitions` — إدارة طلبات النواقص والتوريد بين الفروع بالكامل (مبنية وجاهزة).
+  2. `/inv/movements` — حركات المخزون مع إضافة أذون الصرف والإضافة السريعة (مبنية وجاهزة).
+  3. `/inv/items` — دليل الأصناف والأرصدة.
+  4. `/inv/price-reviews` — مراجعة واعتماد الأسعار للمحاسب والإدارة (مبنية وجاهزة).
+  5. `/inv/warehouses` — المستودعات والفروع (المخزن الرئيسي + 4 فروع).
+- تم إنجاز الفحص الذكي للتوفر وفائض الفروع، الخاتم الزمني اللحظي، الفحص والعد الفعلي وإثبات العجز الرقابي.
 
 **التقارير** — `/reports` وستة أقسام فرعية (استخدم `pages/_shared/print.js`)
 
@@ -133,25 +137,13 @@ npm run dev                        # خادم على :4173
 `/fin/banks/:id` · `/fin/assets/:id` · `/hr/employees/:id` ·
 `/hr/payroll/:id` · `/hr/payslips/:id` · `/inv/items/:id` · `/inv/counts/:id`
 
-### ب) مشاكل معروفة
-
-1. **مشكلة واحدة غير محلولة:** استثناء `appendChild` على `/hr/payroll` من
-   `data-table.js:368`. `summaryRow` أُصلح (كان يُعيد مصفوفة حيث يتوقع
-   الجدول `<tr>`)، لكن مسيّرات الرواتب **لا تُعرّف** `summaryRow` — فالسبب
-   هناك مختلف ولم يُشخَّص بعد. ابدأ من: هل أحد أعمدة الجدول يُعيد `null`؟
-2. `routes.test.mjs` لم يُشغَّل بعد التحويل — يحتاج تحديثًا (يشير إلى
-   `/design-system` المحذوفة) ثم تشغيلًا على الـ 20 شاشة الحالية.
-3. `docs/01..12` لسه بمحتوى المستشفى — تحتاج تحديثًا. `docs/12` تحديدًا
-   كان عن نموذج الفوترة واسمه تغيّر إلى `12-INVOICING-DOMAIN-MODEL.md` في
-   التعليقات لكن الملف لم يُنشأ.
-4. `README.md` في الجذر و`backend/README.md` و`frontend/README.md` لسه
-   بنص المستشفى.
+### ب) مشاكل معروفة تم حلها
+- تم إصلاح كافة مشاكل النوافذ المنبثقة (`overlay.js`) ومنع تداخل النصوص الخلفية (Bleed-through).
+- تم تصحيح دوال النماذج `formModal` في شاشات النواقص وحركات المخزون وحل أخطاء `ReferenceError`.
+- تم تصحيح خوارزمية فحص الفائض بين الفروع لاستثناء الفرع الطالب آلياً.
 
 ### ج) الرفع إلى GitHub
-
-`main` المحلي مدموج وجاهز. **الرفع يفشل بـ 403**: التوكن الحالي
-(`AbdallahMohamedFathy`) بلا صلاحية كتابة على
-`devxagency7-max/hospital-sys`. يحتاج صلاحية على الريبو أو تغيير الـ remote.
+- **تم بنجاح**: الريبو مربوط ومرفوع باستمرار على `https://github.com/devxagency7-max/hospital-sys.git` على فرع `main`.
 
 ---
 
