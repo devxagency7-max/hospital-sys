@@ -64,12 +64,26 @@ const USER_SEEDS = [
   { id: 7, name: "سامح محمد زكي", username: "s.zaki", role: "fin", employeeId: 9, departmentId: 2, jobTitle: "أمين الخزينة" },
   { id: 8, name: "إيمان خالد القاضي", username: "e.kady", role: "hr", employeeId: 11, departmentId: 3, jobTitle: "مدير الموارد البشرية" },
   { id: 9, name: "دعاء سامح شلبي", username: "d.shalaby", role: "hr", employeeId: 12, departmentId: 3, jobTitle: "أخصائي موارد بشرية" },
-  { id: 10, name: "نادر طارق سليمان", username: "n.soliman", role: "inv", employeeId: 28, departmentId: 6, jobTitle: "مدير المخازن" },
-  { id: 11, name: "وليد حسن البحيري", username: "w.behairy", role: "inv", employeeId: 29, departmentId: 6, jobTitle: "أمين مخزن" },
-  { id: 12, name: "ماجد فادي عطية", username: "m.atya", role: "inv", employeeId: 30, departmentId: 6, jobTitle: "أمين مخزن — الصيدلية المركزية" },
+  /*
+   * `warehouseIds` = نطاق المخازن. `null` بلا قيد (مدير المخازن يرى الكل)،
+   * ومصفوفة = قيد فعلي يُفرض عند تنفيذ أي حركة لا عند رسم الزر فقط.
+   */
+  { id: 10, name: "نادر طارق سليمان", username: "n.soliman", role: "inv", employeeId: 28, departmentId: 6, jobTitle: "مدير المخازن", warehouseIds: null },
+  { id: 11, name: "وليد حسن البحيري", username: "w.behairy", role: "inv", employeeId: 29, departmentId: 6, jobTitle: "أمين المخزن الرئيسي", warehouseIds: [1] },
+  { id: 12, name: "ماجد فادي عطية", username: "m.atya", role: "pharmacy", employeeId: 30, departmentId: 6, jobTitle: "أمين مخزن الصيدلية المركزية (فرع 1)", warehouseIds: [2] },
   { id: 13, name: "نادر إسلام الفقي", username: "n.fakey", role: "gl", employeeId: null, departmentId: 1, jobTitle: "مراجع داخلي" },
   { id: 14, name: "رامي عادل خليل", username: "r.khalil", role: "fin", employeeId: 21, departmentId: 4, jobTitle: "مسؤول تعاقدات ومطالبات أول" },
   { id: 15, name: "شيماء باسم النجار", username: "s.naggar", role: "hr", employeeId: 13, departmentId: 3, jobTitle: "أخصائي موارد بشرية" },
+
+  /* --- الاستقبال والتمريض والصيدليات الفرعية --- */
+  { id: 16, name: "منى صابر عبد الله", username: "m.saber", role: "reception", employeeId: 23, departmentId: 8, jobTitle: "موظفة استقبال وخدمة مرضى", warehouseIds: [] },
+  { id: 17, name: "هند درويش فتحي", username: "h.darwish", role: "reception", employeeId: 24, departmentId: 8, jobTitle: "مسؤولة استقبال — الوردية المسائية", warehouseIds: [] },
+  { id: 18, name: "أمل فؤاد السيد", username: "a.fouad", role: "nurse", employeeId: 25, departmentId: 7, jobTitle: "ممرضة القسم الداخلي", warehouseIds: [2] },
+  { id: 19, name: "سعاد ناصر حامد", username: "s.nasser", role: "nurse", employeeId: 26, departmentId: 7, jobTitle: "ممرضة العناية المركزة", warehouseIds: [4] },
+  { id: 20, name: "طارق إبراهيم مرسي", username: "t.morsy", role: "pharmacy", employeeId: 27, departmentId: 6, jobTitle: "أمين مخزن الطوارئ (فرع 3)", warehouseIds: [4] },
+  { id: 21, name: "ياسمين القاضي سعد", username: "y.kady", role: "pharmacy", employeeId: 31, departmentId: 6, jobTitle: "أمينة مخزن العيادات (فرع 2)", warehouseIds: [3] },
+  { id: 22, name: "رضا عبد اللطيف", username: "r.latif", role: "billing", employeeId: 32, departmentId: 2, jobTitle: "مسؤول حسابات المرضى والمطالبات", warehouseIds: [] },
+  { id: 23, name: "عصام جابر الشريف", username: "e.gaber", role: "pharmacy", employeeId: 33, departmentId: 6, jobTitle: "أمين مخزن المستلزمات العامة (فرع 4)", warehouseIds: [6] },
 ];
 
 export const users = USER_SEEDS.map((seed, index) => {

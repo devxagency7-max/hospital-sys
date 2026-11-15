@@ -86,7 +86,13 @@ import {
 import {
   patients,
   hospitalServices,
+  roomTypes,
+  rooms,
   admissions,
+  admissionCharges,
+  tariffTiers,
+  tariffPrices,
+  exchangeRates,
   patientInvoices,
   patientReceipts,
   insuranceProviders,
@@ -151,6 +157,10 @@ export const db = {
   stockCounts: [...stockCounts],
   stockCountLines: [...stockCountLines],
   requisitions: [...requisitions],
+
+  /** سجل المطابقة الثلاثية: أمر الشراء ↔ إذن الاستلام ↔ فاتورة المورد. */
+  purchaseMatches: [],
+
   priceReviews: [
     {
       id: 1,
@@ -233,7 +243,13 @@ export const db = {
   /* --- حسابات المرضى والخدمات الطبية --- */
   patients: [...patients],
   hospitalServices: [...hospitalServices],
+  roomTypes: [...roomTypes],
+  rooms: [...rooms],
+  tariffTiers: [...tariffTiers],
+  tariffPrices: [...tariffPrices],
+  exchangeRates: [...exchangeRates],
   admissions: [...admissions],
+  admissionCharges: [...admissionCharges],
   patientInvoices: [...patientInvoices],
   patientReceipts: [...patientReceipts],
   insuranceProviders: [...insuranceProviders],
@@ -256,6 +272,12 @@ export const db = {
 
 /** الحقول القابلة للبحث الحر لكل مجموعة. */
 const SEARCHABLE = {
+  rooms: ["code", "name", "floor", "wing", "currentPatientName", "notes"],
+  tariffTiers: ["code", "name", "nameEn", "notes"],
+  purchaseMatches: ["receiptReference", "supplierInvoiceRef", "itemName", "supplierName"],
+  exchangeRates: ["currency", "name", "source"],
+  roomTypes: ["code", "name", "department"],
+  admissionCharges: ["serviceName", "patientName", "admissionCode", "categoryLabel"],
   accounts: ["code", "name", "nameEn", "type"],
   journalEntries: ["entryNumber", "description", "reference", "createdBy", "sourceType"],
   accountingPeriods: ["name", "periodKey", "status"],

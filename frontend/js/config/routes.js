@@ -22,6 +22,12 @@ const IMPLEMENTED = [
 
   /* ===================== الاستقبال واستعلام المرضى ===================== */
   {
+    path: "/reception/occupancy",
+    title: "إشغال الغرف والأسرّة",
+    permission: "reception.view",
+    load: () => import("../../pages/reception/occupancy.page.js"),
+  },
+  {
     path: "/reception",
     title: "استعلام وسداد حسابات المرضى",
     permission: "reception.view",
@@ -314,6 +320,12 @@ const IMPLEMENTED = [
     load: () => import("../../pages/inv/balances.page.js"),
   },
   {
+    path: "/inv/dispense",
+    title: "صرف أدوية ومستلزمات لمريض",
+    permission: "inv.issue.create",
+    load: () => import("../../pages/inv/dispense.page.js"),
+  },
+  {
     path: "/inv/movements",
     title: "حركات المخزون",
     permission: "inv.view",
@@ -330,6 +342,12 @@ const IMPLEMENTED = [
     title: "المخازن",
     permission: "inv.view",
     load: () => import("../../pages/inv/warehouses.page.js"),
+  },
+  {
+    path: "/inv/invoice-matching",
+    title: "مطابقة فواتير الموردين",
+    permission: "fin.supplier.invoice",
+    load: () => import("../../pages/inv/invoice-matching.page.js"),
   },
   {
     path: "/inv/price-reviews",

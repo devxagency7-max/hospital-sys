@@ -49,6 +49,7 @@ export const accounts = [
   { id: 11412, code: "11412", name: "مخزون أدوية", nameEn: "Medications Inventory", type: "asset", parentId: 114, level: 4, nature: "debit", status: "active" },
   { id: 11413, code: "11413", name: "مخزون مستلزمات العمليات", nameEn: "Surgical Supplies Inventory", type: "asset", parentId: 114, level: 4, nature: "debit", status: "active" },
   { id: 11414, code: "11414", name: "مخزون قطع غيار الأجهزة الطبية", nameEn: "Medical Equipment Spares Inventory", type: "asset", parentId: 114, level: 4, nature: "debit", status: "active" },
+  { id: 11415, code: "11415", name: "مخزون تحت التحويل بين الفروع", nameEn: "Stock in Transit Between Branches", type: "asset", parentId: 114, level: 4, nature: "debit", status: "active" },
 
   { id: 115, code: "115", name: "مدينون متنوعون وأرصدة مدينة أخرى", nameEn: "Other Receivables", type: "asset", parentId: 11, level: 3, nature: "debit", status: "active" },
   { id: 1151, code: "1151", name: "سلف وعهد الموظفين", nameEn: "Employee Advances", type: "asset", parentId: 115, level: 4, nature: "debit", status: "active" },
@@ -146,6 +147,7 @@ export const accounts = [
   { id: 511, code: "511", name: "تكلفة المستلزمات المصروفة", nameEn: "Cost of Supplies Issued", type: "expense", parentId: 51, level: 3, nature: "debit", status: "active" },
   { id: 5111, code: "5111", name: "تكلفة مستهلكات طبية مصروفة", nameEn: "Medical Consumables Cost", type: "expense", parentId: 511, level: 4, nature: "debit", status: "active" },
   { id: 5112, code: "5112", name: "تكلفة مستلزمات عمليات مصروفة", nameEn: "Surgical Supplies Cost", type: "expense", parentId: 511, level: 4, nature: "debit", status: "active" },
+  { id: 5113, code: "5113", name: "فرق سعر الشراء", nameEn: "Purchase Price Variance", type: "expense", parentId: 511, level: 4, nature: "debit", status: "active" },
   { id: 512, code: "512", name: "أدوية مستهلكة", nameEn: "Medications Consumed", type: "expense", parentId: 51, level: 3, nature: "debit", status: "active" },
   { id: 513, code: "513", name: "عجز وتلف المخزون", nameEn: "Inventory Shrinkage", type: "expense", parentId: 51, level: 3, nature: "debit", status: "active" },
 
@@ -211,9 +213,11 @@ export const postingMap = {
   otherIncome: 423,
 
   inventory: 11411,
+  stockInTransit: 11415,
   goodsReceivedNotInvoiced: 2112,
   costOfGoodsSold: 5111,
   inventoryShrinkage: 513,
+  purchasePriceVariance: 5113,
   inventorySurplus: 422,
   purchaseReturns: 5312,
 
@@ -399,6 +403,7 @@ const openingEntry = entry({
     D(11412, 0, "مخزون أدوية — رصيد افتتاحي"),
     D(11413, 0, "مخزون مستلزمات عمليات — رصيد افتتاحي"),
     D(11414, 0, "مخزون قطع غيار أجهزة — رصيد افتتاحي"),
+    D(11415, 0, "مخزون تحت التحويل بين الفروع — رصيد افتتاحي"),
     D(1151, 96_000, "سلف الموظفين القائمة"),
     D(1152, 240_000, "دفعات مقدمة للموردين"),
     D(1153, 180_000, "مصروفات مدفوعة مقدمًا (إيجار وتأمين)"),

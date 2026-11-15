@@ -13,7 +13,7 @@ import { el, cx } from "../../js/core/dom.js";
 import { button, buttonGroup } from "../../components/common/button.js";
 import { badge } from "../../components/common/badge.js";
 import { statTile } from "../../components/common/card.js";
-import { listPage } from "../_shared/list-page.js";
+import { listPage, runAction } from "../_shared/list-page.js";
 import { codeColumn, nameColumn, dateColumn } from "../_shared/cells.js";
 import { formModal, selectField, notesField, value, numberValue } from "../_shared/forms.js";
 import { openModal } from "../../components/modals/overlay.js";
@@ -27,6 +27,9 @@ import {
   fulfillByBranchTransfer,
   orderFromSupplier,
   branchInspectAndReceive,
+  receiveSupplierOrderAtHub,
+  markShipmentArrivedAtBranch,
+  rejectRequisition,
 } from "../../js/api/inventory.api.js";
 import { getWarehouses, getItems } from "../../js/api/lookups.api.js";
 
@@ -278,8 +281,22 @@ async function openRequisitionDetailsModal(reqId, ctx, { warehouses }) {
   }
 
   const availability = req.availability || { surplusBranches: [] };
-  const canFulfillHub = availability.canFulfillFromHub;
-  const hasSurplus = availability.hasSurplusBranches;
+  const hubAvailable = Number(availability.hubAvailable || 0);
+
+  /*
+   * الكمية القابلة للشحن فعلاً = الأقل من المطلوب والمتاح. الخدمة ترفض الشحن
+   * برصيد غير كافٍ، فالواجهة لا تعرض زرًّا يَعِد بما سيُرفض — تعرض الممكن
+   * وتُعلن الفارق صراحة.
+   */
+  const hubDispatchQty = Math.min(Number(req.requestedQty || 0), hubAvailable);
+  const canFulfillHub = hubDispatchQty > 0;
+  const isPartialFromHub = canFulfillHub && hubDispatchQty < Number(req.requestedQty || 0);
+
+  const topSurplus = (availability.surplusBranches || [])[0] || null;
+  const surplusDispatchQty = topSurplus
+    ? Math.min(Number(req.requestedQty || 0), Number(topSurplus.transferableQty || 0))
+    : 0;
+  const hasSurplus = surplusDispatchQty > 0;
 
   openModal({
     title: `تفاصيل ومسار طلب النواقص: ${req.code}`,
@@ -381,7 +398,7 @@ async function openRequisitionDetailsModal(reqId, ctx, { warehouses }) {
       content.appendChild(headerCard);
 
       /* 2) كارت مسار التوفير والقرار الذكي (Smart Decision Cockpit) */
-      if (req.status === "pending_review") {
+      if (req.status === "pending_review" || req.status === "hub_received") {
         const balanceCard = el(
           "div",
           {
@@ -396,10 +413,10 @@ async function openRequisitionDetailsModal(reqId, ctx, { warehouses }) {
               ]),
               badge(
                 canFulfillHub
-                  ? `متوفر بالمخزن الرئيسي: ${availability.hubAvailable} ${req.unit}`
-                  : `المخزن الرئيسي: غير متوفر (رصيد 0)`,
+                  ? `متوفر بالمخزن الرئيسي: ${hubAvailable} ${req.unit}`
+                  : `المخزن الرئيسي: رصيد غير كافٍ (${hubAvailable} ${req.unit})`,
                 {
-                  tone: canFulfillHub ? "success" : "warning",
+                  tone: canFulfillHub && !isPartialFromHub ? "success" : "warning",
                   dot: true,
                   size: "sm",
                 },
@@ -408,44 +425,56 @@ async function openRequisitionDetailsModal(reqId, ctx, { warehouses }) {
             el(
               "p",
               { class: "text-xs text-muted leading-relaxed" },
-              canFulfillHub
-                ? `الكمية المطلوبة متوفرة بالكامل داخل المخزن الرئيسي. يمكنك اعتماد الصرف المباشر والشحن الفوري للفرع الطالب.`
-                : hasSurplus
-                  ? `تنبيه التوزيع الذكي: المخزن الرئيسي لا يملك رصيداً كافياً، لكن يوجد فائض عن الاستهلاك في (${availability.surplusBranches
-                      .map((b) => `${b.warehouseName}: متوفر ${b.available} ${req.unit}`)
-                      .join(" · ")}). يمكنك المناقلة الداخلية فوراً وتوفير السيولة للمؤسسة دون الحاجة لشراء خارجي جديد.`
-                  : "الصنف غير متوفر بالمخزن الرئيسي ولا يوجد أي فائض في الفروع الأخرى. يُرجى إصدار أمر شراء وتوريد للمورد المعتمد.",
+              canFulfillHub && !isPartialFromHub
+                ? "الكمية المطلوبة متوفرة بالكامل داخل المخزن الرئيسي. الشحن يخرج الكمية فعلياً من رصيده ويحجزها في «مخزون تحت التحويل» حتى يفحصها الفرع ويعدّها."
+                : isPartialFromHub
+                  ? `المخزن الرئيسي يغطي ${hubDispatchQty} ${req.unit} فقط من أصل ${req.requestedQty} المطلوبة. يمكنك شحن المتاح الآن ثم تغطية الباقي بمناقلة أو أمر شراء.`
+                  : hasSurplus
+                    ? `تنبيه التوزيع الذكي: المخزن الرئيسي لا يملك رصيداً كافياً، لكن يوجد فائض فوق حد الأمان في (${availability.surplusBranches
+                        .map((b) => `${b.warehouseName}: قابل للمناقلة ${b.transferableQty} ${req.unit}`)
+                        .join(" · ")}). المناقلة الداخلية توفّر الشراء الخارجي ولا تُنزل الفرع المصدر تحت حده الأدنى.`
+                    : "الصنف غير متوفر بالمخزن الرئيسي ولا يوجد فائض قابل للمناقلة في الفروع الأخرى. يُرجى إصدار أمر شراء وتوريد للمورد المعتمد.",
             ),
             el("div", { class: "flex flex-wrap items-center gap-2.5 pt-2 border-t border-brand-500/20" }, [
               canFulfillHub
                 ? button({
-                    label: `صرف فوري وشحن من المخزن الرئيسي (${req.requestedQty} ${req.unit})`,
+                    label: `صرف فوري وشحن من المخزن الرئيسي (${hubDispatchQty} ${req.unit})`,
                     variant: "primary",
                     size: "sm",
                     icon: "check",
-                    onClick: async () => {
-                      await fulfillFromHub(req.id, { dispatchedQty: req.requestedQty });
-                      close();
-                      ctx.refresh?.();
-                      toast.success("تم اعتماد الصرف والشحن من المخزن الرئيسي وتثبيت الختم الزمني");
-                    },
+                    onClick: () =>
+                      runAction(
+                        async () => {
+                          await fulfillFromHub(req.id, { dispatchedQty: hubDispatchQty });
+                          close();
+                          ctx.refresh?.();
+                        },
+                        {
+                          success:
+                            `تم شحن ${hubDispatchQty} ${req.unit} وخروجها من رصيد المخزن الرئيسي ` +
+                            "وحجزها تحت التحويل بختم زمني",
+                        },
+                      ),
                   })
                 : null,
               hasSurplus
                 ? button({
-                    label: `مناقلة وتحويل من ${availability.surplusBranches[0].warehouseName}`,
+                    label: `مناقلة ${surplusDispatchQty} ${req.unit} من ${topSurplus.warehouseName}`,
                     variant: "secondary",
                     size: "sm",
                     icon: "refresh",
-                    onClick: async () => {
-                      await fulfillByBranchTransfer(req.id, {
-                        sourceBranchId: availability.surplusBranches[0].warehouseId,
-                        dispatchedQty: req.requestedQty,
-                      });
-                      close();
-                      ctx.refresh?.();
-                      toast.success("تم اعتماد المناقلة الداخلية بين الفروع وتوفير الشراء");
-                    },
+                    onClick: () =>
+                      runAction(
+                        async () => {
+                          await fulfillByBranchTransfer(req.id, {
+                            sourceBranchId: topSurplus.warehouseId,
+                            dispatchedQty: surplusDispatchQty,
+                          });
+                          close();
+                          ctx.refresh?.();
+                        },
+                        { success: "تم اعتماد المناقلة الداخلية وخروج الكمية من رصيد الفرع المصدر" },
+                      ),
                   })
                 : null,
               button({
@@ -453,17 +482,126 @@ async function openRequisitionDetailsModal(reqId, ctx, { warehouses }) {
                 variant: canFulfillHub ? "ghost" : "primary",
                 size: "sm",
                 icon: "plus",
-                onClick: async () => {
-                  await orderFromSupplier(req.id, { supplierId: 2 });
-                  close();
-                  ctx.refresh?.();
-                  toast.success("تم إصدار طلبية التوريد للمورد المعتمد بنجاح");
+                onClick: () =>
+                  runAction(
+                    async () => {
+                      await orderFromSupplier(req.id, { supplierId: 2 });
+                      close();
+                      ctx.refresh?.();
+                    },
+                    { success: "تم إصدار طلبية التوريد للمورد المعتمد بنجاح" },
+                  ),
+              }),
+              button({
+                label: "رفض / إلغاء الطلب",
+                variant: "ghost",
+                size: "sm",
+                icon: "close",
+                onClick: () => {
+                  const reason = window.prompt("سبب الرفض أو الإلغاء (إلزامي للتوثيق):");
+                  if (!reason?.trim()) return;
+                  runAction(
+                    async () => {
+                      await rejectRequisition(req.id, { reason });
+                      close();
+                      ctx.refresh?.();
+                    },
+                    { success: "تم رفض الطلب وتوثيق السبب في المسار الزمني" },
+                  );
                 },
               }),
             ]),
           ],
         );
         content.appendChild(balanceCard);
+      }
+
+      /* 2.ب) كارت وصول طلبية المورد للمخزن الرئيسي */
+      if (req.status === "supplier_ordered") {
+        const supQty = el("input", {
+          type: "number",
+          class:
+            "w-32 px-3 py-1.5 rounded-lg border border-line bg-white dark:bg-slate-800 text-ink text-center font-bold num shadow-2xs focus:border-brand-500",
+          value: String(req.requestedQty),
+          min: "1",
+        });
+
+        const supCost = el("input", {
+          type: "number",
+          step: "0.01",
+          class:
+            "w-36 px-3 py-1.5 rounded-lg border border-line bg-white dark:bg-slate-800 text-ink text-center num shadow-2xs focus:border-brand-500",
+          placeholder: "سعر الوحدة",
+        });
+
+        const supBatch = el("input", {
+          type: "text",
+          class:
+            "flex-1 min-w-40 px-3 py-1.5 rounded-lg border border-line bg-white dark:bg-slate-800 text-ink text-xs shadow-2xs focus:border-brand-500",
+          placeholder: "رقم التشغيلة (مطلوب للأصناف المتتبَّعة بالتشغيلات)",
+        });
+
+        const supExpiry = el("input", {
+          type: "date",
+          class:
+            "px-3 py-1.5 rounded-lg border border-line bg-white dark:bg-slate-800 text-ink text-xs shadow-2xs focus:border-brand-500",
+        });
+
+        content.appendChild(
+          el(
+            "div",
+            {
+              class:
+                "p-5 rounded-2xl border-2 border-brand-500/25 bg-brand-50/40 dark:bg-brand-950/20 space-y-4 shadow-2xs",
+            },
+            [
+              el("div", { class: "flex flex-wrap items-center justify-between gap-3" }, [
+                el("h4", { class: "font-bold text-ink text-sm flex items-center gap-2" }, [
+                  el("span", { class: "text-base" }, "🚚"),
+                  "تسجيل وصول طلبية المورد للمخزن الرئيسي",
+                ]),
+                badge(`أمر شراء: ${req.poReference ?? "—"}`, { tone: "brand", size: "sm", dot: true }),
+              ]),
+              el(
+                "p",
+                { class: "text-xs text-muted leading-relaxed" },
+                `المورد: ${req.supplierName ?? "المورد المعتمد"}. الكمية الواردة تدخل مخزون الرئيسي ` +
+                  "بإذن إضافة حقيقي بكل أثره: تقييم، وترحيل محاسبي، ومراجعة سعر إن اختلف سعر الشراء. " +
+                  "بعدها يصبح الطلب جاهزاً للشحن للفرع الطالب.",
+              ),
+              el("div", { class: "flex flex-wrap items-center gap-3 pt-1" }, [
+                el("label", { class: "text-xs font-semibold text-ink" }, "الوارد فعلاً:"),
+                supQty,
+                el("label", { class: "text-xs font-semibold text-ink" }, "سعر الفاتورة:"),
+                supCost,
+                supBatch,
+                supExpiry,
+              ]),
+              el("div", { class: "flex items-center gap-2.5 pt-2 border-t border-brand-500/20" }, [
+                button({
+                  label: "تسجيل الوصول بإذن إضافة",
+                  variant: "primary",
+                  size: "sm",
+                  icon: "check",
+                  onClick: () =>
+                    runAction(
+                      async () => {
+                        await receiveSupplierOrderAtHub(req.id, {
+                          receivedQty: Number(supQty.value),
+                          unitCost: supCost.value ? Number(supCost.value) : undefined,
+                          batchNumber: supBatch.value.trim() || undefined,
+                          expiryDate: supExpiry.value || undefined,
+                        });
+                        close();
+                        ctx.refresh?.();
+                      },
+                      { success: "تم تسجيل وصول طلبية المورد بإذن إضافة ودخولها مخزون الرئيسي" },
+                    ),
+                }),
+              ]),
+            ],
+          ),
+        );
       }
 
       /* 3) شاشة فحص واستلام الفرع (Branch Receiving & Discrepancy Inspection Card) */
@@ -504,7 +642,9 @@ async function openRequisitionDetailsModal(reqId, ctx, { warehouses }) {
             el(
               "p",
               { class: "text-xs text-muted leading-relaxed" },
-              "أمين مخزن الفرع: قم بعد الحبات الفعلية المستلمة. إذا كان هناك عجز أو كسر، اكتب المستلم الفعلي وسيتم توثيق العجز لحظياً بالساعة وإضافته فقط لعهدتك.",
+              "أمين مخزن الفرع: قم بعدّ الكمية الفعلية المستلمة. المستلم فعلاً هو وحده ما يدخل رصيد " +
+                "مخزنك. أي عجز يُثبَّت لحظياً بالساعة ويُعترف به خسارة في «عجز وتلف المخزون» — " +
+                "لا يُحمَّل على عهدتك.",
             ),
             el("div", { class: "flex flex-wrap items-center gap-3 pt-1" }, [
               el("label", { class: "text-xs font-semibold text-ink" }, "المستلم الفعلي:"),
@@ -512,7 +652,24 @@ async function openRequisitionDetailsModal(reqId, ctx, { warehouses }) {
               el("label", { class: "text-xs font-semibold text-ink" }, "ملاحظات الفحص:"),
               notesInput,
             ]),
-            el("div", { class: "flex items-center gap-2.5 pt-2 border-t border-warning-500/20" }, [
+            el("div", { class: "flex flex-wrap items-center gap-2.5 pt-2 border-t border-warning-500/20" }, [
+              req.status === "in_transit"
+                ? button({
+                    label: "تسجيل وصول الشحنة للفرع (بدء العد)",
+                    variant: "secondary",
+                    size: "sm",
+                    icon: "truck",
+                    onClick: () =>
+                      runAction(
+                        async () => {
+                          await markShipmentArrivedAtBranch(req.id, {});
+                          close();
+                          ctx.refresh?.();
+                        },
+                        { success: "تم تثبيت لحظة وصول الشحنة للفرع وبدء الفحص والعد" },
+                      ),
+                  })
+                : null,
               button({
                 label: "اعتماد استلام مطابق 100%",
                 variant: "success",
@@ -532,7 +689,7 @@ async function openRequisitionDetailsModal(reqId, ctx, { warehouses }) {
                 label: "إثبات استلام مع عجز / خلاف رقابي",
                 variant: "danger",
                 size: "sm",
-                icon: "alert",
+                icon: "warning",
                 onClick: async () => {
                   const val = Number(qtyInput.value);
                   const dispatched = Number(req.dispatchedQty || req.requestedQty);

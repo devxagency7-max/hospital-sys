@@ -29,6 +29,7 @@ export const navigation = [
     icon: "users",
     permission: "reception.view",
     children: [
+      { label: "إشغال الغرف والأسرّة", path: "/reception/occupancy", permission: "reception.view" },
       { label: "استعلام وسداد حسابات المرضى", path: "/reception", permission: "reception.view" },
       { label: "سندات قبض ودفعات الاستقبال", path: "/reception/receipts", permission: "reception.receipt" },
     ],
@@ -138,8 +139,10 @@ export const navigation = [
     permission: "inv.view",
     children: [
       { label: "طلبات النواقص والتوريد", path: "/inv/requisitions", permission: "inv.view" },
+      { label: "صرف أدوية لمريض", path: "/inv/dispense", permission: "inv.issue.create" },
       { label: "حركات المخزون", path: "/inv/movements", permission: "inv.view" },
       { label: "الأصناف والمخزون", path: "/inv/items", permission: "inv.view" },
+      { label: "مطابقة فواتير الموردين", path: "/inv/invoice-matching", permission: "fin.supplier.invoice" },
       { label: "مراجعة وتسعير الأصناف", path: "/inv/price-reviews", permission: "pricing.manage" },
       { label: "المستودعات والفروع", path: "/inv/warehouses", permission: "inv.view" },
     ],

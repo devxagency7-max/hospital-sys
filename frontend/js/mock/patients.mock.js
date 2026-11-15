@@ -57,6 +57,268 @@ export const insuranceProviders = [
 ];
 
 /* ============================================================================
+   1.ب شرائح التعريفة والعملات
+
+   ═══════════════════════════════════════════════════════════════════════════
+    الخدمة الواحدة لها أكثر من سعر — والسعر ليس صفةً للخدمة وحدها.
+
+    كان لكل خدمة سعر واحد (`price`)، والتأمين مجرد «نسبة تغطية» على المريض.
+    هذا يَعجز عن ثلاث حقائق تشغيلية في أي مستشفى:
+      1. سعر المريض النقدي ≠ السعر المتعاقد عليه مع شركة التأمين.
+      2. المريض الوافد (غير المقيم بالدولة) له تعريفة مستقلة أعلى، وكثيرًا
+         ما تكون بعملة أجنبية.
+      3. المريض الخارجي (عيادات) والداخلي (مُنوَّم) قد يختلفان في تعريفة
+         نفس الإجراء.
+
+    فالتعريفة = (شريحة × خدمة) → سعر. والشريحة تُشتق من نوع المريض، ثم
+    تُترجم لسعر واحد محسوم عند إصدار الفاتورة.
+   ═══════════════════════════════════════════════════════════════════════════
+   ============================================================================ */
+
+/**
+ * شرائح التعريفة.
+ *
+ * `multiplier` معامل على السعر الأساسي في دليل الخدمات — يُستخدم حين لا
+ * يوجد سعر مُعلَن صريح للشريحة. وجوده يعني أن إضافة خدمة جديدة لا تُجبر
+ * أحدًا على إدخال أربعة أسعار لها قبل أن تعمل.
+ *
+ * `currency` عملة التعريفة: الشرائح المحلية بالجنيه، وشريحة الوافد بالدولار
+ * — فيرى المريض سعره بعملته ويُرحَّل القيد بالجنيه بسعر يوم الفاتورة.
+ */
+export const tariffTiers = [
+  {
+    id: 1,
+    code: "TIER-CASH",
+    name: "نقدي / خاص",
+    nameEn: "Self-Pay",
+    patientTypes: ["cash"],
+    multiplier: 1,
+    currency: "EGP",
+    isDefault: true,
+    notes: "السعر المُعلَن في دليل الخدمات — الأساس الذي تُقاس عليه الشرائح.",
+  },
+  {
+    id: 2,
+    code: "TIER-INS",
+    name: "تأمين وجهات متعاقدة",
+    nameEn: "Insurance & Contracted",
+    patientTypes: ["insurance"],
+    multiplier: 1.1,
+    currency: "EGP",
+    isDefault: false,
+    notes: "التعريفة المتعاقد عليها مع شركات التأمين والنقابات — أعلى من النقدي مقابل الأجل.",
+  },
+  {
+    id: 3,
+    code: "TIER-FOREIGN",
+    name: "وافد / سياحة علاجية",
+    nameEn: "International Patient",
+    patientTypes: ["foreign"],
+    multiplier: 1.6,
+    currency: "USD",
+    isDefault: false,
+    notes: "تعريفة المرضى الوافدين بالدولار — تُحوَّل للجنيه بسعر يوم إصدار الفاتورة.",
+  },
+  {
+    id: 4,
+    code: "TIER-STAFF",
+    name: "العاملون وذووهم",
+    nameEn: "Staff & Dependents",
+    patientTypes: ["staff"],
+    multiplier: 0.6,
+    currency: "EGP",
+    isDefault: false,
+    notes: "تعريفة مخفّضة للعاملين بالمنشأة وأسرهم.",
+  },
+];
+
+/**
+ * أسعار مُعلَنة صريحة لشريحة/خدمة بعينها — تغلب على المعامل.
+ *
+ * المعامل تقدير معقول، لكن بعض الخدمات تُتفاوض عليها بالاسم (جراحة قلب مع
+ * شركة تأمين مثلًا). هذا الجدول هو مكان الاتفاق الصريح، وغيابه ليس خطأً.
+ */
+export const tariffPrices = [
+  /* --- جراحة القلب المفتوح: متفاوض عليها صراحة --- */
+  { id: 1, tierId: 2, serviceId: 10, price: 72_000, currency: "EGP", notes: "اتفاق إطاري مع شركات التأمين" },
+  { id: 2, tierId: 3, serviceId: 10, price: 2_400, currency: "USD", notes: "باقة سياحة علاجية شاملة" },
+
+  /* --- القسطرة العلاجية --- */
+  { id: 3, tierId: 2, serviceId: 11, price: 35_500, currency: "EGP", notes: null },
+  { id: 4, tierId: 3, serviceId: 11, price: 1_250, currency: "USD", notes: null },
+
+  /* --- الإقامة بالجناح الملكي للوافدين --- */
+  { id: 5, tierId: 3, serviceId: 1, price: 160, currency: "USD", notes: "إقامة يومية بالجناح الملكي" },
+
+  /* --- الكشف الاستشاري --- */
+  { id: 6, tierId: 3, serviceId: 16, price: 35, currency: "USD", notes: null },
+  { id: 7, tierId: 4, serviceId: 16, price: 150, currency: "EGP", notes: "كشف العاملين" },
+];
+
+/**
+ * أسعار الصرف المُعلَنة.
+ *
+ * ═══════════════════════════════════════════════════════════════════════════
+ *  قاعدة مُلزِمة: **الفاتورة الصادرة تحتفظ بسعر يوم إصدارها إلى الأبد.**
+ *
+ *  السعر الحالي يخص الحركة القادمة فقط. إعادة تقييم فاتورة قديمة بسعر
+ *  اليوم تُغيّر إيرادًا اعتُرف به في فترة مُقفلة — وهو تحريف للنتيجة لا
+ *  تحديثٌ لها. فرق العملة يُعترف به بندًا مستقلًا عند التحصيل، لا بتعديل
+ *  الإيراد الأصلي.
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+export const exchangeRates = [
+  { id: 1, currency: "USD", code: "USD", name: "دولار أمريكي", symbol: "$", rate: 48.65, date: "2026-11-01", source: "البنك المركزي المصري" },
+  { id: 2, currency: "USD", code: "USD", name: "دولار أمريكي", symbol: "$", rate: 48.9,  date: "2026-11-05", source: "البنك المركزي المصري" },
+  { id: 3, currency: "USD", code: "USD", name: "دولار أمريكي", symbol: "$", rate: 49.15, date: "2026-11-07", source: "البنك المركزي المصري" },
+  { id: 4, currency: "EUR", code: "EUR", name: "يورو",          symbol: "€", rate: 52.8,  date: "2026-11-01", source: "البنك المركزي المصري" },
+  { id: 5, currency: "EUR", code: "EUR", name: "يورو",          symbol: "€", rate: 53.4,  date: "2026-11-07", source: "البنك المركزي المصري" },
+  { id: 6, currency: "SAR", code: "SAR", name: "ريال سعودي",    symbol: "﷼", rate: 13.08, date: "2026-11-07", source: "البنك المركزي المصري" },
+  { id: 7, currency: "AED", code: "AED", name: "درهم إماراتي",  symbol: "د.إ", rate: 13.38, date: "2026-11-07", source: "البنك المركزي المصري" },
+  { id: 8, currency: "KWD", code: "KWD", name: "دينار كويتي",   symbol: "د.ك", rate: 159.4, date: "2026-11-07", source: "البنك المركزي المصري" },
+];
+
+/** العملة الأساسية للمنشأة — كل القيود تُرحَّل بها. */
+export const BASE_CURRENCY = "EGP";
+
+/* ============================================================================
+   2.ب أنواع الغرف والأسرّة والوحدات القابلة للحجز
+
+   ═══════════════════════════════════════════════════════════════════════════
+    الغرفة كيان مستقل، لا نصّ حر داخل سجل الإقامة.
+
+    قبل ذلك كانت الغرفة سلسلة نصية («جناح خاص 301») وسعرها رقمًا منسوخًا
+    بالإيد في كل سجل إقامة. أثر ذلك ثلاثة أخطاء لا تُكتشف إلا متأخرة:
+      1. لا يمكن بناء شاشة إشغال — لا يُعرف الفاضي من المشغول.
+      2. لا شيء يمنع حجز الغرفة نفسها لمريضين.
+      3. تعديل تعريفة الغرفة لا يَسري على الإقامات القائمة.
+
+    ولذلك: `roomTypes` تحمل التعريفة بالإشارة إلى خدمة في دليل الخدمات
+    (`serviceId`) ولا تُخزّن السعر مكرَّرًا، و`rooms` تحمل حالة الإشغال
+    اللحظية لكل وحدة قابلة للحجز.
+   ═══════════════════════════════════════════════════════════════════════════
+   ============================================================================ */
+
+/**
+ * أنواع وحدات الإقامة.
+ *
+ * `serviceId` يشاور على خدمة الإقامة اليومية في `hospitalServices` — وهي
+ * **المصدر الوحيد للسعر**. لا حقل `dailyRate` مخزَّن هنا: تعديل سعر الخدمة
+ * يسري فورًا على كل الوحدات من نوعها بلا تحديث ثانٍ.
+ *
+ * `nursingServiceId` خدمة الإشراف الطبي والتمريض التي تُحمَّل مع الإقامة
+ * يوميًا — بعض الأنواع تدمجها في سعرها فتكون `null`.
+ */
+export const roomTypes = [
+  { id: 1, code: "RT-ROYAL",  name: "جناح ملكي فاخر",          category: "room", serviceId: 1, nursingServiceId: 4,    capacity: 1, department: "القسم الداخلي" },
+  { id: 2, code: "RT-SINGLE", name: "غرفة مفردة ممتازة",        category: "room", serviceId: 2, nursingServiceId: 4,    capacity: 1, department: "القسم الداخلي" },
+  { id: 3, code: "RT-DOUBLE", name: "غرفة مزدوجة مشتركة",       category: "room", serviceId: 3, nursingServiceId: 4,    capacity: 2, department: "القسم الداخلي" },
+  { id: 4, code: "RT-ICU",    name: "سرير عناية مركزة عامة",     category: "icu",  serviceId: 5, nursingServiceId: 8,    capacity: 1, department: "العناية المركزة" },
+  { id: 5, code: "RT-CCU",    name: "سرير عناية قلب (CCU)",      category: "icu",  serviceId: 6, nursingServiceId: 8,    capacity: 1, department: "العناية المركزة" },
+  { id: 6, code: "RT-NICU",   name: "حضّانة مبتسرين (NICU)",     category: "icu",  serviceId: 7, nursingServiceId: null, capacity: 1, department: "المبتسرين" },
+];
+
+/**
+ * الوحدات القابلة للحجز — غرفة كاملة أو سرير داخل وحدة عناية.
+ *
+ * `status` هو حالة الإشغال اللحظية: `vacant` فاضي · `occupied` مشغول ·
+ * `cleaning` تحت التنظيف والتجهيز · `maintenance` خارج الخدمة.
+ *
+ * **لا تُكتب `occupied` هنا يدويًا.** الإشغال يُسقَط أدناه من الإقامات
+ * القائمة وحدها، فلا توجد وحدة «مشغولة» لا يُعرف من يشغلها.
+ */
+export const rooms = (() => {
+  const out = [];
+  let id = 0;
+
+  const push = (row) => {
+    id += 1;
+    out.push({
+      id,
+      currentAdmissionId: null,
+      currentPatientId: null,
+      currentPatientName: null,
+      occupiedSince: null,
+      notes: null,
+      ...row,
+    });
+  };
+
+  /* --- الدور الثالث: الأجنحة الملكية والمفردة الممتازة --- */
+  push({ code: "301", name: "جناح خاص 301", roomTypeId: 1, floor: "الدور الثالث", wing: "الجناح الشرقي", status: "vacant" });
+  push({ code: "302", name: "جناح خاص 302", roomTypeId: 1, floor: "الدور الثالث", wing: "الجناح الشرقي", status: "vacant" });
+  push({ code: "303", name: "جناح خاص 303", roomTypeId: 1, floor: "الدور الثالث", wing: "الجناح الغربي", status: "cleaning" });
+  push({ code: "304", name: "غرفة مفردة 304", roomTypeId: 2, floor: "الدور الثالث", wing: "الجناح الغربي", status: "vacant" });
+  push({ code: "305", name: "غرفة مفردة 305", roomTypeId: 2, floor: "الدور الثالث", wing: "الجناح الغربي", status: "vacant" });
+  push({ code: "306", name: "غرفة مفردة 306", roomTypeId: 2, floor: "الدور الثالث", wing: "الجناح الغربي", status: "maintenance", notes: "إصلاح تكييف" });
+
+  /* --- الدور الثاني: مفردة ومزدوجة --- */
+  push({ code: "201", name: "غرفة مفردة 201", roomTypeId: 2, floor: "الدور الثاني", wing: "الجناح الشرقي", status: "vacant" });
+  push({ code: "202", name: "غرفة مفردة 202", roomTypeId: 2, floor: "الدور الثاني", wing: "الجناح الشرقي", status: "vacant" });
+  push({ code: "203", name: "غرفة مفردة 203", roomTypeId: 2, floor: "الدور الثاني", wing: "الجناح الشرقي", status: "vacant" });
+  push({ code: "204", name: "غرفة مفردة 204", roomTypeId: 2, floor: "الدور الثاني", wing: "الجناح الشرقي", status: "vacant" });
+  push({ code: "205", name: "غرفة مزدوجة 205", roomTypeId: 3, floor: "الدور الثاني", wing: "الجناح الغربي", status: "vacant" });
+  push({ code: "206", name: "غرفة مزدوجة 206", roomTypeId: 3, floor: "الدور الثاني", wing: "الجناح الغربي", status: "vacant" });
+  push({ code: "207", name: "غرفة مزدوجة 207", roomTypeId: 3, floor: "الدور الثاني", wing: "الجناح الغربي", status: "cleaning" });
+  push({ code: "208", name: "غرفة مزدوجة 208", roomTypeId: 3, floor: "الدور الثاني", wing: "الجناح الغربي", status: "vacant" });
+
+  /* --- الدور الأول: مزدوجة اقتصادية --- */
+  push({ code: "101", name: "غرفة 101", roomTypeId: 3, floor: "الدور الأول", wing: "الجناح الشرقي", status: "vacant" });
+  push({ code: "102", name: "غرفة 102", roomTypeId: 3, floor: "الدور الأول", wing: "الجناح الشرقي", status: "vacant" });
+  push({ code: "103", name: "غرفة 103", roomTypeId: 3, floor: "الدور الأول", wing: "الجناح الشرقي", status: "vacant" });
+  push({ code: "104", name: "غرفة 104", roomTypeId: 3, floor: "الدور الأول", wing: "الجناح الغربي", status: "vacant" });
+  push({ code: "105", name: "غرفة 105", roomTypeId: 3, floor: "الدور الأول", wing: "الجناح الغربي", status: "maintenance", notes: "تجديد دهانات" });
+  push({ code: "106", name: "غرفة 106", roomTypeId: 3, floor: "الدور الأول", wing: "الجناح الغربي", status: "vacant" });
+  push({ code: "107", name: "غرفة 107", roomTypeId: 3, floor: "الدور الأول", wing: "الجناح الغربي", status: "vacant" });
+  push({ code: "108", name: "غرفة 108", roomTypeId: 3, floor: "الدور الأول", wing: "الجناح الغربي", status: "cleaning" });
+
+  /* --- العناية المركزة العامة --- */
+  for (let n = 1; n <= 6; n += 1) {
+    const code = `ICU-${String(n).padStart(2, "0")}`;
+    push({
+      code,
+      name: `سرير عناية ${code}`,
+      roomTypeId: 4,
+      floor: "الدور الأرضي",
+      wing: "وحدة العناية المركزة",
+      status: n === 5 ? "maintenance" : "vacant",
+      notes: n === 5 ? "صيانة جهاز مراقبة" : null,
+    });
+  }
+
+  /* --- عناية القلب --- */
+  for (let n = 1; n <= 4; n += 1) {
+    const code = `CCU-${String(n).padStart(2, "0")}`;
+    push({
+      code,
+      name: `سرير عناية قلب ${code}`,
+      roomTypeId: 5,
+      floor: "الدور الأرضي",
+      wing: "وحدة عناية القلب",
+      status: "vacant",
+    });
+  }
+
+  /* --- حضّانات المبتسرين --- */
+  for (let n = 1; n <= 5; n += 1) {
+    const code = `NICU-${String(n).padStart(2, "0")}`;
+    push({
+      code,
+      name: `حضّانة ${code}`,
+      roomTypeId: 6,
+      floor: "الدور الأول",
+      wing: "وحدة المبتسرين",
+      status: "vacant",
+    });
+  }
+
+  return out;
+})();
+
+/** فهرس سريع بالكود — يُستخدم في ربط البيانات التجريبية ببعضها. */
+const roomByCode = new Map(rooms.map((room) => [room.code, room]));
+
+/* ============================================================================
    3. سجل المرضى
    ============================================================================ */
 
@@ -80,14 +342,47 @@ const PATIENT_NAMES = [
 
 export const patients = PATIENT_NAMES.map(([name, gender], index) => {
   const id = index + 1;
-  const isInsurance = index % 3 !== 0;
+  /*
+   * نوع المريض هو ما يُحدِّد شريحة تعريفته. ثلاثة أنواع محلية ونوع وافد:
+   *   · `insurance` تأمين أو جهة متعاقدة
+   *   · `cash`      نقدي خاص
+   *   · `foreign`   وافد / سياحة علاجية — تعريفة بالدولار
+   *   · `staff`     من العاملين بالمنشأة أو ذويهم
+   *
+   * النوع صفة في ملف المريض لا قرار يُتخذ عند كل فاتورة: ترك الشريحة
+   * لاختيار الموظف وقت الفوترة هو ما يُنتج مريضًا واحدًا بثلاث تعريفات.
+   */
+  const FOREIGN_INDEXES = [3, 10];
+  const STAFF_INDEXES = [7];
+
+  const patientType = FOREIGN_INDEXES.includes(index)
+    ? "foreign"
+    : STAFF_INDEXES.includes(index)
+      ? "staff"
+      : index % 3 !== 0
+        ? "insurance"
+        : "cash";
+
+  const isInsurance = patientType === "insurance";
+  const isForeign = patientType === "foreign";
   const provider = isInsurance ? insuranceProviders[index % insuranceProviders.length] : null;
+
+  const FOREIGN_PROFILES = [
+    { nationality: "السعودية", currency: "SAR", passport: "S4821907" },
+    { nationality: "الكويت", currency: "KWD", passport: "K1192384" },
+    { nationality: "الإمارات", currency: "AED", passport: "A7730192" },
+    { nationality: "ليبيا", currency: "USD", passport: "L2048813" },
+  ];
+  const foreignProfile = isForeign ? FOREIGN_PROFILES[index % FOREIGN_PROFILES.length] : null;
   const coverageRate = provider ? provider.defaultCoverage : 0;
   
   // حالات المرضى: محجوز، طوارئ/عيادات، تم الخروج
   const status = index < 6 ? "inpatient" : index < 11 ? "discharged" : "outpatient";
-  const roomTypes = ["جناح خاص 301", "غرفة مفردة 204", "سرير عناية ICU-02", "سرير عناية CCU-01", "غرفة 108", "سرير عناية NICU-03"];
-  const room = status === "inpatient" ? roomTypes[index % roomTypes.length] : null;
+  /*
+   * الغرفة الحالية تُسنَد لاحقًا من الإقامة القائمة (انظر «توحيد حالة المريض»
+   * أدناه). لا تُنتقى هنا من قائمة أسماء، فيُنسب مريض لغرفة لا إقامة له فيها.
+   */
+  const room = null;
 
   return {
     id,
@@ -98,7 +393,25 @@ export const patients = PATIENT_NAMES.map(([name, gender], index) => {
     phone: `01${random.pick(["0", "1", "2", "5"])}${random.int(10000000, 99999999)}`,
     birthDate: `19${random.int(60, 98)}-${String(random.int(1, 12)).padStart(2, "0")}-${String(random.int(1, 28)).padStart(2, "0")}`,
     bloodGroup: random.pick(["A+", "B+", "O+", "AB+", "O-", "A-"]),
+    /** نوع المريض — يُحدِّد شريحة التعريفة عند الفوترة. */
+    patientType,
+    patientTypeLabel:
+      patientType === "insurance"
+        ? "تأمين / جهة متعاقدة"
+        : patientType === "foreign"
+          ? "وافد / سياحة علاجية"
+          : patientType === "staff"
+            ? "من العاملين وذويهم"
+            : "نقدي خاص",
+
+    /** محفوظ للتوافق مع الشاشات القائمة — مشتق من `patientType`. */
     insuranceType: isInsurance ? "insurance" : "cash",
+
+    /* --- بيانات الوافد --- */
+    isForeign,
+    nationality: foreignProfile?.nationality ?? "مصر",
+    passportNumber: foreignProfile?.passport ?? null,
+    preferredCurrency: foreignProfile?.currency ?? "EGP",
     insuranceProvider: provider?.name ?? "نقدي / خاص",
     insuranceProviderId: provider?.id ?? null,
     policyNumber: isInsurance ? `POL-${random.int(100000, 999999)}` : "—",
@@ -117,7 +430,13 @@ export const patients = PATIENT_NAMES.map(([name, gender], index) => {
     totalBilled: 0, // محسوبة تالياً
     totalPaid: 0,
     balance: 0,
-    notes: isInsurance ? `تغطية تأمينية معتمدة بنسبة ${Math.round(coverageRate * 100)}%` : "مريض علاج نقدي خاص",
+    notes: isInsurance
+      ? `تغطية تأمينية معتمدة بنسبة ${Math.round(coverageRate * 100)}%`
+      : isForeign
+        ? `مريض وافد — ${foreignProfile.nationality} · جواز ${foreignProfile.passport}`
+        : patientType === "staff"
+          ? "من العاملين بالمنشأة — تعريفة مخفّضة"
+          : "مريض علاج نقدي خاص",
   };
 });
 
@@ -227,6 +546,218 @@ export const admissions = [
     totalCost: 42000 + 1600 * 7 + 2600 + 1450,
   },
 ];
+
+/* ----------------------------------------------------------------------------
+   ربط الإقامات بالوحدات القابلة للحجز وتثبيت حالة الإشغال
+
+   سجل الإقامة كان يحمل اسم الغرفة نصًّا. نربطه الآن بـ `roomId` حقيقي،
+   ونُسقط حالة الإشغال على `rooms` من الإقامات القائمة — فتصبح شاشة الإشغال
+   قراءةً مباشرة للواقع لا تخمينًا من نصوص.
+   ---------------------------------------------------------------------------- */
+
+/** يستخرج كود الوحدة من الاسم النصي القديم («جناح خاص 301» → «301»). */
+function roomCodeFromLabel(label) {
+  const text = String(label || "");
+  const unitMatch = text.match(/(ICU|CCU|NICU)-\d{2}/);
+  if (unitMatch) return unitMatch[0];
+  const numberMatch = text.match(/\d{3}/);
+  return numberMatch ? numberMatch[0] : null;
+}
+
+/**
+ * يُعيد تاريخًا بإزاحة أيام عن التاريخ المرجعي.
+ * `shiftDays(-6)` = قبل ستة أيام من «اليوم» في بيانات العرض.
+ */
+function shiftDays(days) {
+  const d = new Date(REFERENCE_DATE.getTime());
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+/*
+ * الإقامات القائمة تُثبَّت على التاريخ المرجعي: مريض «مقيم سبعة أيام» يعني
+ * أنه دخل قبل ستة أيام من اليوم، لا في تاريخ ثابت يصير مستقبليًا مع الوقت.
+ * (كان ADM-2026-0004 بتاريخ دخول لاحق لليوم المرجعي — إقامة لم تبدأ بعد
+ * ومع ذلك محسوب لها ثلاثة أيام وإجمالي مالي.)
+ */
+for (const admission of admissions) {
+  if (admission.status === "active") {
+    const nights = Math.max(1, Number(admission.daysCount || 1));
+    admission.admissionDate = shiftDays(-(nights - 1));
+    admission.dischargeDate = null;
+  }
+
+  /*
+   * `daysCount` و`totalCost` يُشتقّان من التواريخ ومن دفتر الاستحقاق — لا
+   * يُخزَّنان. تركهما مخزَّنين هو ما جعل الإجمالي لا يطابق سطوره أبدًا.
+   */
+  delete admission.daysCount;
+  delete admission.totalCost;
+}
+
+for (const admission of admissions) {
+  const room = roomByCode.get(roomCodeFromLabel(admission.roomNumber));
+  const roomType = room ? roomTypes.find((t) => t.id === room.roomTypeId) : null;
+
+  admission.roomId = room?.id ?? null;
+  admission.roomCode = room?.code ?? null;
+  admission.roomTypeId = roomType?.id ?? null;
+  admission.roomTypeName = roomType?.name ?? null;
+
+  /* الإشغال يُسقط على الوحدة من الإقامة القائمة فقط. */
+  if (room && admission.status === "active") {
+    room.status = "occupied";
+    room.currentAdmissionId = admission.id;
+    room.currentPatientId = admission.patientId;
+    room.currentPatientName = admission.patientName;
+    room.occupiedSince = admission.admissionDate;
+  }
+}
+
+/* ----------------------------------------------------------------------------
+   توحيد حالة المريض مع إقامته
+
+   حالة المريض وغرفته الحالية ليستا بيانات مستقلة — هما انعكاس لوجود إقامة
+   قائمة أو عدمه. فصلهما يُنتج «مريض مقيم في غرفة 108» بينما الغرفة فاضية
+   في شاشة الإشغال، وهو تناقض لا يستطيع موظف الاستقبال تفسيره.
+   ---------------------------------------------------------------------------- */
+
+const activeAdmissionByPatient = new Map(
+  admissions.filter((a) => a.status === "active").map((a) => [a.patientId, a]),
+);
+const anyAdmissionByPatient = new Map(admissions.map((a) => [a.patientId, a]));
+
+for (const patient of patients) {
+  const active = activeAdmissionByPatient.get(patient.id);
+
+  if (active) {
+    patient.status = "inpatient";
+    patient.statusLabel = "مقيم / منوّم";
+    patient.currentRoom = active.roomNumber;
+    patient.currentRoomId = active.roomId;
+    patient.currentAdmissionId = active.id;
+    patient.admissionDate = active.admissionDate;
+    patient.attendingDoctor = active.attendingDoctor ?? patient.attendingDoctor;
+    continue;
+  }
+
+  patient.currentRoom = null;
+  patient.currentRoomId = null;
+  patient.currentAdmissionId = null;
+
+  const past = anyAdmissionByPatient.get(patient.id);
+  if (past) {
+    patient.status = "discharged";
+    patient.statusLabel = "تم الخروج";
+    patient.admissionDate = past.admissionDate;
+  } else {
+    patient.status = "outpatient";
+    patient.statusLabel = "عيادات خارجية";
+    patient.admissionDate = null;
+  }
+}
+
+/* ============================================================================
+   4.أ دفتر استحقاق خدمات الإقامة (Admission Charges Ledger)
+
+   ═══════════════════════════════════════════════════════════════════════════
+    دفتر واحد لكل ما يُحمَّل على المريض خلال إقامته — لا حساب يدوي.
+
+    قبل ذلك كان إجمالي الإقامة رقمًا مضروبًا في ملف البيانات
+    (`3500 * 7 + 16500 + …`). النتيجة: يوم إقامة يُنسى فلا يُحصَّل، ودواء
+    يُصرف من الصيدلية فلا يظهر على الحساب.
+
+    الآن كل تحميل سطرٌ في هذا الدفتر، مهما كان مصدره:
+      · `bed_day`    رسم الإقامة اليومي — يولّده محرك الاستحقاق آليًا
+      · `nursing`    الإشراف الطبي والتمريض اليومي
+      · `medication` دواء أو مستهلك صُرف للمريض من الصيدلية
+      · `procedure`  عملية أو إجراء أو فحص
+    وإجمالي الإقامة يُشتق جمعًا لسطوره، ولا يُخزَّن أبدًا.
+   ═══════════════════════════════════════════════════════════════════════════
+   ============================================================================ */
+
+const TODAY_ISO = REFERENCE_DATE.toISOString().slice(0, 10);
+
+/** يُعيد قائمة التواريخ من البداية حتى النهاية (شاملة الطرفين). */
+function datesBetween(fromDate, toDate) {
+  const out = [];
+  const cursor = new Date(`${fromDate}T00:00:00.000Z`);
+  const end = new Date(`${toDate}T00:00:00.000Z`);
+  while (cursor <= end) {
+    out.push(cursor.toISOString().slice(0, 10));
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+  }
+  return out;
+}
+
+export const admissionCharges = (() => {
+  const out = [];
+  let id = 0;
+
+  const push = (row) => {
+    id += 1;
+    out.push({ id, invoiceId: null, invoicedAt: null, ...row });
+  };
+
+  for (const admission of admissions) {
+    const roomType = roomTypes.find((t) => t.id === admission.roomTypeId);
+    const roomService = roomType ? hospitalServices.find((s) => s.id === roomType.serviceId) : null;
+    const nursingService = roomType?.nursingServiceId
+      ? hospitalServices.find((s) => s.id === roomType.nursingServiceId)
+      : null;
+
+    /* الليالي المحمَّلة: من تاريخ الدخول حتى الخروج أو حتى اليوم. */
+    const lastDay = admission.dischargeDate ?? TODAY_ISO;
+    const stayDates = datesBetween(admission.admissionDate, lastDay);
+
+    for (const date of stayDates) {
+      if (roomService) {
+        push({
+          admissionId: admission.id,
+          admissionCode: admission.code,
+          patientId: admission.patientId,
+          patientName: admission.patientName,
+          date,
+          category: "bed_day",
+          categoryLabel: "رسم إقامة يومي",
+          serviceId: roomService.id,
+          serviceName: `${roomService.name} — ${admission.roomNumber}`,
+          quantity: 1,
+          unitPrice: roomService.price,
+          amount: roomService.price,
+          source: "bed_day_engine",
+          sourceRef: `${admission.code}/${date}/bed_day`,
+          createdBy: "محرك الاستحقاق اليومي",
+          createdAt: `${date}T00:05:00.000Z`,
+        });
+      }
+
+      if (nursingService) {
+        push({
+          admissionId: admission.id,
+          admissionCode: admission.code,
+          patientId: admission.patientId,
+          patientName: admission.patientName,
+          date,
+          category: "nursing",
+          categoryLabel: "إشراف طبي ورعاية تمريضية",
+          serviceId: nursingService.id,
+          serviceName: nursingService.name,
+          quantity: 1,
+          unitPrice: nursingService.price,
+          amount: nursingService.price,
+          source: "bed_day_engine",
+          sourceRef: `${admission.code}/${date}/nursing`,
+          createdBy: "محرك الاستحقاق اليومي",
+          createdAt: `${date}T00:05:00.000Z`,
+        });
+      }
+    }
+  }
+
+  return out;
+})();
+
 
 /* ============================================================================
    5. فواتير المرضى (Patient Invoices)

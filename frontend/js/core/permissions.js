@@ -87,9 +87,15 @@ export const PERMISSIONS = {
   "inv.return.create": "تسجيل مرتجع مخزني",
   "inv.count.manage": "إدارة الجرد الفعلي",
   "inv.valuation.view": "عرض تقييم المخزون",
+  "inv.dispense.patient": "صرف أدوية ومستلزمات لمريض",
+  "inv.requisition.create": "إنشاء طلب نواقص من فرع",
+  "inv.requisition.fulfill": "اعتماد وشحن طلبات النواقص",
+  "inv.requisition.inspect": "فحص واستلام الشحنات بالفرع",
 
   /* ===================== التسعير وهوامش الربح ===================== */
   "pricing.manage": "مراجعة واعتماد أسعار البيع وهوامش الربح للأصناف",
+  "pricing.tiers.manage": "إدارة شرائح التعريفة (نقدي · تأمين · وافد · عاملون)",
+  "pricing.fx.manage": "إعلان أسعار الصرف",
 
   /* ===================== حسابات المرضى والخدمات الطبية ===================== */
   "patients.view": "عرض حسابات المرضى والخدمات",
@@ -98,6 +104,8 @@ export const PERMISSIONS = {
   "patients.receipt": "تسجيل سندات قبض ودفعات المرضى",
   "patients.services.manage": "إدارة دليل الخدمات الطبية",
   "patients.admissions.manage": "إدارة الإقامة والعمليات والعناية",
+  "patients.rooms.manage": "إدارة الغرف والأسرّة وحالاتها",
+  "patients.charges.run": "تشغيل استحقاق الإقامة اليومي",
 
   /* ===================== الاستقبال واستعلام المرضى ===================== */
   "reception.view": "عرض موديول الاستقبال واستعلام المرضى",
@@ -138,7 +146,11 @@ export const ROLES = {
       "dashboard.view",
       "reception.*",
       "patients.view",
+      "patients.manage",
       "patients.receipt",
+      "patients.invoice",
+      "patients.admissions.manage",
+      "patients.rooms.manage",
     ],
   },
 
@@ -189,6 +201,48 @@ export const ROLES = {
     ],
   },
 
+  /**
+   * التمريض — يصرف الأدوية للمريض ولا يملك شيئًا آخر في المخزون.
+   *
+   * لا `inv.*` كاملة: الممرضة تصرف لمريضها، ولا تُسجّل استلامًا من مورد ولا
+   * تسوية جرد ولا تُعدّل صنفًا. منح `inv.*` لها يُعطيها سلطة أمين المخزن.
+   */
+  nurse: {
+    label: "تمريض وصرف للمريض",
+    permissions: [
+      "dashboard.view",
+      "inv.view",
+      "inv.dispense.patient",
+      "inv.issue.create",
+      "inv.requisition.create",
+      "patients.view",
+      "reception.view",
+    ],
+  },
+
+  /**
+   * الصيدلية الفرعية — تصرف للمريض وتطلب نواقصها وتستلم شحناتها.
+   *
+   * لا تملك `inv.receipt.create` (استلام من مورد) ولا `pricing.*`: التوريد
+   * الخارجي يدخل المخزن الرئيسي، والسعر قرار المحاسب ومدير الحسابات.
+   */
+  pharmacy: {
+    label: "أمين صيدلية فرعية",
+    permissions: [
+      "dashboard.view",
+      "inv.view",
+      "inv.dispense.patient",
+      "inv.issue.create",
+      "inv.transfer.create",
+      "inv.requisition.create",
+      "inv.requisition.inspect",
+      "inv.count.manage",
+      "patients.view",
+      "reports.view",
+      "reports.inventory.view",
+    ],
+  },
+
   billing: {
     label: "مسؤول حسابات المرضى والخدمات",
     permissions: [
@@ -217,6 +271,15 @@ let session = {
     jobTitle: "مدير النظام",
     role: "admin",
     departmentId: null,
+
+    /**
+     * المخازن التي يملك المستخدم التصرف فيها.
+     *
+     * `null` = بلا قيد (مدير النظام ومدير المخازن). ومصفوفة معرّفات = قيد
+     * فعلي: أمين مخزن فرع 1 لا يصرف من مخزن فرع 3 ولا يشحن منه، ولو فتح
+     * الشاشة. الصلاحية تقول «يملك الصرف»، والنطاق يقول «من أين».
+     */
+    warehouseIds: null,
   },
 };
 
@@ -261,6 +324,32 @@ export function can(permission) {
   }
 
   return false;
+}
+
+/* ==========================================================================
+   نطاق المخازن
+
+   الصلاحية والنطاق سؤالان مختلفان:
+     · `can("inv.issue.create")`        → هل يملك الصرف أصلًا؟
+     · `canAccessWarehouse(3)`          → هل يملك الصرف **من هذا المخزن**؟
+
+   الخلط بينهما يُنتج أمين مخزن فرع يصرف من مخزن فرع آخر لأن صلاحيته العامة
+   تسمح بالصرف. ولذلك فُصل النطاق في دالة مستقلة تُسأل بجوار الصلاحية.
+   ========================================================================== */
+
+/** المخازن المسموح بها للمستخدم الحالي — `null` تعني بلا قيد. */
+export function allowedWarehouseIds() {
+  const ids = session.user?.warehouseIds;
+  if (ids === null || ids === undefined) return null;
+  return ids.map(String);
+}
+
+/** هل يملك المستخدم الحالي التصرف في هذا المخزن؟ */
+export function canAccessWarehouse(warehouseId) {
+  const allowed = allowedWarehouseIds();
+  if (allowed === null) return true;
+  if (warehouseId === null || warehouseId === undefined) return false;
+  return allowed.includes(String(warehouseId));
 }
 
 export function canAny(permissions = []) {

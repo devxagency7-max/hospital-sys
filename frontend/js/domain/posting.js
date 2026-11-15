@@ -87,6 +87,10 @@ export const SourceType = Object.freeze({
   INVENTORY_ADJUSTMENT: "inventory_adjustment",
   INVENTORY_RETURN: "inventory_return",
   INVENTORY_TRANSFER: "inventory_transfer",
+  INVENTORY_DISPATCH: "inventory_dispatch",
+  INVENTORY_TRANSIT_RECEIPT: "inventory_transit_receipt",
+  INVENTORY_TRANSIT_LOSS: "inventory_transit_loss",
+  PURCHASE_INVOICE_MATCH: "purchase_invoice_match",
 
   /* المحاسبة العامة */
   PERIOD_CLOSING: "period_closing",
@@ -119,6 +123,10 @@ export const SOURCE_LABELS = Object.freeze({
   [SourceType.INVENTORY_ADJUSTMENT]: "تسوية مخزنية",
   [SourceType.INVENTORY_RETURN]: "مرتجع مخزني",
   [SourceType.INVENTORY_TRANSFER]: "تحويل مخزني",
+  [SourceType.INVENTORY_DISPATCH]: "شحن مخزني للفرع",
+  [SourceType.INVENTORY_TRANSIT_RECEIPT]: "استلام شحنة بالفرع",
+  [SourceType.INVENTORY_TRANSIT_LOSS]: "عجز شحنة تحت التحويل",
+  [SourceType.PURCHASE_INVOICE_MATCH]: "مطابقة فاتورة مورد",
   [SourceType.PERIOD_CLOSING]: "إغلاق فترة",
   [SourceType.YEAR_CLOSING]: "إغلاق سنة مالية",
   [SourceType.OPENING_BALANCE]: "رصيد افتتاحي",

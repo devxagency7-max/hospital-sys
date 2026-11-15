@@ -22,9 +22,42 @@ import {
 import { SourceType } from "../../domain/posting.js";
 import { db, all, find, insert, update, where, query } from "../db.js";
 import { postDocument, audit, entryForDocument } from "./posting.service.js";
+import { canAccessWarehouse, allowedWarehouseIds } from "../../core/permissions.js";
 import { REFERENCE_DATE } from "../seed.js";
 
 const TODAY = REFERENCE_DATE.toISOString().slice(0, 10);
+
+/** المخزن الرئيسي المركزي — مركز الإمداد الذي تُراجع عنده طلبات الفروع. */
+const HUB_WAREHOUSE_ID = 1;
+
+/** حد الفائض الذي يسمح بالمناقلة بدل الشراء الخارجي، حين لا يحدده الصنف. */
+const DEFAULT_SURPLUS_THRESHOLD = 15;
+
+/**
+ * يرفض التصرف في مخزن خارج نطاق المستخدم.
+ *
+ * ═══════════════════════════════════════════════════════════════════════════
+ *  إخفاء الزر ليس أمانًا. أمين مخزن فرع 1 قد يصل لمسار صرف من فرع 3 بطلب
+ *  مباشر أو بتبويب قديم مفتوح، فالقيد يُفرض عند **تنفيذ العملية** لا عند
+ *  رسمها. (وفي الباك-إند الحقيقي يُفرض مرة أخرى على الخادم — هذه الطبقة
+ *  مواصفةٌ له لا بديل عنه.)
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+function assertWarehouseInScope(warehouse, action = "التصرف") {
+  if (canAccessWarehouse(warehouse?.id)) return;
+
+  const allowed = (allowedWarehouseIds() ?? [])
+    .map((id) => find("warehouses", id)?.name)
+    .filter(Boolean);
+
+  throw ruleViolation(
+    `${action} في «${warehouse?.name ?? "هذا المخزن"}» خارج نطاق صلاحيتك. ` +
+      (allowed.length
+        ? `المخازن المسندة إليك: ${allowed.join(" · ")}.`
+        : "لا يوجد مخزن مسند إليك — راجع مدير النظام."),
+    { field: "warehouseId" },
+  );
+}
 
 /* ==========================================================================
    1) مساعدات التقييم
@@ -212,6 +245,9 @@ function validateMovement(payload) {
   if (!item) throw notFound("الصنف غير موجود.");
   if (!warehouse) throw notFound("المخزن غير موجود.");
 
+  /* المستخدم يتصرف في مخزنه فقط. */
+  assertWarehouseInScope(warehouse, "تسجيل حركة مخزنية");
+
   /* الصنف يُخزَّن في المخازن المسموح بها فقط. */
   if (!(item.warehouseIds ?? []).map(String).includes(String(warehouse.id))) {
     throw ruleViolation(
@@ -228,10 +264,34 @@ function validateMovement(payload) {
 export function createReceipt(payload, { user } = {}) {
   const { item, warehouse, quantity } = validateMovement(payload);
 
-  const unitCost = money.round(payload?.unitCost ?? item.lastPurchasePrice ?? item.costPrice);
+  /*
+   * ═══════════════════════════════════════════════════════════════════════
+   *  السعر ليس مسؤولية أمين المخزن.
+   *
+   *  أمين المخزن يُقرّ بما استلمه: الصنف والكمية وحالته. سعر الفاتورة يدخله
+   *  المحاسب عند مطابقة فاتورة المورد (`procurement.service.js`).
+   *
+   *  فإن لم يُمرَّر سعر، يُقيَّم الاستلام **مؤقتًا** بآخر سعر شراء معروف
+   *  ويُوسَم `pending_invoice`. التقييم المؤقت ليس تخمينًا مُخفى: الفارق
+   *  بينه وبين سعر الفاتورة يُرحَّل فرق سعر صريحًا عند المطابقة، والمخزون
+   *  يُصحَّح لتكلفته الفعلية.
+   *
+   *  البديل — رفض الاستلام حتى تصل الفاتورة — يعني بضاعة على الرف لا تظهر
+   *  في الأصول، وهو أسوأ من تقييم مؤقت مُعلَن.
+   * ═══════════════════════════════════════════════════════════════════════
+   */
+  const priceProvided = payload?.unitCost !== undefined && payload?.unitCost !== null && payload?.unitCost !== "";
+  const unitCost = money.round(priceProvided ? payload.unitCost : (item.lastPurchasePrice ?? item.costPrice));
+
   if (!money.isPositive(unitCost)) {
-    throw validationError({ unitCost: "تكلفة الوحدة مطلوبة في إذن الإضافة." });
+    throw validationError({
+      unitCost:
+        "لا يوجد سعر شراء سابق لهذا الصنف يُقيَّم به الاستلام مؤقتًا — " +
+        "أدخل سعر الوحدة في إذن الإضافة.",
+    });
   }
+
+  const priceStatus = priceProvided ? "priced" : "pending_invoice";
 
   if (item.trackBatches && !String(payload?.batchNumber ?? "").trim()) {
     throw validationError({ batchNumber: "هذا الصنف يُتتبَّع بالتشغيلات — رقم التشغيلة مطلوب." });
@@ -257,6 +317,16 @@ export function createReceipt(payload, { user } = {}) {
     totalCost,
     reference: `GRN-2026-${String(sequence).padStart(4, "0")}`,
     documentType: "goods_receipt",
+
+    /** `pending_invoice` = مُقيَّم مؤقتًا بانتظار سعر فاتورة المورد. */
+    priceStatus,
+    provisionalUnitCost: priceProvided ? null : unitCost,
+    invoiceUnitCost: priceProvided ? unitCost : null,
+    matchedAt: null,
+    matchedBy: null,
+    supplierInvoiceRef: null,
+    priceVariance: null,
+
     supplierId: payload?.supplierId ?? null,
     batchNumber: payload?.batchNumber ?? null,
     expiryDate: payload?.expiryDate ?? null,
@@ -293,8 +363,13 @@ export function createReceipt(payload, { user } = {}) {
    * إذا ورد الصنف بسعر شراء يختلف عن آخر سعر شراء مسجل، لا يتغير سعر البيع تلقائيًا،
    * بل يُنشأ طلب مراجعة وتحديث سعر بيع للمريض خاص بمدير الحسابات مع إشعار فوري.
    */
+  /*
+   * مراجعة السعر تُفتح على **سعر الفاتورة** لا على التقييم المؤقت. التقييم
+   * المؤقت هو آخر سعر معروف أصلًا، ففتح مراجعة عليه يُنتج إشعارًا لمدير
+   * الحسابات بأن السعر «تغيّر» إلى نفسه.
+   */
   const previousCost = item.lastPurchasePrice ?? item.costPrice;
-  if (previousCost && Number(unitCost) !== Number(previousCost)) {
+  if (priceProvided && previousCost && Number(unitCost) !== Number(previousCost)) {
     const changePercent = Number((((unitCost - previousCost) / previousCost) * 100).toFixed(1));
     const currentMarginPct = previousCost > 0
       ? Number((((item.sellingPrice - previousCost) / previousCost) * 100).toFixed(1))
@@ -338,8 +413,13 @@ export function createReceipt(payload, { user } = {}) {
     });
   }
 
-  // تحديث آخر سعر شراء للصنف لمتابعة التوريدات القادمة
-  update("items", item.id, { lastPurchasePrice: unitCost });
+  /*
+   * آخر سعر شراء يُحدَّث من سعر الفاتورة فقط. تحديثه من التقييم المؤقت
+   * يجعل الصنف يُقيَّم أبدًا بسعره القديم: كل استلام يُثبّت القديم من جديد.
+   */
+  if (priceProvided) {
+    update("items", item.id, { lastPurchasePrice: unitCost });
+  }
 
   const posting = postDocument({
     sourceType: SourceType.INVENTORY_RECEIPT,
@@ -363,7 +443,14 @@ export function createReceipt(payload, { user } = {}) {
     details: `${movement.reference} — ${item.name} — ${quantity} ${item.unit}`, user,
   });
 
-  return { movement, balance, journalEntry: posting.entry };
+  return {
+    movement,
+    balance,
+    journalEntry: posting.entry,
+    priceStatus,
+    /** تُعلنه الواجهة صريحًا: الاستلام مُسجَّل لكن سعره لم يُعتمد بعد. */
+    awaitingInvoicePrice: priceStatus === "pending_invoice",
+  };
 }
 
 /**
@@ -478,6 +565,13 @@ export function createTransfer(payload, { user } = {}) {
 
   const toWarehouse = find("warehouses", payload?.toWarehouseId);
   if (!toWarehouse) throw notFound("المخزن المستقبل غير موجود.");
+
+  /*
+   * التحويل يتطلب نطاقًا على **الطرفين**: من يحوّل من مخزنه إلى مخزن لا
+   * يملكه ينقل عهدة لغيره بلا إقرار منه. المسار الصحيح لذلك هو طلب نواقص
+   * بفحص واستلام، لا تحويل مباشر.
+   */
+  assertWarehouseInScope(toWarehouse, "التحويل إلى");
 
   if (String(fromWarehouse.id) === String(toWarehouse.id)) {
     throw ruleViolation("لا يُحوَّل صنف من مخزن إلى نفسه.", { field: "toWarehouseId" });
@@ -1297,28 +1391,52 @@ export function checkItemAvailability(itemId, requestingBranchId = null) {
   const allWh = all("warehouses");
   const balances = all("stockBalances");
 
+  /*
+   * «الفائض» يُقاس بحد الصنف نفسه لا برقم ثابت: الفرع لا يُطلب منه التنازل
+   * عن كمية تُنزله تحت حده الأدنى، وإلا حلّينا نقص فرع بخلق نقص في آخر.
+   * المناقلة مسموحة فقط من الكمية الزائدة عن نقطة إعادة الطلب.
+   */
+  const reorderPoint = Number(item.reorderPoint ?? item.minLevel ?? DEFAULT_SURPLUS_THRESHOLD);
+
+  /*
+   * المخازن المسموح بتخزين الصنف فيها فقط. اقتراح مناقلة من مخزن لا يُخزَّن
+   * فيه الصنف يُنتج رصيدًا وهميًا، ويُرفض لاحقًا عند الشحن — فالأفضل ألا
+   * يُقترح من أصله.
+   */
+  const allowedIds = (item.warehouseIds ?? []).map(String);
+
   const results = allWh.map((wh) => {
     const bal = balances.find(
       (b) => String(b.itemId) === String(itemId) && String(b.warehouseId) === String(wh.id),
     );
     const onHand = bal?.onHand || 0;
     const available = bal?.available || onHand;
-    const hasSurplus = available > 15; // فائض يتيح المناقلة وتوفير الشراء
+
+    /* الكمية القابلة للمناقلة = المتاح فوق حد الأمان، وليست المتاح كله. */
+    const transferableQty = Math.max(0, available - reorderPoint);
+    const hasSurplus = transferableQty > 0;
 
     return {
       warehouseId: wh.id,
       warehouseCode: wh.code,
       warehouseName: wh.name,
-      isHub: Boolean(wh.isHub || wh.id === 1),
+      isHub: Boolean(wh.isHub || wh.id === HUB_WAREHOUSE_ID),
+      isAllowedForItem: allowedIds.includes(String(wh.id)),
       onHand,
       available,
+      reorderPoint,
+      transferableQty,
       hasSurplus,
     };
   });
 
   const hubBalance = results.find((r) => r.isHub) || results[0];
   const surplusBranches = results.filter(
-    (r) => !r.isHub && r.hasSurplus && (!requestingBranchId || String(r.warehouseId) !== String(requestingBranchId)),
+    (r) =>
+      !r.isHub &&
+      r.hasSurplus &&
+      r.isAllowedForItem &&
+      (!requestingBranchId || String(r.warehouseId) !== String(requestingBranchId)),
   );
 
   return {
@@ -1326,6 +1444,7 @@ export function checkItemAvailability(itemId, requestingBranchId = null) {
     itemName: item.name,
     itemCode: item.code,
     unit: item.unit,
+    reorderPoint,
     hubAvailable: hubBalance?.available || 0,
     canFulfillFromHub: (hubBalance?.available || 0) > 0,
     hasSurplusBranches: surplusBranches.length > 0,
@@ -1348,6 +1467,19 @@ export function createRequisition(payload, { user } = {}) {
   if (!item) throw notFound("الصنف غير موجود.");
   const branch = find("warehouses", payload.branchId);
   if (!branch) throw notFound("مخزن الفرع غير موجود.");
+
+  /*
+   * الصنف يُطلب لمخزن مسموح بتخزينه فيه فقط — والرفض هنا عند الطلب لا عند
+   * الاستلام. قبول الطلب ثم رفضه بعد الشحن يترك كمية خرجت من المصدر ولا
+   * يصح دخولها للفرع: عجز مصطنع لا ذنب لأحد فيه.
+   */
+  if (!(item.warehouseIds ?? []).map(String).includes(String(branch.id))) {
+    throw ruleViolation(
+      `الصنف «${item.name}» غير مسموح بتخزينه في «${branch.name}» — ` +
+        "أضف المخزن إلى مخازن الصنف أولًا قبل طلبه.",
+      { field: "itemId" },
+    );
+  }
 
   const sequence = all("requisitions").length + 1;
   const now = new Date().toISOString();
@@ -1408,17 +1540,268 @@ export function createRequisition(payload, { user } = {}) {
   return newReq;
 }
 
+/* --------------------------------------------------------------------------
+   7.أ.0) حرّاس دورة الحياة
+
+   الحالات التي يُسمح بالشحن منها محدَّدة بالاسم. بدون هذا الحارس يمكن شحن
+   طلب مشحون بالفعل فيُخصم الرصيد مرتين من غير أن يلاحظ أحد.
+   -------------------------------------------------------------------------- */
+
+/** الحالات التي يصح الشحن منها. */
+const DISPATCHABLE_STATUSES = Object.freeze(["pending_review", "supplier_ordered", "hub_received"]);
+
+/** الحالات التي يصح الفحص والاستلام منها. */
+const RECEIVABLE_STATUSES = Object.freeze(["in_transit", "under_inspection"]);
+
+/** حالات نهائية لا يُعاد فتحها. */
+const TERMINAL_STATUSES = Object.freeze(["completed", "discrepancy", "rejected"]);
+
+function assertDispatchable(req) {
+  if (!DISPATCHABLE_STATUSES.includes(req.status)) {
+    throw ruleViolation(
+      `لا يمكن الشحن والطلب ${req.code} في حالة «${REQUISITION_STATUS_LABELS[req.status] ?? req.status}». ` +
+        "الشحن مسموح من: بانتظار المراجعة، أو مطلوب من المورد، أو وصل الرئيسي.",
+      { field: "status" },
+    );
+  }
+}
+
+function assertReceivable(req) {
+  if (!RECEIVABLE_STATUSES.includes(req.status)) {
+    throw ruleViolation(
+      `لا يمكن الفحص والاستلام والطلب ${req.code} في حالة «${REQUISITION_STATUS_LABELS[req.status] ?? req.status}». ` +
+        "الاستلام مسموح فقط لطلب في الطريق أو قيد الفحص.",
+      { field: "status" },
+    );
+  }
+}
+
+function assertNotTerminal(req, action) {
+  if (TERMINAL_STATUSES.includes(req.status)) {
+    throw ruleViolation(
+      `الطلب ${req.code} مُغلق بحالة «${REQUISITION_STATUS_LABELS[req.status] ?? req.status}» — ` +
+        `${action} غير مسموح على طلب مغلق.`,
+      { field: "status" },
+    );
+  }
+}
+
+/** وصف عربي لكل حالة — تُستخدم في رسائل الأخطاء وفي سطور التدقيق. */
+export const REQUISITION_STATUS_LABELS = Object.freeze({
+  pending_review: "بانتظار مراجعة المخزن الرئيسي",
+  supplier_ordered: "تم إصدار أمر شراء للمورد",
+  hub_received: "وصل المخزن الرئيسي — جاري التوجيه",
+  in_transit: "في الطريق للفرع",
+  under_inspection: "وصل الفرع — قيد الفحص والعد",
+  discrepancy: "استلام به عجز أو خلاف رقابي",
+  completed: "مكتمل ومطابق 100%",
+  rejected: "طلب ملغي أو مرفوض",
+});
+
+/** مرجع إذن شحن فريد مشتق من كود الطلب — يربط الحركة بالطلب في أي تقرير. */
+function dispatchReference(req) {
+  return `DSP-${String(req.code || "").replace(/^REQ-/, "")}`;
+}
+
+/* --------------------------------------------------------------------------
+   7.أ) محرك الشحن والاستلام المخزني لطلبات النواقص
+
+   قاعدة مُلزِمة: **دورة النواقص لا تُعدّل جدول الأرصدة مباشرة أبدًا.**
+   كل تغيّر في الرصيد ينشأ من حركة مخزنية مُسجَّلة (`stockMovements`) ثم
+   يُشتق الرصيد منها عبر `refreshBalance` — تمامًا كبقية حركات المخزن.
+
+   الشحن والاستلام مرحلتان منفصلتان يفصل بينهما حساب وسيط
+   «مخزون تحت التحويل». السبب: الكمية تخرج من المصدر لحظة الشحن لكنها لا
+   تصل رف الفرع إلا بعد الفحص والعد، والفرق بينهما هو العجز الذي يجب أن
+   يبقى له أثر رقابي ومحاسبي مستقل.
+   -------------------------------------------------------------------------- */
+
+/**
+ * يُخرج الكمية من مخزن المصدر إلى «مخزون تحت التحويل» ويُرحّلها محاسبيًا.
+ *
+ * @returns {{movement: object, cost: object, balance: object, journalEntry: object|null}}
+ */
+function dispatchRequisitionStock({ req, fromWarehouse, quantity, reference, date, user, notes }) {
+  const item = find("items", req.itemId);
+  if (!item) throw notFound("الصنف غير موجود.");
+
+  assertWarehouseInScope(fromWarehouse, "الشحن من");
+
+  /* الصنف يُشحن من مخزن مسموح بتخزينه فيه فقط. */
+  if (!(item.warehouseIds ?? []).map(String).includes(String(fromWarehouse.id))) {
+    throw ruleViolation(
+      `الصنف «${item.name}» غير مسموح بتخزينه في «${fromWarehouse.name}» — لا يمكن الشحن منه.`,
+      { field: "sourceBranchId" },
+    );
+  }
+
+  const method = methodFor(item, fromWarehouse);
+  const preview = previewIssueCost(bucketFor(item.id, fromWarehouse.id), {
+    quantity,
+    method,
+    date,
+  });
+
+  /*
+   * الرصيد غير كافٍ → نرفض الشحن بخطأ صريح. إرجاع «تم الشحن» على رصيد غير
+   * موجود هو بالضبط ما يُنتج أرصدة سالبة لا يستطيع أحد تفسيرها لاحقًا.
+   */
+  if (preview.shortfall > 0 && !fromWarehouse.allowNegative) {
+    throw ruleViolation(
+      `المتاح من «${item.name}» في «${fromWarehouse.name}» هو ${preview.available} ${item.unit} فقط — ` +
+        `والمطلوب شحنه ${quantity}. راجع مسار التوفير قبل الشحن.`,
+      { field: "dispatchedQty" },
+    );
+  }
+
+  const movement = insert("stockMovements", {
+    itemId: item.id, itemCode: item.code, itemName: item.name,
+    warehouseId: fromWarehouse.id, warehouseName: fromWarehouse.name,
+    type: "transfer_out", typeLabel: MOVEMENT_LABELS.transfer_out,
+    date, quantity,
+    unitCost: preview.unitCost, totalCost: preview.totalCost, costingMethod: method,
+    reference, documentType: "requisition_dispatch",
+    counterWarehouseId: req.branchId,
+    counterWarehouseName: req.branchName,
+    requisitionId: req.id,
+    requisitionCode: req.code,
+    performedBy: user?.name ?? "—",
+    notes: notes ?? `شحن طلبية نواقص ${req.code} إلى ${req.branchName}`,
+  });
+
+  const balance = refreshBalance(item.id, fromWarehouse.id);
+
+  const posting = postDocument({
+    sourceType: SourceType.INVENTORY_DISPATCH,
+    sourceId: movement.id,
+    document: {
+      totalCost: preview.totalCost,
+      fromWarehouseName: fromWarehouse.name,
+      toWarehouseName: req.branchName,
+      fromInventoryAccountId: fromWarehouse.inventoryAccountId ?? item.inventoryAccountId,
+    },
+    date,
+    description: `شحن طلبية ${req.code} — ${item.name}: ${fromWarehouse.name} → ${req.branchName}`,
+    reference,
+    user,
+  });
+
+  return { movement, cost: preview, balance, journalEntry: posting.entry };
+}
+
+/**
+ * يُدخل **المستلم الفعلي فقط** إلى مخزن الفرع، ويُعترف بالعجز خسارةً مستقلة.
+ *
+ * العجز لا يُحمَّل على مخزون الفرع ولا على عهدة أمين مخزنه — يُصفّى من
+ * الحساب الوسيط إلى «عجز وتلف المخزون» ويبقى موثقًا باسم ووقت الفاحص.
+ */
+function receiveRequisitionStock({ req, dispatchedQty, receivedQty, shortfallQty, unitCost, reference, date, user, notes }) {
+  const item = find("items", req.itemId);
+  if (!item) throw notFound("الصنف غير موجود.");
+
+  const branch = find("warehouses", req.branchId);
+  if (!branch) throw notFound("مخزن الفرع غير موجود.");
+
+  if (!(item.warehouseIds ?? []).map(String).includes(String(branch.id))) {
+    throw ruleViolation(
+      `الصنف «${item.name}» غير مسموح بتخزينه في «${branch.name}» — أضف المخزن إلى مخازن الصنف أولًا.`,
+      { field: "receivedQty" },
+    );
+  }
+
+  const result = { movement: null, balance: null, receiptEntry: null, lossEntry: null };
+
+  if (receivedQty > 0) {
+    const totalCost = money.multiply(unitCost, receivedQty);
+
+    /* التحويل ينقل القيمة ولا يُنشئها — نفس تكلفة وحدة الشحن. */
+    result.movement = insert("stockMovements", {
+      itemId: item.id, itemCode: item.code, itemName: item.name,
+      warehouseId: branch.id, warehouseName: branch.name,
+      type: "transfer_in", typeLabel: MOVEMENT_LABELS.transfer_in,
+      date, quantity: receivedQty,
+      unitCost, totalCost,
+      reference, documentType: "requisition_receipt",
+      counterWarehouseId: req.sourceBranchId ?? HUB_WAREHOUSE_ID,
+      counterWarehouseName: req.sourceBranchName ?? "المخزن الرئيسي (المركزي)",
+      requisitionId: req.id,
+      requisitionCode: req.code,
+      performedBy: user?.name ?? "—",
+      notes: notes ?? `استلام طلبية ${req.code} بعد الفحص والعد الفعلي`,
+    });
+
+    result.balance = refreshBalance(item.id, branch.id);
+
+    const posting = postDocument({
+      sourceType: SourceType.INVENTORY_TRANSIT_RECEIPT,
+      sourceId: result.movement.id,
+      document: {
+        totalCost,
+        toWarehouseName: branch.name,
+        toInventoryAccountId: branch.inventoryAccountId ?? item.inventoryAccountId,
+      },
+      date,
+      description: `استلام طلبية ${req.code} — ${item.name} بـ ${branch.name} (${receivedQty} ${item.unit})`,
+      reference,
+      user,
+    });
+    result.receiptEntry = posting.entry;
+  }
+
+  if (shortfallQty > 0) {
+    const lossValue = money.multiply(unitCost, shortfallQty);
+
+    const posting = postDocument({
+      sourceType: SourceType.INVENTORY_TRANSIT_LOSS,
+      sourceId: req.id,
+      sourceEvent: "requisition_shortfall",
+      document: {
+        totalCost: lossValue,
+        reference,
+        reason: `عجز شحنة ${req.code} بين ${req.sourceBranchName ?? "المخزن الرئيسي"} و${branch.name}`,
+      },
+      date,
+      description:
+        `إثبات عجز شحنة ${req.code} — ${item.name}: ` +
+        `مشحون ${dispatchedQty} / مستلم ${receivedQty} ${item.unit}`,
+      reference,
+      user,
+    });
+    result.lossEntry = posting.entry;
+  }
+
+  return result;
+}
+
 /**
  * صرف مباشر وتجهيز شحن من المخزن الرئيسي للفرع.
+ *
+ * الشحن يُخرج الكمية فعليًا من رصيد المخزن الرئيسي إلى «مخزون تحت التحويل»
+ * — لا يكتفي بتغيير حالة الطلب. الكمية المشحونة لم تصل الفرع بعد ولا تُضاف
+ * لرصيده إلا بعد الفحص والعد.
  */
 export function fulfillFromHub(id, payload = {}, { user } = {}) {
   const req = find("requisitions", id);
   if (!req) throw notFound("طلب النواقص غير موجود.");
 
+  assertDispatchable(req);
+
+  const hub = find("warehouses", HUB_WAREHOUSE_ID);
+  if (!hub) throw notFound("المخزن الرئيسي غير موجود.");
+
   const now = new Date().toISOString();
-  const qty = Number(payload.dispatchedQty || req.requestedQty);
+  const date = payload.date ?? TODAY;
+  const qty = Number(payload.dispatchedQty ?? req.requestedQty);
+  if (!(qty > 0)) throw validationError({ dispatchedQty: "الكمية المشحونة يجب أن تكون أكبر من صفر." });
+
   const driver = payload.driverName?.trim() || "سائق الحركة والتوصيل";
   const userName = user?.name || "أمين المخزن الرئيسي";
+  const reference = dispatchReference(req);
+
+  /* الحركة المخزنية والترحيل أولًا — فإن رفض الرصيد، لا تتغير حالة الطلب. */
+  const dispatch = dispatchRequisitionStock({
+    req, fromWarehouse: hub, quantity: qty, reference, date, user,
+  });
 
   const timeline = [...(req.timeline || [])];
   timeline.push({
@@ -1426,17 +1809,28 @@ export function fulfillFromHub(id, payload = {}, { user } = {}) {
     title: "شحن البضاعة وإذن خروج للفرع",
     timestamp: now,
     user: userName,
-    notes: `تم شحن ${qty} ${req.unit} مع السائق ${driver}. الختم الزمني مسجل لحظياً لمنع التلاعب`,
+    notes:
+      `تم شحن ${qty} ${req.unit} مع السائق ${driver}. ` +
+      `خرجت من رصيد ${hub.name} بإذن ${reference} بتكلفة ${dispatch.cost.totalCost} ج.م ` +
+      `وحُجزت في «مخزون تحت التحويل». الختم الزمني مسجل لحظياً لمنع التلاعب`,
     statusLabel: "في الطريق للفرع",
+    reference,
+    movementId: dispatch.movement.id,
   });
 
   const updated = update("requisitions", id, {
     status: "in_transit",
     fulfillmentSource: "hub",
+    sourceBranchId: hub.id,
+    sourceBranchName: hub.name,
     dispatchedQty: qty,
     dispatchedAt: now,
     dispatchedBy: userName,
     driverName: driver,
+    dispatchReference: reference,
+    dispatchMovementId: dispatch.movement.id,
+    dispatchUnitCost: dispatch.cost.unitCost,
+    dispatchTotalCost: dispatch.cost.totalCost,
     timeline,
   });
 
@@ -1446,28 +1840,54 @@ export function fulfillFromHub(id, payload = {}, { user } = {}) {
     module: "المخازن",
     entity: "requisition",
     entityId: req.id,
-    details: `${req.code} — تم الشحن إلى ${req.branchName} (${qty} ${req.unit})`,
+    details: `${req.code} — تم الشحن إلى ${req.branchName} (${qty} ${req.unit}) بإذن ${reference}`,
     user,
   });
 
-  return updated;
+  return {
+    ...updated,
+    movement: dispatch.movement,
+    cost: dispatch.cost,
+    sourceBalance: dispatch.balance,
+    journalEntry: dispatch.journalEntry,
+  };
 }
 
 /**
  * تحويل داخلي ذكي بين الفروع (استغلال الفائض وتوفير الشراء).
+ *
+ * الكمية تخرج من رصيد الفرع المصدر فعليًا — المناقلة ليست ملاحظة إدارية.
  */
 export function fulfillByBranchTransfer(id, payload = {}, { user } = {}) {
   const req = find("requisitions", id);
   if (!req) throw notFound("طلب النواقص غير موجود.");
 
+  assertDispatchable(req);
+
   const sourceBranchId = payload.sourceBranchId;
   if (!sourceBranchId) throw validationError({ sourceBranchId: "الفرع المصدر مطلوب للمناقلة." });
+
   const sourceBranch = find("warehouses", sourceBranchId);
   if (!sourceBranch) throw notFound("الفرع المحول منه غير موجود.");
 
+  /* لا يُناقَل فرع إلى نفسه — وهذا ما يستثنيه فحص الفائض أصلًا. */
+  if (String(sourceBranch.id) === String(req.branchId)) {
+    throw ruleViolation("لا تُناقَل كمية من الفرع الطالب إلى نفسه.", { field: "sourceBranchId" });
+  }
+
   const now = new Date().toISOString();
-  const qty = Number(payload.dispatchedQty || req.requestedQty);
+  const date = payload.date ?? TODAY;
+  const qty = Number(payload.dispatchedQty ?? req.requestedQty);
+  if (!(qty > 0)) throw validationError({ dispatchedQty: "الكمية المشحونة يجب أن تكون أكبر من صفر." });
+
   const userName = user?.name || "أمين المخزن الرئيسي";
+  const driver = payload.driverName?.trim() || "سيارة التوزيع الداخلي";
+  const reference = dispatchReference(req);
+
+  const dispatch = dispatchRequisitionStock({
+    req, fromWarehouse: sourceBranch, quantity: qty, reference, date, user,
+    notes: `مناقلة داخلية ${req.code}: ${sourceBranch.name} → ${req.branchName}`,
+  });
 
   const timeline = [...(req.timeline || [])];
   timeline.push({
@@ -1475,8 +1895,12 @@ export function fulfillByBranchTransfer(id, payload = {}, { user } = {}) {
     title: "تحويل داخلي ذكي من فرع آخر",
     timestamp: now,
     user: userName,
-    notes: `تم اعتماد المناقلة من ${sourceBranch.name} لوجود فائض، وتوفير الشراء الخارجي`,
+    notes:
+      `تم اعتماد المناقلة من ${sourceBranch.name} لوجود فائض، وتوفير الشراء الخارجي. ` +
+      `خرجت ${qty} ${req.unit} من رصيده بإذن ${reference} بتكلفة ${dispatch.cost.totalCost} ج.م`,
     statusLabel: "في الطريق بين الفروع",
+    reference,
+    movementId: dispatch.movement.id,
   });
 
   const updated = update("requisitions", id, {
@@ -1487,7 +1911,11 @@ export function fulfillByBranchTransfer(id, payload = {}, { user } = {}) {
     dispatchedQty: qty,
     dispatchedAt: now,
     dispatchedBy: userName,
-    driverName: payload.driverName || "سيارة التوزيع الداخلي",
+    driverName: driver,
+    dispatchReference: reference,
+    dispatchMovementId: dispatch.movement.id,
+    dispatchUnitCost: dispatch.cost.unitCost,
+    dispatchTotalCost: dispatch.cost.totalCost,
     timeline,
   });
 
@@ -1497,11 +1925,17 @@ export function fulfillByBranchTransfer(id, payload = {}, { user } = {}) {
     module: "المخازن",
     entity: "requisition",
     entityId: req.id,
-    details: `${req.code} — تحويل من ${sourceBranch.name} إلى ${req.branchName}`,
+    details: `${req.code} — تحويل من ${sourceBranch.name} إلى ${req.branchName} بإذن ${reference}`,
     user,
   });
 
-  return updated;
+  return {
+    ...updated,
+    movement: dispatch.movement,
+    cost: dispatch.cost,
+    sourceBalance: dispatch.balance,
+    journalEntry: dispatch.journalEntry,
+  };
 }
 
 /**
@@ -1551,23 +1985,55 @@ export function orderFromSupplier(id, payload = {}, { user } = {}) {
 
 /**
  * فحص واستلام الشحنة في مخزن الفرع (مع كشف وتوثيق العجز والتلف بالثانية).
+ *
+ * يُدخل **المستلم الفعلي فقط** لرصيد الفرع عبر حركة مخزنية حقيقية، ويُعترف
+ * بالعجز خسارةً مستقلة لا تُحمَّل على عهدة أمين مخزن الفرع.
  */
 export function branchInspectAndReceive(id, payload = {}, { user } = {}) {
   const req = find("requisitions", id);
   if (!req) throw notFound("طلب النواقص غير موجود.");
+
+  assertReceivable(req);
 
   const receivedQty = Number(payload.receivedQty);
   if (isNaN(receivedQty) || receivedQty < 0) {
     throw validationError({ receivedQty: "الكمية المستلمة فعلياً مطلوبة ويجب أن تكون صفراً أو أكثر." });
   }
 
-  const dispatchedQty = Number(req.dispatchedQty || req.requestedQty);
+  const dispatchedQty = Number(req.dispatchedQty ?? req.requestedQty);
+
+  /* استلام أكثر من المشحون يعني خطأ عدّ أو كمية من مصدر غير موثق. */
+  if (receivedQty > dispatchedQty) {
+    throw ruleViolation(
+      `المستلم (${receivedQty}) أكبر من المشحون (${dispatchedQty} ${req.unit}). ` +
+        "راجع العد أو صحّح كمية الشحن — لا يُقبل إدخال فائض بلا مصدر موثق.",
+      { field: "receivedQty" },
+    );
+  }
+
   const now = new Date().toISOString();
+  const date = payload.date ?? TODAY;
   const userName = user?.name || "أمين مخزن الفرع المستلم";
   const isMatch = receivedQty === dispatchedQty;
   const discrepancyCount = Math.max(0, dispatchedQty - receivedQty);
-  const discrepancyNotes = payload.notes?.trim() || (isMatch ? null : `عجز بعدد ${discrepancyCount} ${req.unit} لم يتم استلامها`);
+  const discrepancyNotes =
+    payload.notes?.trim() || (isMatch ? null : `عجز بعدد ${discrepancyCount} ${req.unit} لم يتم استلامها`);
 
+  /*
+   * تكلفة الوحدة تأتي من إذن الشحن — التحويل ينقل القيمة ولا يُنشئها.
+   * الطلبات التي شُحنت قبل تفعيل محرك الحركات لا تحمل تكلفة، فنسقط على
+   * آخر سعر شراء للصنف بدلًا من ترحيل قيمة صفرية صامتة.
+   */
+  const item = find("items", req.itemId);
+  const unitCost = money.round(req.dispatchUnitCost ?? item?.lastPurchasePrice ?? item?.costPrice ?? 0);
+
+  const stock = receiveRequisitionStock({
+    req, dispatchedQty, receivedQty, shortfallQty: discrepancyCount, unitCost,
+    reference: req.dispatchReference ?? dispatchReference(req),
+    date, user,
+  });
+
+  const discrepancyValue = money.multiply(unitCost, discrepancyCount);
   const timeline = [...(req.timeline || [])];
 
   if (isMatch) {
@@ -1576,8 +2042,11 @@ export function branchInspectAndReceive(id, payload = {}, { user } = {}) {
       title: "✅ فحص مطابق 100% واستلام كامل",
       timestamp: now,
       user: userName,
-      notes: `تم استلام الكمية بالكامل (${receivedQty} ${req.unit}) بحالة سليمة وإضافتها لعهدة مخزن الفرع`,
+      notes:
+        `تم استلام الكمية بالكامل (${receivedQty} ${req.unit}) بحالة سليمة ` +
+        `وإضافتها لرصيد ${req.branchName} بحركة مخزنية مُرحَّلة`,
       statusLabel: "مكتمل ومطابق 100%",
+      movementId: stock.movement?.id ?? null,
     });
   } else {
     timeline.push({
@@ -1585,8 +2054,13 @@ export function branchInspectAndReceive(id, payload = {}, { user } = {}) {
       title: "⚠️ إثبات عجز وخلاف رقابي بالثانية",
       timestamp: now,
       user: userName,
-      notes: `المحول من الرئيسي: ${dispatchedQty} — المستلم الفعلي: ${receivedQty}. تم تسجيل عجز (${discrepancyCount} ${req.unit}). ملاحظات: ${discrepancyNotes}`,
+      notes:
+        `المشحون: ${dispatchedQty} — المستلم الفعلي: ${receivedQty}. ` +
+        `تم تسجيل عجز (${discrepancyCount} ${req.unit}) بقيمة ${discrepancyValue} ج.م ` +
+        `واعتُرف به خسارة في «عجز وتلف المخزون» — لم يُحمَّل على عهدة الفرع. ` +
+        `ملاحظات: ${discrepancyNotes}`,
       statusLabel: "استلام مع عجز وخلاف رقابي",
+      movementId: stock.movement?.id ?? null,
     });
   }
 
@@ -1595,23 +2069,12 @@ export function branchInspectAndReceive(id, payload = {}, { user } = {}) {
     receivedQty,
     discrepancyCount,
     discrepancyNotes,
+    discrepancyValue,
+    receiptMovementId: stock.movement?.id ?? null,
     inspectedAt: now,
     inspectedBy: userName,
     timeline,
   });
-
-  // إضافة المستلم الفعلي فقط لعهدة الفرع لحمايته من أي عجز ليس مسؤوليته
-  if (receivedQty > 0) {
-    const branchBal = all("stockBalances").find(
-      (b) => String(b.itemId) === String(req.itemId) && String(b.warehouseId) === String(req.branchId),
-    );
-    if (branchBal) {
-      update("stockBalances", branchBal.id, {
-        onHand: (branchBal.onHand || 0) + receivedQty,
-        available: (branchBal.available || 0) + receivedQty,
-      });
-    }
-  }
 
   audit({
     action: isMatch ? "requisition.completed" : "requisition.discrepancy",
@@ -1620,6 +2083,199 @@ export function branchInspectAndReceive(id, payload = {}, { user } = {}) {
     entity: "requisition",
     entityId: req.id,
     details: `${req.code} — استلم الفرع ${receivedQty} من ${dispatchedQty} ${req.unit}`,
+    user,
+  });
+
+  return {
+    ...updated,
+    movement: stock.movement,
+    branchBalance: stock.balance,
+    journalEntry: stock.receiptEntry,
+    lossEntry: stock.lossEntry,
+  };
+}
+
+/**
+ * وصول طلبية المورد للمخزن الرئيسي — يُغلق الطريق المسدود بعد أمر الشراء.
+ *
+ * الكمية تدخل مخزون الرئيسي عبر إذن إضافة عادي (`createReceipt`) بكل ما
+ * يستتبعه: تقييم، ترحيل، ومراجعة سعر إن تغيّر سعر الشراء. ثم يصبح الطلب
+ * جاهزًا للشحن للفرع الطالب.
+ */
+export function receiveSupplierOrderAtHub(id, payload = {}, { user } = {}) {
+  const req = find("requisitions", id);
+  if (!req) throw notFound("طلب النواقص غير موجود.");
+
+  if (req.status !== "supplier_ordered") {
+    throw ruleViolation(
+      `الطلب ${req.code} ليس في حالة «مطلوب من المورد» — لا يصح تسجيل وصول طلبية مورد له.`,
+      { field: "status" },
+    );
+  }
+
+  const qty = Number(payload.receivedQty ?? req.requestedQty);
+  if (!(qty > 0)) throw validationError({ receivedQty: "الكمية الواردة من المورد مطلوبة." });
+
+  const now = new Date().toISOString();
+  const userName = user?.name || "أمين المخزن الرئيسي";
+
+  /* إذن إضافة حقيقي — نفس المسار الذي يمر منه أي توريد خارجي. */
+  const receipt = createReceipt(
+    {
+      itemId: req.itemId,
+      warehouseId: HUB_WAREHOUSE_ID,
+      quantity: qty,
+      unitCost: payload.unitCost,
+      supplierId: req.supplierId,
+      batchNumber: payload.batchNumber,
+      expiryDate: payload.expiryDate,
+      date: payload.date ?? TODAY,
+      notes: `توريد مورد لطلبية نواقص ${req.code} — أمر شراء ${req.poReference ?? "—"}`,
+    },
+    { user },
+  );
+
+  const timeline = [...(req.timeline || [])];
+  timeline.push({
+    stage: "hub_received",
+    title: "وصول طلبية المورد للمخزن الرئيسي",
+    timestamp: now,
+    user: userName,
+    notes:
+      `وردت ${qty} ${req.unit} من ${req.supplierName ?? "المورد"} بإذن إضافة ` +
+      `${receipt.movement.reference}. الطلب جاهز للشحن إلى ${req.branchName}`,
+    statusLabel: "وصل المخزن الرئيسي — جاري التوجيه",
+    reference: receipt.movement.reference,
+    movementId: receipt.movement.id,
+  });
+
+  const updated = update("requisitions", id, {
+    status: "hub_received",
+    hubReceivedQty: qty,
+    hubReceivedAt: now,
+    hubReceiptReference: receipt.movement.reference,
+    hubReceiptMovementId: receipt.movement.id,
+    timeline,
+  });
+
+  audit({
+    action: "requisition.hub_received",
+    actionLabel: "وصول طلبية مورد للرئيسي",
+    module: "المخازن",
+    entity: "requisition",
+    entityId: req.id,
+    details: `${req.code} — وردت ${qty} ${req.unit} بإذن ${receipt.movement.reference}`,
+    user,
+  });
+
+  return { ...updated, receipt };
+}
+
+/**
+ * تسجيل وصول الشحنة لمقر الفرع قبل بدء العد — حالة وسيطة توثيقية.
+ *
+ * لا أثر مخزني لها: الكمية ما زالت في «مخزون تحت التحويل» حتى يكتمل العد.
+ * قيمتها أنها تُثبّت لحظة الوصول باسم من استقبلها، فيُقاس زمن الطريق وزمن
+ * العد بشكل مستقل عند أي خلاف.
+ */
+export function markShipmentArrivedAtBranch(id, payload = {}, { user } = {}) {
+  const req = find("requisitions", id);
+  if (!req) throw notFound("طلب النواقص غير موجود.");
+
+  if (req.status !== "in_transit") {
+    throw ruleViolation(
+      `الطلب ${req.code} ليس في الطريق — لا يصح تسجيل وصوله للفرع.`,
+      { field: "status" },
+    );
+  }
+
+  const now = new Date().toISOString();
+  const userName = user?.name || "أمين مخزن الفرع";
+
+  const timeline = [...(req.timeline || [])];
+  timeline.push({
+    stage: "arrived",
+    title: "وصول الشحنة لمقر الفرع — بدء الفحص والعد",
+    timestamp: now,
+    user: userName,
+    notes:
+      payload.notes?.trim() ||
+      `استُلمت الشحنة من ${req.driverName ?? "السائق"} وبدأ العد الفعلي. ` +
+        "الكمية ما زالت تحت التحويل حتى يكتمل الفحص",
+    statusLabel: "وصل الفرع — قيد الفحص والعد",
+  });
+
+  const updated = update("requisitions", id, {
+    status: "under_inspection",
+    arrivedAt: now,
+    arrivedBy: userName,
+    timeline,
+  });
+
+  audit({
+    action: "requisition.arrived",
+    actionLabel: "وصول شحنة لمقر الفرع",
+    module: "المخازن",
+    entity: "requisition",
+    entityId: req.id,
+    details: `${req.code} — وصلت ${req.branchName} وبدأ العد`,
+    user,
+  });
+
+  return updated;
+}
+
+/**
+ * رفض أو إلغاء طلب نواقص قبل الشحن — بسبب إلزامي.
+ *
+ * الرفض مسموح فقط قبل خروج أي كمية. بعد الشحن لا يُرفض الطلب لأن هناك
+ * قيمة فعلية تحت التحويل تحتاج تصفية بالفحص لا بالإلغاء.
+ */
+export function rejectRequisition(id, payload = {}, { user } = {}) {
+  const req = find("requisitions", id);
+  if (!req) throw notFound("طلب النواقص غير موجود.");
+
+  assertNotTerminal(req, "الرفض");
+
+  if (req.dispatchedQty) {
+    throw ruleViolation(
+      `الطلب ${req.code} شُحن بالفعل (${req.dispatchedQty} ${req.unit}) — ` +
+        "أغلقه بالفحص والعد لإثبات ما وصل، لا بالرفض.",
+      { field: "status" },
+    );
+  }
+
+  const reason = payload.reason?.trim();
+  if (!reason) throw validationError({ reason: "سبب الرفض مطلوب لتوثيق القرار." });
+
+  const now = new Date().toISOString();
+  const userName = user?.name || "أمين المخزن الرئيسي";
+
+  const timeline = [...(req.timeline || [])];
+  timeline.push({
+    stage: "rejected",
+    title: "رفض / إلغاء الطلب",
+    timestamp: now,
+    user: userName,
+    notes: `سبب الرفض: ${reason}`,
+    statusLabel: "طلب ملغي أو مرفوض",
+  });
+
+  const updated = update("requisitions", id, {
+    status: "rejected",
+    rejectionReason: reason,
+    rejectedAt: now,
+    rejectedBy: userName,
+    timeline,
+  });
+
+  audit({
+    action: "requisition.rejected",
+    actionLabel: "رفض طلب نواقص",
+    module: "المخازن",
+    entity: "requisition",
+    entityId: req.id,
+    details: `${req.code} — ${reason}`,
     user,
   });
 

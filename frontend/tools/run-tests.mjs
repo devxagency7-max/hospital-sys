@@ -16,8 +16,23 @@ import { fileURLToPath } from "node:url";
 const ROOT = resolve(fileURLToPath(import.meta.url), "../..");
 const PORT = 4178; // منفذ مخصص للاختبارات حتى لا يصطدم بخادم التطوير
 
-/** الوحدات: دوال خالصة، تعمل في Node مباشرة. */
-const UNIT = ["tests/architecture.test.mjs"].filter((f) => existsSync(resolve(ROOT, f)));
+/**
+ * الوحدات: تعمل في Node مباشرة بلا متصفح.
+ *
+ * الترتيب مقصود: `architecture` أولًا لأنها تحرس البنية، ثم مجموعات دورات
+ * العمل. أي ملف اختبار جديد **يُسجَّل هنا** — وإلا لم يشغّله `npm test` ولا
+ * لاحظ أحد أنه توقف عن العمل.
+ */
+const UNIT = [
+  "tests/architecture.test.mjs",
+  "tests/requisitions-workflow.test.mjs",
+  "tests/pricing-workflow.test.mjs",
+  "tests/rooms-admission.test.mjs",
+  "tests/dispensing-workflow.test.mjs",
+  "tests/pricing-tiers-fx.test.mjs",
+  "tests/procurement-match.test.mjs",
+  "tests/roles-scope.test.mjs",
+].filter((f) => existsSync(resolve(ROOT, f)));
 
 /** المتصفح: تحتاج خادمًا و Playwright. */
 const BROWSER = ["tests/routes.test.mjs"].filter((f) => existsSync(resolve(ROOT, f)));

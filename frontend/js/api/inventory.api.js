@@ -216,8 +216,15 @@ export async function createRequisition(requisition) {
   return payload.data;
 }
 
-export async function checkItemAvailability(itemId) {
-  const payload = await http.get(`/inv/requisitions/check-availability/${encodeURIComponent(itemId)}`);
+/**
+ * فحص توفر صنف عبر كل المخازن.
+ *
+ * `branchId` هو الفرع الطالب — يُمرَّر ليُستثنى من اقتراحات المناقلة، فلا
+ * يُقترح على الفرع أن يُناقل من نفسه.
+ */
+export async function checkItemAvailability(itemId, branchId = null) {
+  const path = `/inv/requisitions/check-availability/${encodeURIComponent(itemId)}`;
+  const payload = await http.get(path, branchId ? { branchId } : undefined);
   return payload.data;
 }
 
@@ -238,6 +245,25 @@ export async function orderFromSupplier(id, data = {}) {
 
 export async function branchInspectAndReceive(id, data = {}) {
   const payload = await http.post(`/inv/requisitions/${encodeURIComponent(id)}/inspect-receive`, data);
+  return payload.data;
+}
+
+/** تسجيل وصول طلبية المورد للمخزن الرئيسي بإذن إضافة حقيقي. */
+export async function receiveSupplierOrderAtHub(id, data = {}) {
+  const path = `/inv/requisitions/${encodeURIComponent(id)}/receive-supplier-order`;
+  const payload = await http.post(path, data);
+  return payload.data;
+}
+
+/** تسجيل وصول الشحنة لمقر الفرع وبدء الفحص والعد. */
+export async function markShipmentArrivedAtBranch(id, data = {}) {
+  const payload = await http.post(`/inv/requisitions/${encodeURIComponent(id)}/mark-arrived`, data);
+  return payload.data;
+}
+
+/** رفض أو إلغاء طلب نواقص قبل الشحن — بسبب موثق. */
+export async function rejectRequisition(id, data = {}) {
+  const payload = await http.post(`/inv/requisitions/${encodeURIComponent(id)}/reject`, data);
   return payload.data;
 }
 

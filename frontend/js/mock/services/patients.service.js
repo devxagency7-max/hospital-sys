@@ -4,9 +4,24 @@
  * كل فاتورة وسند قبض يُسجَّل هنا يتكامل مع الخزائن النقدية والبنوك ودفتر الأستاذ.
  */
 
-import { notFound, validationError } from "../../core/errors.js";
+import { notFound, validationError, ruleViolation } from "../../core/errors.js";
+import * as money from "../../core/money.js";
 import { db, all, find, insert, update, where, query } from "../db.js";
 import { postDocument, audit } from "./posting.service.js";
+import {
+  occupyRoom,
+  releaseRoom,
+  tariffForRoom,
+  backfillAdmissionCharges,
+  getAdmissionCostSummary,
+  datesBetween,
+} from "./rooms.service.js";
+import {
+  BASE_CURRENCY,
+  tierForPatientType,
+  priceLine,
+  rateFor,
+} from "../../domain/pricing.js";
 import { REFERENCE_DATE } from "../seed.js";
 
 const TODAY = REFERENCE_DATE.toISOString().slice(0, 10);
@@ -168,77 +183,171 @@ export function getAdmission(id) {
   return admission;
 }
 
+/**
+ * فتح إقامة جديدة لمريض في وحدة محددة.
+ *
+ * ═══════════════════════════════════════════════════════════════════════════
+ *  ثلاث ضمانات:
+ *   1. **الوحدة تُحجز فعليًا** عبر `occupyRoom` — فلا تُحجز لمريضين.
+ *   2. **التعريفة من دليل الخدمات** لا من رقم يُدخله الموظف.
+ *   3. **ليالي الإقامة تُحمَّل آليًا** من الدخول حتى اليوم عبر محرك
+ *      الاستحقاق — لا يوم يضيع ولا إجمالي يُضرب بالإيد.
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
 export function createAdmission(data, { user } = {}) {
-  if (!data.patientId) throw validationError("المريض مطلوب");
+  if (!data.patientId) throw validationError({ patientId: "المريض مطلوب." });
+  if (!data.roomId) throw validationError({ roomId: "وحدة الإقامة (الغرفة أو السرير) مطلوبة." });
+
   const patient = find("patients", data.patientId);
-  if (!patient) throw notFound("المريض غير موجود");
+  if (!patient) throw notFound("المريض غير موجود.");
+
+  /* مريض مقيم بالفعل لا يُحجز له سرير ثانٍ. */
+  const existing = all("admissions").find(
+    (a) => a.status === "active" && String(a.patientId) === String(patient.id),
+  );
+  if (existing) {
+    throw ruleViolation(
+      `المريض ${patient.name} مقيم بالفعل في ${existing.roomNumber} بالإقامة ${existing.code} — ` +
+        "سجّل خروجه أو انقله بدل فتح إقامة ثانية.",
+      { field: "patientId" },
+    );
+  }
+
+  const { room, roomType, dailyRate } = tariffForRoom(data.roomId);
+
+  const admissionDate = data.admissionDate || TODAY;
+  if (String(admissionDate) > String(TODAY)) {
+    throw validationError({ admissionDate: "لا تُفتح إقامة بتاريخ مستقبلي." });
+  }
 
   const count = all("admissions").length + 1;
   const code = `ADM-${new Date().getFullYear()}-${String(count).padStart(4, "0")}`;
 
-  const dailyRate = Number(data.dailyRate || 1600);
-  const daysCount = Number(data.daysCount || 1);
-
   const created = insert("admissions", {
-    ...data,
     code,
+    patientId: patient.id,
     patientName: patient.name,
     patientCode: patient.code,
+
+    roomId: room.id,
+    roomCode: room.code,
+    roomNumber: room.name,
+    roomTypeId: roomType.id,
+    roomTypeName: roomType.name,
+    stayType: roomType.category,
+    stayTypeLabel: roomType.category === "icu" ? "عناية مركزة" : "إقامة غرف",
+    department: roomType.department,
+
+    /** التعريفة المتعاقد عليها لحظة الدخول — للعرض والمراجعة فقط. */
+    dailyRate,
+
+    admissionDate,
+    dischargeDate: null,
+    attendingDoctor: data.attendingDoctor || patient.attendingDoctor || null,
+    diagnosis: data.diagnosis || null,
+    notes: data.notes || null,
     status: "active",
     statusLabel: "محجوز حالياً",
-    admissionDate: data.admissionDate || TODAY,
-    dailyRate,
-    daysCount,
-    totalCost: dailyRate * daysCount,
   });
 
-  // تحديث حالة المريض إلى محجوز
+  /* الحجز يرمي إن كانت الوحدة غير متاحة — بعد الإدراج نُصحّح بالحذف. */
+  try {
+    occupyRoom(room.id, created, { user });
+  } catch (error) {
+    db.admissions = db.admissions.filter((a) => a.id !== created.id);
+    throw error;
+  }
+
   update("patients", patient.id, {
     status: "inpatient",
-    statusLabel: "إقامة داخلية (محجوز)",
-    currentRoom: data.roomNumber,
-    admissionDate: data.admissionDate || TODAY,
-    attendingDoctor: data.attendingDoctor || patient.attendingDoctor,
+    statusLabel: "مقيم / منوّم",
+    currentRoom: room.name,
+    currentRoomId: room.id,
+    currentAdmissionId: created.id,
+    admissionDate,
+    attendingDoctor: created.attendingDoctor,
   });
 
+  /* تحميل كل ليالي الإقامة حتى اليوم — فكري الطابع فلا تكرار. */
+  const accrual = backfillAdmissionCharges(created.id, { user });
+
   audit({
-    action: "create",
+    action: "admission.created",
+    actionLabel: "فتح إقامة لمريض",
+    module: "حسابات المرضى",
     entity: "admission",
     entityId: created.id,
-    details: `دخول مريض: ${patient.name} (${data.roomNumber})`,
+    details:
+      `${code} — ${patient.name} في ${room.name} (${roomType.name}) ` +
+      `بتعريفة ${dailyRate} ج.م/يوم · حُمِّلت ${accrual.nights} ليلة`,
     user,
   });
 
-  return created;
+  return { ...created, accrual, costSummary: getAdmissionCostSummary(created.id) };
 }
 
+/**
+ * تسجيل خروج مريض.
+ *
+ * يُلحق ليالي الإقامة الناقصة أولًا، ثم يُخلي الوحدة. الترتيب مقصود: إخلاء
+ * السرير قبل تحميل ليلته يُسقط آخر يوم من الحساب نهائيًا.
+ */
 export function dischargeAdmission(id, data = {}, { user } = {}) {
   const admission = find("admissions", id);
-  if (!admission) throw notFound("سجل الإقامة غير موجود");
+  if (!admission) throw notFound("سجل الإقامة غير موجود.");
+
+  if (admission.status !== "active") {
+    throw ruleViolation(
+      `الإقامة ${admission.code} غير قائمة (${admission.statusLabel}) — لا يُسجَّل خروج مرتين.`,
+      { field: "status" },
+    );
+  }
 
   const dischargeDate = data.dischargeDate || TODAY;
+  if (String(dischargeDate) < String(admission.admissionDate)) {
+    throw validationError({ dischargeDate: "تاريخ الخروج لا يسبق تاريخ الدخول." });
+  }
+
+  /* 1) إكمال التحميل حتى يوم الخروج — قبل الإخلاء. */
+  update("admissions", id, { dischargeDate });
+  const accrual = backfillAdmissionCharges(id, { user });
+
   const updated = update("admissions", id, {
     status: "discharged",
     statusLabel: "تم الخروج",
     dischargeDate,
+    dischargeNotes: data.notes ?? null,
+    dischargedBy: user?.name ?? null,
+    dischargedAt: new Date().toISOString(),
   });
 
-  // تحديث حالة المريض
+  /* 2) إخلاء الوحدة — تصير «تحت التنظيف» لا «فاضية» فورًا. */
+  if (admission.roomId) releaseRoom(admission.roomId, { user });
+
   update("patients", admission.patientId, {
     status: "discharged",
     statusLabel: "تم الخروج",
     currentRoom: null,
+    currentRoomId: null,
+    currentAdmissionId: null,
   });
 
+  const costSummary = getAdmissionCostSummary(id);
+
   audit({
-    action: "update",
+    action: "admission.discharged",
+    actionLabel: "خروج مريض",
+    module: "حسابات المرضى",
     entity: "admission",
     entityId: id,
-    details: `خروج مريض: ${admission.patientName}`,
+    details:
+      `${admission.code} — ${admission.patientName} خرج من ${admission.roomNumber} ` +
+      `بعد ${costSummary.nights} ليلة · إجمالي ${costSummary.total} ج.م ` +
+      `(غير مفوتر: ${costSummary.uninvoiced} ج.م)`,
     user,
   });
 
-  return updated;
+  return { ...updated, accrual, costSummary };
 }
 
 /* ==========================================================================
@@ -266,58 +375,214 @@ export function getPatientInvoice(id) {
   return invoice;
 }
 
+/**
+ * إصدار فاتورة مريض.
+ *
+ * ═══════════════════════════════════════════════════════════════════════════
+ *  ثلاث قواعد يحرسها هذا الإصدار:
+ *
+ *  1. **الشريحة تُشتق من نوع المريض** لا يختارها الموظف. مريض وافد يُسعَّر
+ *     بتعريفة الوافد ولو سهَت الموظفة، ومريض تأمين لا يُفوتر بسعر نقدي.
+ *
+ *  2. **سعر الصرف يُثبَّت على الفاتورة** لحظة إصدارها. الفاتورة بالدولار
+ *     تحمل سعر يومها إلى الأبد، ولا يُعاد تقييمها بسعر لاحق — فرق العملة
+ *     يُعترف به عند التحصيل بندًا مستقلًا.
+ *
+ *  3. **كل حساب مالي يمر من `money`** — لا `+` ولا `*` مباشرة على المبالغ.
+ *     الطرح العشري المباشر يُنتج 94.19999999999999 بدل 94.2، وفرق القرش
+ *     هذا يتراكم حتى لا يتوازن الميزان.
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
 export function createPatientInvoice(data, { user } = {}) {
-  if (!data.patientId) throw validationError("المريض مطلوب");
-  const patient = find("patients", data.patientId);
-  if (!patient) throw notFound("المريض غير موجود");
+  if (!data?.patientId) throw validationError({ patientId: "المريض مطلوب." });
 
-  const lines = data.lines || [];
-  if (!lines.length) throw validationError("يجب إضافة بند خدمة واحد على الأقل في الفاتورة");
+  const patient = find("patients", data.patientId);
+  if (!patient) throw notFound("المريض غير موجود.");
+
+  const rawLines = data.lines ?? [];
+  if (!rawLines.length) {
+    throw validationError({ lines: "يجب إضافة بند خدمة واحد على الأقل في الفاتورة." });
+  }
+
+  const date = data.date || TODAY;
+  const patientType = patient.patientType ?? "cash";
+
+  const tiers = all("tariffTiers");
+  const tariffPrices = all("tariffPrices");
+  const rates = all("exchangeRates");
+  const tier = tierForPatientType(patientType, tiers);
+
+  /*
+   * السطر المُسعَّر: إن حمل `serviceId` فسعره من الشريحة، وإلا فسعره
+   * المُدخَل (بنود يدوية كالخصم أو خدمة غير مُفهرسة). الخلط بينهما مسموح
+   * لكن العملة لا بد أن تتوحّد.
+   */
+  const lines = rawLines.map((line, index) => {
+    if (line.serviceId) {
+      const service = find("hospitalServices", line.serviceId);
+      if (!service) throw notFound(`الخدمة #${line.serviceId} غير موجودة.`);
+
+      const priced = priceLine({
+        service,
+        patientType,
+        quantity: line.quantity ?? 1,
+        date,
+        tiers,
+        tariffPrices,
+        rates,
+      });
+
+      return {
+        id: index + 1,
+        serviceId: service.id,
+        serviceCode: service.code,
+        description: line.description ?? service.name,
+        category: service.category,
+        categoryName: service.categoryName,
+        quantity: priced.quantity,
+        unitPrice: priced.unitPrice,
+        total: priced.total,
+        currency: priced.currency,
+        baseTotal: priced.baseTotal,
+        priceSource: priced.priceSource,
+        tierId: priced.tierId,
+      };
+    }
+
+    /* بند يدوي — بعملة الفاتورة المفترضة (عملة الشريحة). */
+    const quantity = Number(line.quantity ?? 1);
+    const unitPrice = money.round(line.unitPrice ?? 0);
+    const total = money.multiply(unitPrice, quantity);
+    const { rate } = rateFor(tier.currency, date, rates);
+
+    return {
+      id: index + 1,
+      serviceId: null,
+      serviceCode: line.serviceCode ?? null,
+      description: line.description ?? "بند يدوي",
+      category: line.category ?? "other",
+      categoryName: line.categoryName ?? "بنود أخرى",
+      quantity,
+      unitPrice,
+      total,
+      currency: tier.currency,
+      baseTotal: money.round(total * rate),
+      priceSource: "manual",
+      tierId: tier.id,
+    };
+  });
+
+  /* عملة واحدة للمستند — إجمالي بعملتين لا معنى له. */
+  const currencies = [...new Set(lines.map((l) => l.currency))];
+  if (currencies.length > 1) {
+    throw ruleViolation(
+      `سطور الفاتورة بعملات مختلفة (${currencies.join(", ")}) — افصلها في مستندين.`,
+      { field: "lines" },
+    );
+  }
+
+  const currency = currencies[0] ?? BASE_CURRENCY;
+  const { rate: exchangeRate, date: exchangeRateDate } = rateFor(currency, date, rates);
+
+  const subtotal = lines.reduce((sum, l) => money.add(sum, l.total), 0);
+  const discount = money.round(data.discount ?? 0);
+
+  if (discount > subtotal) {
+    throw validationError({ discount: "الخصم لا يتجاوز إجمالي الفاتورة." });
+  }
+
+  const totalAfterDiscount = money.subtract(subtotal, discount);
+
+  /* حصة التأمين تُحسب على الصافي بعد الخصم. */
+  const coverageRate = Number(patient.coverageRate ?? 0);
+  const insuranceAmount = coverageRate > 0 ? money.multiply(totalAfterDiscount, coverageRate) : 0;
+  const patientAmount = money.subtract(totalAfterDiscount, insuranceAmount);
 
   const count = all("patientInvoices").length + 1;
   const invoiceNumber = `PINV-${new Date().getFullYear()}-${String(count).padStart(4, "0")}`;
-
-  const subtotal = lines.reduce((sum, line) => sum + (Number(line.quantity || 1) * Number(line.unitPrice || 0)), 0);
-  const discount = Number(data.discount || 0);
-  const totalAfterDiscount = Math.max(0, subtotal - discount);
-
-  const coverageRate = Number(patient.coverageRate || 0);
-  const insuranceAmount = coverageRate > 0 ? Math.round(totalAfterDiscount * coverageRate) : 0;
-  const patientAmount = totalAfterDiscount - insuranceAmount;
 
   const created = insert("patientInvoices", {
     invoiceNumber,
     patientId: patient.id,
     patientName: patient.name,
     patientCode: patient.code,
-    date: data.date || TODAY,
-    dueDate: data.dueDate || TODAY,
+    date,
+    dueDate: data.dueDate || date,
+
+    /* --- الشريحة والعملة --- */
+    patientType,
+    patientTypeLabel: patient.patientTypeLabel ?? "نقدي خاص",
+    tierId: tier.id,
+    tierCode: tier.code,
+    tierName: tier.name,
+    currency,
+
+    /** سعر الصرف يوم الإصدار — مثبَّت، لا يُعاد تقييمه أبدًا. */
+    exchangeRate,
+    exchangeRateDate,
+    baseCurrency: BASE_CURRENCY,
+
     insuranceType: patient.insuranceType,
     insuranceProvider: patient.insuranceProvider,
     coverageRate,
-    lines: lines.map((l, idx) => ({ id: idx + 1, ...l })),
+
+    lines,
     subtotal,
     discount,
     totalAfterDiscount,
     insuranceAmount,
     patientAmount,
+
+    /** المقابل بالعملة الأساسية — هو ما يُرحَّل في الدفتر. */
+    baseSubtotal: lines.reduce((sum, l) => money.add(sum, l.baseTotal), 0),
+    baseTotalAfterDiscount: money.round(totalAfterDiscount * exchangeRate),
+    basePatientAmount: money.round(patientAmount * exchangeRate),
+    baseInsuranceAmount: money.round(insuranceAmount * exchangeRate),
+
     paidAmount: 0,
     remainingAmount: patientAmount,
     status: "unpaid",
     statusLabel: "غير مسددة",
+    createdBy: user?.name ?? null,
+    createdAt: new Date().toISOString(),
   });
 
-  // تحديث رصيد المريض
+  /* ربط سطور دفتر الاستحقاق المفوترة — فلا تُفوتر مرتين. */
+  if (Array.isArray(data.chargeIds) && data.chargeIds.length) {
+    for (const chargeId of data.chargeIds) {
+      const charge = find("admissionCharges", chargeId);
+      if (!charge) continue;
+      if (charge.invoiceId) {
+        throw ruleViolation(
+          `البند «${charge.serviceName}» مفوتر بالفعل في فاتورة سابقة — لا يُفوتر مرتين.`,
+          { field: "chargeIds" },
+        );
+      }
+      update("admissionCharges", chargeId, {
+        invoiceId: created.id,
+        invoicedAt: new Date().toISOString(),
+      });
+    }
+  }
+
+  /* رصيد المريض يُقاس بالعملة الأساسية دائمًا — وإلا جُمع دولار على جنيه. */
   update("patients", patient.id, {
-    totalBilled: (patient.totalBilled || 0) + patientAmount,
-    balance: (patient.balance || 0) + patientAmount,
+    totalBilled: money.add(patient.totalBilled ?? 0, created.basePatientAmount),
+    balance: money.add(patient.balance ?? 0, created.basePatientAmount),
   });
 
   audit({
-    action: "create",
+    action: "patient.invoice_created",
+    actionLabel: "إصدار فاتورة مريض",
+    module: "حسابات المرضى",
     entity: "patientInvoice",
     entityId: created.id,
-    details: `إصدار فاتورة مريض: ${invoiceNumber} بمبلغ ${patientAmount} ج.م`,
+    details:
+      `${invoiceNumber} — ${patient.name} · شريحة ${tier.name} · ` +
+      `${patientAmount} ${currency}` +
+      (currency === BASE_CURRENCY
+        ? ""
+        : ` (= ${created.basePatientAmount} ${BASE_CURRENCY} بسعر ${exchangeRate} يوم ${exchangeRateDate})`),
     user,
   });
 
@@ -343,13 +608,76 @@ export function listPatientReceipts(params = {}) {
   });
 }
 
+/**
+ * تسجيل سند قبض من مريض.
+ *
+ * ═══════════════════════════════════════════════════════════════════════════
+ *  التحصيل بعملة أجنبية يُنتج **بندين لا بندًا واحدًا**:
+ *
+ *   1. المحصَّل بقيمته — يُطفئ المديونية.
+ *   2. فرق العملة — الفارق بين سعر يوم الفاتورة وسعر يوم التحصيل.
+ *
+ *  ولا يُعدَّل الإيراد الأصلي. الخدمة قُدِّمت بقيمتها، والفارق ناتج عن
+ *  الزمن وسعر الصرف لا عن الخدمة. دمجهما يجعل «إيراد الكشف» يتغير لأن
+ *  المريض تأخر في الدفع — وهو تحريف لقياس الأداء الطبي.
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
 export function createPatientReceipt(data, { user } = {}) {
-  if (!data.patientId) throw validationError("المريض مطلوب");
-  const patient = find("patients", data.patientId);
-  if (!patient) throw notFound("المريض غير موجود");
+  if (!data?.patientId) throw validationError({ patientId: "المريض مطلوب." });
 
-  const amount = Number(data.amount);
-  if (!amount || amount <= 0) throw validationError("مبلغ السند غير صحيح");
+  const patient = find("patients", data.patientId);
+  if (!patient) throw notFound("المريض غير موجود.");
+
+  const amount = money.round(data.amount);
+  if (!money.isPositive(amount)) {
+    throw validationError({ amount: "مبلغ السند يجب أن يكون أكبر من صفر." });
+  }
+
+  const date = data.date || TODAY;
+  const invoice = data.invoiceId ? find("patientInvoices", data.invoiceId) : null;
+
+  if (data.invoiceId && !invoice) throw notFound("الفاتورة غير موجودة.");
+
+  /*
+   * عملة السند تتبع عملة الفاتورة التي يُسدِّدها. سند بالجنيه على فاتورة
+   * بالدولار يُخصم من مديونية بعملة أخرى — والمقارنة بينهما بلا معنى.
+   */
+  const currency = data.currency ?? invoice?.currency ?? BASE_CURRENCY;
+  const rates = all("exchangeRates");
+  const { rate: settlementRate, date: rateDate } = rateFor(currency, date, rates);
+
+  const baseAmount = money.round(amount * settlementRate);
+
+  /* فرق العملة — يُحسب فقط حين تختلف عملة الفاتورة عن العملة الأساسية. */
+  let fxDifference = null;
+  if (invoice && currency !== BASE_CURRENCY) {
+    const invoiceRate = Number(invoice.exchangeRate ?? settlementRate);
+    const baseAtInvoice = money.round(amount * invoiceRate);
+    const difference = money.subtract(baseAmount, baseAtInvoice);
+
+    fxDifference = {
+      currency,
+      foreignAmount: amount,
+      invoiceRate,
+      settlementRate,
+      baseAtInvoice,
+      baseAtSettlement: baseAmount,
+      difference,
+      label:
+        difference > 0 ? "مكسب فرق عملة" : difference < 0 ? "خسارة فرق عملة" : "لا فرق عملة",
+    };
+  }
+
+  if (invoice) {
+    const outstanding = money.subtract(invoice.patientAmount, invoice.paidAmount ?? 0);
+    if (amount > outstanding) {
+      throw ruleViolation(
+        `المتبقي على الفاتورة ${invoice.invoiceNumber} هو ${outstanding} ${invoice.currency} ` +
+          `والمحصَّل ${amount}. لا يُقبل تحصيل أكثر من المستحق — سجّل الفارق تأمينًا مقدمًا.`,
+        { field: "amount" },
+      );
+    }
+  }
 
   const count = all("patientReceipts").length + 1;
   const receiptNumber = `PRC-${new Date().getFullYear()}-${String(count).padStart(4, "0")}`;
@@ -359,44 +687,69 @@ export function createPatientReceipt(data, { user } = {}) {
     patientId: patient.id,
     patientName: patient.name,
     patientCode: patient.code,
-    invoiceId: data.invoiceId || null,
-    invoiceNumber: data.invoiceNumber || (data.invoiceId ? find("patientInvoices", data.invoiceId)?.invoiceNumber : "تأمين مقدم"),
-    date: data.date || TODAY,
+    invoiceId: invoice?.id ?? null,
+    invoiceNumber: invoice?.invoiceNumber ?? (data.type === "deposit" ? "تأمين دخول مقدم" : null),
+    date,
+
     amount,
+    currency,
+
+    /** المقابل بالعملة الأساسية — هو ما يُرحَّل ويُجمَع في التقارير. */
+    baseAmount,
+    baseCurrency: BASE_CURRENCY,
+    exchangeRate: settlementRate,
+    exchangeRateDate: rateDate,
+
+    /** فرق العملة بندًا مستقلًا — لا يُدمج في الإيراد. */
+    fxDifference,
+
     type: data.type || "invoice_payment",
     typeLabel: data.type === "deposit" ? "تأمين دخول مقدم" : "سداد فاتورة",
     paymentMethod: data.paymentMethod || "cash",
-    paymentMethodLabel: data.paymentMethod === "cash" ? "نقدي بالخزينة" : data.paymentMethod === "card" ? "بطاقة بنكية / فيزا" : "تحويل بنكي",
-    targetAccount: data.targetAccount || (data.paymentMethod === "cash" ? "الخزينة الرئيسية (1111)" : "البنك الأهلي المصري (1121)"),
+    paymentMethodLabel:
+      data.paymentMethod === "cash"
+        ? "نقدي بالخزينة"
+        : data.paymentMethod === "card"
+          ? "بطاقة بنكية / فيزا"
+          : "تحويل بنكي",
+    targetAccount:
+      data.targetAccount ||
+      (data.paymentMethod === "cash" ? "الخزينة الرئيسية (1111)" : "البنك الأهلي المصري (1121)"),
     notes: data.notes || "سند قبض من مريض",
+    createdBy: user?.name ?? null,
+    createdAt: new Date().toISOString(),
   });
 
-  // تحديث الفاتورة إن وُجدت
-  if (data.invoiceId) {
-    const inv = find("patientInvoices", data.invoiceId);
-    if (inv) {
-      const newPaid = (inv.paidAmount || 0) + amount;
-      const newRemaining = Math.max(0, inv.patientAmount - newPaid);
-      update("patientInvoices", inv.id, {
-        paidAmount: newPaid,
-        remainingAmount: newRemaining,
-        status: newRemaining === 0 ? "paid" : "partially_paid",
-        statusLabel: newRemaining === 0 ? "مسددة بالكامل" : "مسددة جزئياً",
-      });
-    }
+  if (invoice) {
+    const newPaid = money.add(invoice.paidAmount ?? 0, amount);
+    const newRemaining = Math.max(0, money.subtract(invoice.patientAmount, newPaid));
+
+    update("patientInvoices", invoice.id, {
+      paidAmount: newPaid,
+      remainingAmount: newRemaining,
+      status: newRemaining === 0 ? "paid" : "partially_paid",
+      statusLabel: newRemaining === 0 ? "مسددة بالكامل" : "مسددة جزئياً",
+    });
   }
 
-  // تحديث إجمالي مسددات المريض ورصيده
+  /* رصيد المريض بالعملة الأساسية — المقياس الوحيد القابل للجمع. */
   update("patients", patient.id, {
-    totalPaid: (patient.totalPaid || 0) + amount,
-    balance: Math.max(0, (patient.balance || 0) - amount),
+    totalPaid: money.add(patient.totalPaid ?? 0, baseAmount),
+    balance: Math.max(0, money.subtract(patient.balance ?? 0, baseAmount)),
   });
 
   audit({
-    action: "create",
+    action: "patient.receipt_created",
+    actionLabel: "سند قبض من مريض",
+    module: "حسابات المرضى",
     entity: "patientReceipt",
     entityId: created.id,
-    details: `سند قبض مريض: ${receiptNumber} بمبلغ ${amount} ج.م`,
+    details:
+      `${receiptNumber} — ${patient.name} · ${amount} ${currency}` +
+      (currency === BASE_CURRENCY ? "" : ` (= ${baseAmount} ${BASE_CURRENCY} بسعر ${settlementRate})`) +
+      (fxDifference && fxDifference.difference !== 0
+        ? ` · ${fxDifference.label}: ${fxDifference.difference} ${BASE_CURRENCY}`
+        : ""),
     user,
   });
 
@@ -473,9 +826,20 @@ export function getPatientStats() {
 
   const inpatientsCount = allPatients.filter((p) => p.status === "inpatient").length;
   const icuCount = allAdmissions.filter((a) => a.status === "active" && a.stayType === "icu").length;
-  const totalReceivables = allPatients.reduce((sum, p) => sum + (p.balance || 0), 0);
-  const totalBilled = allInvoices.reduce((sum, inv) => sum + (inv.totalAfterDiscount || 0), 0);
-  const totalCollected = allReceipts.reduce((sum, rec) => sum + (rec.amount || 0), 0);
+  /*
+   * الإجماليات تُجمَع بالعملة الأساسية لا بعملة كل فاتورة: جمع 1,285 دولار
+   * على 32,450 جنيهًا يُنتج رقمًا بلا معنى. فواتير العملة الأجنبية تحمل
+   * `baseTotalAfterDiscount` لهذا الغرض بالضبط.
+   */
+  const totalReceivables = allPatients.reduce((sum, p) => money.add(sum, p.balance ?? 0), 0);
+  const totalBilled = allInvoices.reduce(
+    (sum, inv) => money.add(sum, inv.baseTotalAfterDiscount ?? inv.totalAfterDiscount ?? 0),
+    0,
+  );
+  const totalCollected = allReceipts.reduce(
+    (sum, rec) => money.add(sum, rec.baseAmount ?? rec.amount ?? 0),
+    0,
+  );
 
   return {
     totalPatients: allPatients.length,
@@ -645,11 +1009,21 @@ export function getReceptionPatientSummary(patientId) {
   // ترتيب الحركات زمنيًا
   summaryItems.sort((a, b) => new Date(b.date) - new Date(a.date));
 
-  const totalBilled = invoices.reduce((sum, i) => sum + (i.totalAfterDiscount || 0), 0);
-  const totalInsurance = invoices.reduce((sum, i) => sum + (i.insuranceAmount || 0), 0);
-  const totalPatientRequired = invoices.reduce((sum, i) => sum + (i.patientAmount || 0), 0);
-  const totalPaid = receipts.reduce((sum, r) => sum + (r.amount || 0), 0);
-  const remainingDue = Math.max(0, totalPatientRequired - totalPaid);
+  /* كشف الحساب يُقاس بالعملة الأساسية — هو المقياس الوحيد القابل للجمع. */
+  const totalBilled = invoices.reduce(
+    (sum, i) => money.add(sum, i.baseTotalAfterDiscount ?? i.totalAfterDiscount ?? 0),
+    0,
+  );
+  const totalInsurance = invoices.reduce(
+    (sum, i) => money.add(sum, i.baseInsuranceAmount ?? i.insuranceAmount ?? 0),
+    0,
+  );
+  const totalPatientRequired = invoices.reduce(
+    (sum, i) => money.add(sum, i.basePatientAmount ?? i.patientAmount ?? 0),
+    0,
+  );
+  const totalPaid = receipts.reduce((sum, r) => money.add(sum, r.baseAmount ?? r.amount ?? 0), 0);
+  const remainingDue = Math.max(0, money.subtract(totalPatientRequired, totalPaid));
 
   return {
     patient,

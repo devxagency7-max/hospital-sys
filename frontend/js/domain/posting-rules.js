@@ -53,9 +53,11 @@ export const MAP_KEYS = Object.freeze({
 
   /* --- المخزون وتكلفة الخدمات --- */
   inventory: "مخزون المستلزمات الطبية",
+  stockInTransit: "مخزون تحت التحويل بين الفروع",
   goodsReceivedNotInvoiced: "مخزون مستلم ولم يُفوتر",
   costOfGoodsSold: "تكلفة الخدمات الطبية",
   inventoryShrinkage: "عجز وتلف المخزون",
+  purchasePriceVariance: "فرق سعر الشراء",
   inventorySurplus: "زيادة المخزون (إيراد تسوية)",
   purchaseReturns: "مردودات المشتريات",
 
@@ -616,6 +618,139 @@ export function inventoryAdjustmentLines(adjustment, accountMap) {
  * بنفس القيمة. وإن كان المخزون كله على حساب واحد فلا قيد من أصله، وهذه
  * الدالة تُعيد مصفوفة فارغة — و`shouldPost` أدناه تمنع إنشاء قيد فارغ.
  */
+/**
+ * شحن طلبية نواقص من مخزن إلى فرع — **مرحلة الخروج فقط**.
+ *
+ * ═══════════════════════════════════════════════════════════════════════════
+ *  الشحن ليس تحويلاً مكتملاً. الكمية خرجت من رف المصدر لكنها لم تصل رف
+ *  الفرع بعد، وما زالت مملوكة للمنشأة. لذلك تُحجز في حساب وسيط
+ *  «مخزون تحت التحويل» ولا تُحمَّل على مخزون الفرع إلا بعد الفحص والعد.
+ *
+ *  بدون هذه المرحلة الوسيطة يحدث أحد خطأين: إما أن يبقى الرصيد في المصدر
+ *  ويُضاف للفرع فيتضاعف، أو أن يُخصم ويُضاف فورًا فيختفي العجز في الطريق
+ *  ولا يبقى له أثر رقابي.
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
+ * مدين «مخزون تحت التحويل»، دائن حساب مخزون المصدر.
+ */
+/**
+ * مطابقة فاتورة مورد مع إذن الاستلام (3-Way Match).
+ *
+ * ═════════════════════════════════════════════════════════════════════════
+ *  المطابقة تُقفل ثلاثة أرقام في قيد واحد:
+ *
+ *    · قيمة الاستلام المؤقتة  → كانت محجوزة في «مخزون مستلم ولم يُفوتر»
+ *    · فرق السعر               → الفارق بين التقييم المؤقت وسعر الفاتورة
+ *    · قيمة الفاتورة           → التزام فعلي على حساب المورد
+ *
+ *  القيد:
+ *    مدين   «مخزون مستلم ولم يُفوتر»   بقيمة الاستلام المؤقتة (إقفال الاستحقاق)
+ *    مدين   المخزون                    بفرق السعر إن زاد  (تصحيح تكلفة الأصل)
+ *      أو دائن المخزون                 بفرق السعر إن نقص
+ *    دائن   الموردون                   بقيمة الفاتورة
+ *
+ *  الفارق يُصحَّح على **المخزون** لا على المصروف ما دامت الكمية على الرف:
+ *  تكلفة الأصل هي ما دُفع فيه فعلًا. تحميله مصروفًا فورًا يُنقص قيمة أصل
+ *  موجود ويُحمِّل الفترة تكلفة لم تُستهلك بعد.
+ * ═════════════════════════════════════════════════════════════════════════
+ */
+export function purchaseInvoiceMatchLines(match, accountMap) {
+  const accrued = money.round(match?.accruedValue ?? 0);
+  const invoiceValue = money.round(match?.invoiceValue ?? 0);
+  const variance = money.subtract(invoiceValue, accrued);
+
+  const inventoryAccount = accountOr(match?.inventoryAccountId, accountMap, "inventory");
+
+  const lines = [
+    debit(resolveAccount(accountMap, "goodsReceivedNotInvoiced"), accrued, {
+      description: `إقفال استحقاق استلام ${match?.receiptReference ?? ""}`.trim(),
+      partyType: match?.supplierId ? "supplier" : null,
+      partyId: match?.supplierId ?? null,
+    }),
+  ];
+
+  if (!money.isZero(variance)) {
+    lines.push(
+      variance > 0
+        ? debit(inventoryAccount, variance, {
+            description: `فرق سعر شراء بالزيادة — ${match?.itemName ?? ""}`.trim(),
+          })
+        : credit(inventoryAccount, Math.abs(variance), {
+            description: `فرق سعر شراء بالنقص — ${match?.itemName ?? ""}`.trim(),
+          }),
+    );
+  }
+
+  lines.push(
+    credit(accountOr(match?.payableAccountId, accountMap, "accountsPayable"), invoiceValue, {
+      description: `فاتورة مورد ${match?.supplierInvoiceRef ?? ""} — ${match?.supplierName ?? ""}`.trim(),
+      partyType: "supplier",
+      partyId: match?.supplierId ?? null,
+    }),
+  );
+
+  return lines;
+}
+
+export function inventoryDispatchLines(dispatch, accountMap) {
+  const value = money.round(dispatch?.totalCost ?? 0);
+  const fromAccount = accountOr(dispatch?.fromInventoryAccountId, accountMap, "inventory");
+
+  return [
+    debit(resolveAccount(accountMap, "stockInTransit"), value, {
+      description: `شحنة تحت التحويل إلى ${dispatch?.toWarehouseName ?? ""}`.trim(),
+    }),
+    credit(fromAccount, value, {
+      description: `خروج شحنة من ${dispatch?.fromWarehouseName ?? ""}`.trim(),
+    }),
+  ];
+}
+
+/**
+ * استلام شحنة بالفرع بعد الفحص والعد — بقيمة **المستلم الفعلي فقط**.
+ *
+ * مدين حساب مخزون الفرع، دائن «مخزون تحت التحويل».
+ */
+export function inventoryTransitReceiptLines(receipt, accountMap) {
+  const value = money.round(receipt?.totalCost ?? 0);
+  const toAccount = accountOr(receipt?.toInventoryAccountId, accountMap, "inventory");
+
+  return [
+    debit(toAccount, value, {
+      description: `استلام شحنة بـ ${receipt?.toWarehouseName ?? ""} بعد العد الفعلي`.trim(),
+    }),
+    credit(resolveAccount(accountMap, "stockInTransit"), value, {
+      description: "تصفية شحنة من مخزون تحت التحويل",
+    }),
+  ];
+}
+
+/**
+ * عجز شحنة تحت التحويل — الفرق بين المشحون والمستلم فعلاً.
+ *
+ * الفرق **لا يُحمَّل على مخزون الفرع** حمايةً لأمين المخزن المستلم، بل
+ * يُعترف به خسارة في «عجز وتلف المخزون» ويُصفّى من الحساب الوسيط.
+ *
+ * مدين «عجز وتلف المخزون»، دائن «مخزون تحت التحويل».
+ */
+export function inventoryTransitLossLines(loss, accountMap) {
+  const value = money.round(loss?.totalCost ?? 0);
+
+  if (money.isZero(value)) {
+    throw ruleViolation("عجز شحنة بقيمة صفر لا يُرحَّل محاسبيًا.");
+  }
+
+  return [
+    debit(resolveAccount(accountMap, "inventoryShrinkage"), value, {
+      description: `عجز شحنة ${loss?.reference ?? ""} — ${loss?.reason ?? ""}`.trim(),
+      costCenterId: loss?.costCenterId ?? null,
+    }),
+    credit(resolveAccount(accountMap, "stockInTransit"), value, {
+      description: "تصفية عجز من مخزون تحت التحويل",
+    }),
+  ];
+}
+
 export function inventoryTransferLines(transfer, accountMap) {
   const value = money.round(transfer?.totalCost ?? 0);
 
@@ -771,6 +906,10 @@ export const POSTING_RULES = Object.freeze({
   [SourceType.INVENTORY_ADJUSTMENT]: inventoryAdjustmentLines,
   [SourceType.INVENTORY_RETURN]: supplierReturnLines,
   [SourceType.INVENTORY_TRANSFER]: inventoryTransferLines,
+  [SourceType.INVENTORY_DISPATCH]: inventoryDispatchLines,
+  [SourceType.INVENTORY_TRANSIT_RECEIPT]: inventoryTransitReceiptLines,
+  [SourceType.INVENTORY_TRANSIT_LOSS]: inventoryTransitLossLines,
+  [SourceType.PURCHASE_INVOICE_MATCH]: purchaseInvoiceMatchLines,
 });
 
 /**

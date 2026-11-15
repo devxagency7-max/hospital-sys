@@ -29,6 +29,10 @@ import * as hr from "../mock/services/hr.service.js";
 import * as inventory from "../mock/services/inventory.service.js";
 import * as dashboard from "../mock/services/dashboard.service.js";
 import * as patients from "../mock/services/patients.service.js";
+import * as rooms from "../mock/services/rooms.service.js";
+import * as dispensing from "../mock/services/dispensing.service.js";
+import * as pricing from "../mock/services/pricing.service.js";
+import * as procurement from "../mock/services/procurement.service.js";
 
 /** المستخدم الحالي — يُمرَّر لكل عملية كتابة لتوثيقها في سجل التدقيق. */
 const actor = () => ({ user: currentUser() });
@@ -268,6 +272,61 @@ const ROUTES = {
   "GET /patients/admissions/:id": ({ params }) => ({ data: patients.getAdmission(params.id) }),
   "POST /patients/admissions": ({ body }) => ({ data: patients.createAdmission(body, actor()) }),
   "POST /patients/admissions/:id/discharge": ({ params, body }) => ({ data: patients.dischargeAdmission(params.id, body, actor()) }),
+  "GET /patients/admissions/:id/cost-summary": ({ params }) => ({
+    data: rooms.getAdmissionCostSummary(params.id),
+  }),
+  "POST /patients/admissions/:id/backfill-charges": ({ params }) => ({
+    data: rooms.backfillAdmissionCharges(params.id, actor()),
+  }),
+
+  /* --- الغرف والأسرّة ولوحة الإشغال --- */
+  "GET /rooms": ({ params }) => rooms.listRooms(params),
+  "GET /rooms/occupancy-board": ({ params }) => ({ data: rooms.getOccupancyBoard(params) }),
+  "GET /rooms/types": ({ params }) => rooms.listRoomTypes(params),
+  "GET /rooms/:id": ({ params }) => ({ data: rooms.getRoom(params.id) }),
+  "POST /rooms/:id/status": ({ params, body }) => ({ data: rooms.setRoomStatus(params.id, body, actor()) }),
+
+  /* --- المشتريات والمطابقة الثلاثية (3-Way Match) --- */
+  "GET /procurement/awaiting-price": ({ params }) => procurement.listReceiptsAwaitingPrice(params),
+  "GET /procurement/matches": ({ params }) => procurement.listPurchaseMatches(params),
+  "GET /procurement/matches/:id": ({ params }) => ({ data: procurement.getPurchaseMatch(params.id) }),
+  "POST /procurement/receipts/:id/preview-match": ({ params, body }) => ({
+    data: procurement.previewMatch(params.id, body),
+  }),
+  "POST /procurement/receipts/:id/match": ({ params, body }) => ({
+    data: procurement.matchSupplierInvoice(params.id, body, actor()),
+  }),
+
+  /* --- شرائح التعريفة والعملات وأسعار الصرف --- */
+  "GET /pricing/tiers": ({ params }) => pricing.listTariffTiers(params),
+  "GET /pricing/services/:id/matrix": ({ params }) => ({
+    data: pricing.getServicePriceMatrix(params.id),
+  }),
+  "GET /pricing/patients/:id/profile": ({ params }) => ({
+    data: pricing.getPatientTariffProfile(params.id),
+  }),
+  "POST /pricing/quote": ({ body }) => ({ data: pricing.priceBasketForPatient(body) }),
+
+  "GET /fx/rates": ({ params }) => pricing.listExchangeRates(params),
+  "GET /fx/rate": ({ query }) => ({ data: pricing.getExchangeRate(query) }),
+  "POST /fx/rates": ({ body }) => ({ data: pricing.declareExchangeRate(body, actor()) }),
+  "POST /fx/difference": ({ body }) => ({ data: pricing.computeExchangeDifference(body) }),
+
+  /* --- الصرف للمريض (الجسر بين المخزون وحساب المريض) --- */
+  "GET /dispensing/items": ({ params }) => dispensing.listDispensableItems(params),
+  "GET /dispensing/patient-log": ({ params }) => dispensing.listPatientDispenses(params),
+  "POST /dispensing/to-patient": ({ body }) => ({
+    data: dispensing.dispenseItemToPatient(body, actor()),
+  }),
+  "POST /dispensing/basket": ({ body }) => ({
+    data: dispensing.dispenseBasketToPatient(body, actor()),
+  }),
+
+  /* --- دفتر استحقاق خدمات الإقامة ومحرك الرسم اليومي --- */
+  "GET /patients/admission-charges": ({ params }) => rooms.listAdmissionCharges(params),
+  "POST /patients/admission-charges/run-daily": ({ body }) => ({
+    data: rooms.runDailyBedCharges(body ?? {}, actor()),
+  }),
 
   /* --- فواتير المرضى --- */
   "GET /patients/invoices/list": ({ params }) => patients.listPatientInvoices(params),
@@ -430,8 +489,8 @@ const ROUTES = {
   "GET /inv/requisitions": ({ params }) => inventory.listRequisitions(params),
   "GET /inv/requisitions/:id": ({ params }) => ({ data: inventory.getRequisition(params.id) }),
   "POST /inv/requisitions": ({ body }) => ({ data: inventory.createRequisition(body, actor()) }),
-  "GET /inv/requisitions/check-availability/:itemId": ({ params }) => ({
-    data: inventory.checkItemAvailability(params.itemId),
+  "GET /inv/requisitions/check-availability/:itemId": ({ params, query }) => ({
+    data: inventory.checkItemAvailability(params.itemId, query?.branchId ?? null),
   }),
   "POST /inv/requisitions/:id/fulfill-hub": ({ params, body }) => ({
     data: inventory.fulfillFromHub(params.id, body, actor()),
@@ -444,6 +503,15 @@ const ROUTES = {
   }),
   "POST /inv/requisitions/:id/inspect-receive": ({ params, body }) => ({
     data: inventory.branchInspectAndReceive(params.id, body, actor()),
+  }),
+  "POST /inv/requisitions/:id/receive-supplier-order": ({ params, body }) => ({
+    data: inventory.receiveSupplierOrderAtHub(params.id, body, actor()),
+  }),
+  "POST /inv/requisitions/:id/mark-arrived": ({ params, body }) => ({
+    data: inventory.markShipmentArrivedAtBranch(params.id, body, actor()),
+  }),
+  "POST /inv/requisitions/:id/reject": ({ params, body }) => ({
+    data: inventory.rejectRequisition(params.id, body, actor()),
   }),
 
   /* ======================================================================
