@@ -53,57 +53,48 @@ export default async function receptionBillingPage(context) {
         "div",
         { class: "flex items-center gap-2.5" },
         el("div", { class: "p-2 rounded-lg bg-brand-subtle text-brand" }, icon("users", { size: 22 })),
-        el("h1", { class: "text-xl font-bold text-ink" }, "مكتب الاستقبال — استعلام وسداد حسابات المرضى"),
-        badge("المكاتب الأمامية والخزينة", { tone: "brand" }),
-      ),
-      el(
-        "p",
-        { class: "text-xs text-muted mt-1" },
-        "استعلام فوري عن حسابات المرضى، عرض العمليات والإقامة، وطباعة كشف الحساب الملخص المعتمد للاستقبال.",
+
+        /*
+         * عنوان قصير بلا وصف.
+         *
+         * كان العنوان «مكتب الاستقبال — استعلام وسداد حسابات المرضى» ومعه
+         * سطر وصف، وفوقهما مسار تنقّل يقول الشيء نفسه. ثلاثة أسطر تشرح
+         * شاشة يفتحها صاحبها خمسين مرة في اليوم ويعرف ما فيها.
+         */
+        el("h1", { class: "text-xl font-bold text-ink" }, "استعلام وسداد حساب مريض"),
       ),
     ),
-    el(
-      "div",
-      { class: "flex items-center gap-2 flex-wrap" },
-      button({
-        id: "btn-quick-receipt-header",
-        label: "+ تحصيل دفعة / سند قبض سريع",
-        variant: "primary",
-        icon: "check",
-        onClick: () => openFastReceiptModal(summaryData.patient, summaryData, refreshCurrentPatient),
-      }),
-    ),
+
+    /*
+     * زر السداد كان مكررًا: واحد هنا في الترويسة وواحد في بطاقة المريض.
+     * والترويسة أسوأ موضع له — يُضغط قبل اختيار مريض فيفتح على فراغ.
+     * بقي زر واحد بجوار الحساب الذي يُسدَّد.
+     */
   );
 
-  // 2. بطاقات إحصائيات الاستقبال السريعة
+  /*
+   * 2. مؤشران لا أربعة.
+   *
+   * الأربعة كانت تأخذ ثلث الشاشة فوق منطقة العمل، وفيها رقمان لا يخصان
+   * موظفة الاستقبال وهي تستعلم عن مريض: «إجمالي التحصيلات» و«العناية
+   * المركزة» مؤشرا إدارة لا أداة تشغيل — موضعهما لوحة التحكم.
+   *
+   * الباقيان يجيبان سؤالي الموظفة: كم مقيمًا عندي؟ وكم مطلوب تحصيله؟
+   */
   const kpiRow = el(
     "section",
-    { class: "grid grid-cols-2 md:grid-cols-4 gap-4" },
+    { class: "grid grid-cols-2 gap-3" },
     statTile({
-      title: "المرضى المقيمون حالياً",
+      label: "المرضى المقيمون حالياً",
       value: integer(statsData.activeInpatients || 0),
-      hint: "أجنحة وعناية وغرف",
+      hint: `منهم ${integer(statsData.activeIcu || 0)} في العناية المركزة`,
       icon: "hospital",
       tone: "brand",
     }),
     statTile({
-      title: "العناية المركزة (ICU)",
-      value: integer(statsData.activeIcu || 0),
-      hint: "حالات نشطة حالياً",
-      icon: "activity",
-      tone: "danger",
-    }),
-    statTile({
-      title: "إجمالي التحصيلات بالاستقبال",
-      value: amount(statsData.totalCollected || 0),
-      hint: "سندات قبض مسجلة",
-      icon: "checkCircle",
-      tone: "success",
-    }),
-    statTile({
-      title: "مستحقات مطلوب تحصيلها",
+      label: "مستحقات مطلوب تحصيلها",
       value: amount(statsData.totalReceivables || 0),
-      hint: "رصيد المرضى المتبقي",
+      hint: `حُصِّل حتى الآن ${amount(statsData.totalCollected || 0)}`,
       icon: "creditCard",
       tone: "warning",
     }),

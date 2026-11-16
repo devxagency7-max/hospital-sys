@@ -180,9 +180,21 @@ export function notificationsPanel() {
   }
 
   function updateBadge() {
+    /*
+     * المصفوفات فقط تُعدّ.
+     *
+     * استجابة التنبيهات تحمل — إلى جانب مصفوفات البنود — مفتاح `totals`
+     * وهو كائن ملخص. جمع `.length` عليه يُنتج `undefined`، و`عدد + undefined`
+     * يُنتج `NaN` — وهو ما كان يظهر حرفيًا في شارة الجرس أعلى كل شاشة.
+     *
+     * الحارس بالشكل لا بالاسم: استثناء `totals` بالاسم يكسر مجددًا مع أول
+     * مفتاح ملخص جديد.
+     */
     const count =
       state.status === "ready"
-        ? Object.values(state.data).reduce((total, rows) => total + rows.length, 0)
+        ? Object.values(state.data ?? {})
+            .filter(Array.isArray)
+            .reduce((total, rows) => total + rows.length, 0)
         : 0;
 
     badge.textContent = count > 9 ? "9+" : String(count);

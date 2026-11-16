@@ -14,6 +14,7 @@ import { icon } from "../common/icon.js";
 import { iconButton } from "../common/button.js";
 import { initials } from "../../js/core/format.js";
 import { currentUser, currentRole, ROLES, setRole } from "../../js/core/permissions.js";
+import { landingPathForRole } from "../../js/config/navigation.js";
 import { appState } from "../../js/core/store.js";
 import { on } from "../../js/core/events.js";
 import { toggleCollapsed } from "./sidebar.js";
@@ -405,8 +406,16 @@ function roleSwitcher() {
                   setRole(key);
                   closePanel();
                   paintLabel();
-                  // الشاشة الحالية قد تكون ممنوعة على الدور الجديد — نعيد توجيهها.
-                  window.dispatchEvent(new HashChangeEvent("hashchange"));
+
+                  /*
+                   * ننتقل لشاشة بداية الدور لا نكتفي بإعادة التوجيه.
+                   *
+                   * الشاشة الحالية قد تكون ممنوعة على الدور الجديد، وحتى
+                   * إن كانت مسموحة فهي غالبًا ليست ما يبدأ به صاحب الدور
+                   * يومه: الاستقبال يبدأ على لوحة الإشغال، والتمريض على
+                   * شاشة الصرف، وأمين المخزن على طلبات النواقص.
+                   */
+                  navigate(landingPathForRole(key));
                 },
               },
               el("span", {}, role.label),

@@ -24,7 +24,7 @@ const IMPLEMENTED = [
   {
     path: "/reception/occupancy",
     title: "إشغال الغرف والأسرّة",
-    permission: "reception.view",
+    permission: "reception.occupancy.view",
     load: () => import("../../pages/reception/occupancy.page.js"),
   },
   {

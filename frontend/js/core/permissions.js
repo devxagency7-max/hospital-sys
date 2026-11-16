@@ -77,6 +77,18 @@ export const PERMISSIONS = {
 
   /* ===================== المخازن ===================== */
   "inv.view": "عرض المخازن",
+
+  /*
+   * مفاتيح عرض دقيقة لكل شاشة مخزون.
+   *
+   * `inv.view` وحدها كانت تفتح قسم المخازن كاملًا، فكانت الممرضة ترى
+   * «المستودعات والفروع» و«الأصناف والمخزون» — شاشات إدارة لا تخص شغلها.
+   * الصلاحية الواسعة تُسهّل الإعداد وتُفسد القائمة.
+   */
+  "inv.movements.view": "عرض حركات المخزون",
+  "inv.items.view": "عرض دليل الأصناف والأرصدة",
+  "inv.warehouse.view": "عرض المستودعات والفروع",
+  "inv.operations.view": "عمليات المخزون التفصيلية (جرد · تسويات · تشغيلات · صلاحية)",
   "inv.item.manage": "إدارة الأصناف والتصنيفات",
   "inv.warehouse.manage": "إدارة المخازن",
   "inv.receipt.create": "تسجيل إذن إضافة",
@@ -101,6 +113,7 @@ export const PERMISSIONS = {
   "patients.view": "عرض حسابات المرضى والخدمات",
   "patients.manage": "إدارة ملفات المرضى",
   "patients.invoice": "إصدار فواتير المرضى",
+  "patients.invoices.view": "عرض فواتير المرضى",
   "patients.receipt": "تسجيل سندات قبض ودفعات المرضى",
   "patients.services.manage": "إدارة دليل الخدمات الطبية",
   "patients.admissions.manage": "إدارة الإقامة والعمليات والعناية",
@@ -109,6 +122,12 @@ export const PERMISSIONS = {
 
   /* ===================== الاستقبال واستعلام المرضى ===================== */
   "reception.view": "عرض موديول الاستقبال واستعلام المرضى",
+
+  /*
+   * لوحة الإشغال مفصولة عن استعلام الحسابات: الممرضة تحتاج أن ترى غرف
+   * قسمها، ولا تحتاج شاشة الاستعلام والسداد — وهي شغل كاشير لا تمريض.
+   */
+  "reception.occupancy.view": "عرض لوحة إشغال الغرف والأسرّة",
   "reception.receipt": "تسجيل سندات قبض الاستقبال",
   "reception.summary.print": "طباعة كشف حساب ملخص للاستقبال",
 
@@ -145,10 +164,12 @@ export const ROLES = {
     permissions: [
       "dashboard.view",
       "reception.*",
+      "reception.occupancy.view",
       "patients.view",
       "patients.manage",
       "patients.receipt",
       "patients.invoice",
+      "patients.invoices.view",
       "patients.admissions.manage",
       "patients.rooms.manage",
     ],
@@ -161,6 +182,9 @@ export const ROLES = {
       "gl.*",
       "pricing.*",
       "inv.view",
+      "inv.movements.view",
+      "inv.items.view",
+      "patients.invoices.view",
       "reports.view",
       "reports.financial.view",
       "reports.export",
@@ -211,12 +235,18 @@ export const ROLES = {
     label: "تمريض وصرف للمريض",
     permissions: [
       "dashboard.view",
-      "inv.view",
+
+      /*
+       * لا `inv.view` ولا `inv.items.view` ولا `inv.warehouse.view`:
+       * الممرضة تصرف لمريضها وتطلب نواقص قسمها. دليل الأصناف وإدارة
+       * المستودعات وحركات المخزون شغل أمين المخزن لا شغلها.
+       */
       "inv.dispense.patient",
       "inv.issue.create",
       "inv.requisition.create",
+
       "patients.view",
-      "reception.view",
+      "reception.occupancy.view",
     ],
   },
 
@@ -231,12 +261,19 @@ export const ROLES = {
     permissions: [
       "dashboard.view",
       "inv.view",
+      "inv.movements.view",
+      "inv.items.view",
+      "inv.operations.view",
       "inv.dispense.patient",
       "inv.issue.create",
       "inv.transfer.create",
       "inv.requisition.create",
       "inv.requisition.inspect",
       "inv.count.manage",
+      "inv.adjustment.create",
+
+      /* لا `inv.warehouse.view`: إدارة المستودعات قرار مدير المخازن. */
+      "reception.occupancy.view",
       "patients.view",
       "reports.view",
       "reports.inventory.view",

@@ -25,29 +25,37 @@ export const navigation = [
      ====================================================================== */
   {
     key: "reception",
-    label: "الاستقبال واستعلام المرضى",
+    label: "الاستقبال والغرف",
     icon: "users",
     permission: "reception.view",
     children: [
-      { label: "إشغال الغرف والأسرّة", path: "/reception/occupancy", permission: "reception.view" },
-      { label: "استعلام وسداد حسابات المرضى", path: "/reception", permission: "reception.view" },
-      { label: "سندات قبض ودفعات الاستقبال", path: "/reception/receipts", permission: "reception.receipt" },
+      { label: "إشغال الغرف والأسرّة", path: "/reception/occupancy", permission: "reception.occupancy.view" },
+      { label: "استعلام وسداد حساب مريض", path: "/reception", permission: "reception.view" },
     ],
   },
 
   /* ======================================================================
      حسابات المرضى والخدمات الطبية
      ====================================================================== */
+  /*
+   * كان هناك قسمان متداخلان: «الاستقبال واستعلام المرضى» و«حسابات المرضى
+   * والخدمات»، وفيهما سندا قبض بمسارين مختلفين واسمين متشابهين
+   * (`/reception/receipts` و`/patients/receipts`). موظفة الاستقبال كانت
+   * تقف أمام زرّين لا تعرف أيهما تضغط.
+   *
+   * الآن: «الاستقبال والغرف» لما يخص الحجز والاستعلام، و«المرضى والفواتير»
+   * لما يخص الحساب — وسند قبض واحد في مكان واحد.
+   */
   {
     key: "patients",
-    label: "حسابات المرضى والخدمات",
+    label: "المرضى والفواتير",
     icon: "hospital",
     permission: "patients.view",
     children: [
       { label: "سجل المرضى", path: "/patients", permission: "patients.view" },
-      { label: "فواتير المرضى", path: "/patients/invoices", permission: "patients.view" },
+      { label: "الإقامة والعمليات والعناية", path: "/patients/admissions", permission: "patients.admissions.manage" },
+      { label: "فواتير المرضى", path: "/patients/invoices", permission: "patients.invoices.view" },
       { label: "سندات القبض والدفعات", path: "/patients/receipts", permission: "patients.receipt" },
-      { label: "الإقامة والعمليات والعناية", path: "/patients/admissions", permission: "patients.view" },
       { label: "دليل الخدمات الطبية", path: "/patients/services", permission: "patients.services.manage" },
     ],
   },
@@ -100,7 +108,13 @@ export const navigation = [
 
       { label: "الضرائب والإقرارات", path: "/fin/taxes", permission: "fin.tax.manage" },
       { label: "القوائم المالية", path: "/fin/statements", permission: "fin.statements.view" },
-      { label: "تسعير الأصناف وهوامش الربح", path: "/inv/price-reviews", permission: "pricing.manage" },
+
+      /*
+       * «تسعير الأصناف وهوامش الربح» كان مُدرجًا هنا أيضًا بنفس المسار
+       * (`/inv/price-reviews`) وباسم مختلف — فكان مدير حسابات المرضى يرى
+       * الشاشة نفسها مرتين باسمين لا يعرف الفرق بينهما. موضعها قسم
+       * المخازن حيث تُراجَع أسعار الأصناف.
+       */
     ],
   },
 
@@ -138,13 +152,39 @@ export const navigation = [
     icon: "inventory",
     permission: "inv.view",
     children: [
-      { label: "طلبات النواقص والتوريد", path: "/inv/requisitions", permission: "inv.view" },
-      { label: "صرف أدوية لمريض", path: "/inv/dispense", permission: "inv.issue.create" },
-      { label: "حركات المخزون", path: "/inv/movements", permission: "inv.view" },
-      { label: "الأصناف والمخزون", path: "/inv/items", permission: "inv.view" },
+      { label: "طلبات النواقص والتوريد", path: "/inv/requisitions", permission: "inv.requisition.create" },
+      { label: "صرف أدوية لمريض", path: "/inv/dispense", permission: "inv.dispense.patient" },
+      { label: "حركات المخزون", path: "/inv/movements", permission: "inv.movements.view" },
+      { label: "الأصناف والمخزون", path: "/inv/items", permission: "inv.items.view" },
       { label: "مطابقة فواتير الموردين", path: "/inv/invoice-matching", permission: "fin.supplier.invoice" },
       { label: "مراجعة وتسعير الأصناف", path: "/inv/price-reviews", permission: "pricing.manage" },
-      { label: "المستودعات والفروع", path: "/inv/warehouses", permission: "inv.view" },
+      { label: "المستودعات والفروع", path: "/inv/warehouses", permission: "inv.warehouse.view" },
+
+      /*
+       * مجموعة فرعية مطوية: عمليات يحتاجها أمين المخزن يوميًا لكنها كانت
+       * **غائبة عن القائمة تمامًا** — الجرد الفعلي والتسويات وتتبّع الصلاحية
+       * كانت بمسارات بلا رابط، فلم يكن أمين المخزن يصل إليها من أصله.
+       * (أثر جانبي لاختصار الروابط من 13 إلى 5.)
+       *
+       * تُطوى افتراضيًا فلا تُطيل القائمة على غير أصحابها، وتظهر لمن يملك
+       * `inv.operations.view` وحدهم.
+       */
+      {
+        label: "عمليات المخزون التفصيلية",
+        permission: "inv.operations.view",
+        collapsible: true,
+        children: [
+          { label: "الجرد الفعلي", path: "/inv/counts", permission: "inv.count.manage" },
+          { label: "التسويات المخزنية", path: "/inv/adjustments", permission: "inv.adjustment.create" },
+          { label: "تتبّع الصلاحية", path: "/inv/expiry", permission: "inv.operations.view" },
+          { label: "التشغيلات", path: "/inv/batches", permission: "inv.operations.view" },
+          { label: "أرصدة المخزون", path: "/inv/balances", permission: "inv.operations.view" },
+          { label: "إذن إضافة", path: "/inv/receipts", permission: "inv.receipt.create" },
+          { label: "إذن صرف", path: "/inv/issues", permission: "inv.issue.create" },
+          { label: "تحويل مخزني", path: "/inv/transfers", permission: "inv.transfer.create" },
+          { label: "تصنيفات الأصناف", path: "/inv/categories", permission: "inv.item.manage" },
+        ],
+      },
     ],
   },
 
@@ -202,6 +242,102 @@ export const navigation = [
   },
 ];
 
+/* ============================================================================
+   شغلي النهاردة — اختصارات الدور
+
+   ═══════════════════════════════════════════════════════════════════════════
+    القائمة المفلترة وحدها لا تكفي.
+
+    موظفة الاستقبال تُسأل عشرين مرة في الساعة سؤالًا واحدًا: «فيه أوضة
+    فاضية؟». أن تجد الجواب خلف قسم مطوي اسمه «الاستقبال والغرف» يعني فتح
+    مجموعة ثم قراءة أربعة عناوين ثم الضغط — ثلاث خطوات لسؤال واحد يتكرر
+    كل ثلاث دقائق.
+
+    فأعلى الشريط اختصارات الدور: أزرار كبيرة لأكثر شاشتين أو ثلاث يستعملها
+    صاحب الدور فعلًا، مرئية دائمًا بلا طيّ. والأقسام تحتها كما هي للباقي —
+    فيبقى اسم القسم واحدًا لكل الأدوار، والتدريب والتوثيق مشتركين.
+
+    القاعدة: **ثلاثة اختصارات كحد أقصى.** أربعة تعني أننا لم نقرر.
+   ═══════════════════════════════════════════════════════════════════════════
+   ============================================================================ */
+
+/**
+ * اختصارات كل دور — مرتبة بالأهم أولًا.
+ *
+ * كل اختصار يحمل صلاحيته: الدور قد يُعدَّل من شاشة الأدوار، فلا نفترض أن
+ * صاحب الدور يملك ما في قائمته. ما لا يملكه لا يُعرض.
+ */
+export const ROLE_SHORTCUTS = {
+  reception: [
+    { label: "إشغال الغرف", hint: "الفاضي والمشغول", path: "/reception/occupancy", icon: "hospital", permission: "reception.occupancy.view" },
+    { label: "سداد حساب", hint: "استعلام وتحصيل", path: "/reception", icon: "wallet", permission: "reception.view" },
+    { label: "سجل المرضى", hint: "بحث وتسجيل", path: "/patients", icon: "users", permission: "patients.view" },
+  ],
+
+  nurse: [
+    { label: "صرف أدوية لمريض", hint: "غرفة ← أصناف ← تم", path: "/inv/dispense", icon: "inventory", permission: "inv.dispense.patient" },
+    { label: "إشغال الغرف", hint: "مرضى القسم", path: "/reception/occupancy", icon: "hospital", permission: "reception.occupancy.view" },
+    { label: "طلب نواقص", hint: "احتياج القسم", path: "/inv/requisitions", icon: "inbox", permission: "inv.requisition.create" },
+  ],
+
+  pharmacy: [
+    { label: "صرف أدوية لمريض", hint: "غرفة ← أصناف ← تم", path: "/inv/dispense", icon: "inventory", permission: "inv.dispense.patient" },
+    { label: "طلبات النواقص", hint: "طلب واستلام", path: "/inv/requisitions", icon: "inbox", permission: "inv.requisition.create" },
+    { label: "الجرد الفعلي", hint: "عدّ ومطابقة", path: "/inv/counts", icon: "columns", permission: "inv.count.manage" },
+  ],
+
+  inv: [
+    { label: "طلبات النواقص", hint: "شحن للفروع", path: "/inv/requisitions", icon: "inbox", permission: "inv.requisition.create" },
+    { label: "إذن إضافة", hint: "استلام من مورد", path: "/inv/receipts", icon: "download", permission: "inv.receipt.create" },
+    { label: "الجرد الفعلي", hint: "عدّ ومطابقة", path: "/inv/counts", icon: "columns", permission: "inv.count.manage" },
+  ],
+
+  fin: [
+    { label: "مطابقة فواتير الموردين", hint: "استلامات تنتظر سعرًا", path: "/inv/invoice-matching", icon: "money", permission: "fin.supplier.invoice" },
+    { label: "فواتير العملاء", hint: "إصدار ومتابعة", path: "/fin/customer-invoices", icon: "billing", permission: "fin.view" },
+    { label: "الخزائن والبنوك", hint: "الحركة النقدية", path: "/fin/cash-boxes", icon: "wallet", permission: "fin.view" },
+  ],
+
+  gl: [
+    { label: "قيود اليومية", hint: "مراجعة وترحيل", path: "/gl/journal", icon: "accounting", permission: "gl.view" },
+    { label: "مراجعة وتسعير الأصناف", hint: "اعتماد هوامش الربح", path: "/inv/price-reviews", icon: "money", permission: "pricing.manage" },
+    { label: "ميزان المراجعة", hint: "التوازن اللحظي", path: "/gl/trial-balance", icon: "reports", permission: "gl.trialbalance.view" },
+  ],
+
+  hr: [
+    { label: "الحضور والانصراف", hint: "تسجيل ومتابعة", path: "/hr/attendance", icon: "clock", permission: "hr.attendance.view" },
+    { label: "طلبات الإجازات", hint: "بانتظار الاعتماد", path: "/hr/leaves", icon: "calendar", permission: "hr.view" },
+    { label: "مسيّرات الرواتب", hint: "تشغيل واعتماد", path: "/hr/payroll", icon: "money", permission: "hr.payroll.view" },
+  ],
+
+  billing: [
+    { label: "فواتير المرضى", hint: "إصدار ومتابعة", path: "/patients/invoices", icon: "billing", permission: "patients.invoices.view" },
+    { label: "سندات القبض", hint: "تحصيل", path: "/patients/receipts", icon: "wallet", permission: "patients.receipt" },
+    { label: "سجل المرضى", hint: "بحث وحسابات", path: "/patients", icon: "users", permission: "patients.view" },
+  ],
+
+  /*
+   * مدير النظام بلا اختصارات عمدًا: شغله ليس شاشة يومية متكررة، وقائمة
+   * اختصارات له تعني اختيار ثلاث شاشات من أربع وسبعين بلا مبرر.
+   */
+  admin: [],
+};
+
+/** اختصارات دور بعينه — فارغة لدور بلا اختصارات معرَّفة. */
+export function shortcutsForRole(roleKey) {
+  return ROLE_SHORTCUTS[roleKey] ?? [];
+}
+
+/**
+ * أول شاشة يفتح عليها الدور.
+ *
+ * أول اختصار في قائمته — فيبدأ يومه على ما يستعمله فعلًا لا على لوحة تحكم
+ * عامة يمر عليها ثم يغادرها.
+ */
+export function landingPathForRole(roleKey) {
+  return ROLE_SHORTCUTS[roleKey]?.[0]?.path ?? "/";
+}
+
 /** كل الشاشات في قائمة مسطّحة — يبنيها الراوتر. */
 export function flatScreens() {
   const out = [];
@@ -218,6 +354,23 @@ export function flatScreens() {
     }
 
     for (const child of entry.children ?? []) {
+      /*
+       * المجموعة الفرعية المطوية ليست شاشة — هي حاوية. نُسطّح أبناءها
+       * بدلها، وإلا دخلت القائمة مدخلًا بلا `path` فيُسجَّل الراوتر مسارًا
+       * فارغًا ويفشل فحص «كل مسار يشاور على ملف موجود».
+       */
+      if (child.children) {
+        for (const grandchild of child.children) {
+          out.push({
+            ...grandchild,
+            module: entry.key,
+            moduleLabel: entry.label,
+            groupLabel: child.label,
+          });
+        }
+        continue;
+      }
+
       out.push({
         ...child,
         module: entry.key,

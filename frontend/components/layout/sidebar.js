@@ -9,7 +9,7 @@
 
 import { el, cx, render } from "../../js/core/dom.js";
 import { icon } from "../common/icon.js";
-import { navigation } from "../../js/config/navigation.js";
+import { navigation, shortcutsForRole } from "../../js/config/navigation.js";
 import { can, canAny, currentUser, currentRole } from "../../js/core/permissions.js";
 import { appState, writePreference } from "../../js/core/store.js";
 import { on, emit } from "../../js/core/events.js";
@@ -80,8 +80,112 @@ export function sidebar() {
       )
       .map((entry) => (entry.children ? renderGroup(entry, active, collapsed) : renderLink(entry, active, collapsed)));
 
-    render(navHost, ...groups);
+    render(navHost, shortcutsBlock(active, collapsed), ...groups);
     render(footerHost, footer(collapsed));
+  }
+
+  /**
+   * «شغلي النهاردة» — اختصارات الدور أعلى الشريط.
+   *
+   * مرئية دائمًا بلا طيّ: الشاشة التي تُفتح عشرين مرة في اليوم لا تُخبَّأ
+   * خلف مجموعة. وتُفلتر بالصلاحية كبقية القائمة — الدور قد يُعدَّل، فلا
+   * نفترض أن صاحبه يملك ما في قائمته.
+   */
+  function shortcutsBlock(active, collapsed) {
+    const role = currentRole();
+    const items = shortcutsForRole(role.key).filter((item) => can(item.permission));
+
+    if (!items.length) return null;
+
+    if (collapsed) {
+      return el(
+        "div",
+        { class: "pb-2 mb-2 border-b border-white/50 dark:border-white/10 space-y-0.5" },
+        ...items.map((item) =>
+          el(
+            "a",
+            {
+              href: `#${item.path}`,
+              title: `${item.label} — ${item.hint}`,
+              onClick: () => {
+                if (window.innerWidth < UI.mobileBreakpoint) emit("sidebar:close-mobile");
+              },
+              class: cx(
+                "hx-press grid place-items-center size-11 rounded-2xl mx-auto my-1 transition-all cursor-pointer",
+                active === item.path
+                  ? "bg-blue-600 text-white shadow-md"
+                  : "bg-white/70 dark:bg-white/10 text-blue-700 dark:text-blue-300 hover:bg-white",
+              ),
+            },
+            icon(item.icon, { size: 21 }),
+          ),
+        ),
+      );
+    }
+
+    return el(
+      "div",
+      { class: "pb-3 mb-2 border-b border-white/50 dark:border-white/10 space-y-1.5" },
+      el(
+        "p",
+        { class: "px-3.5 pt-1 pb-0.5 text-[11px] font-black tracking-wide text-slate-500 dark:text-slate-400" },
+        "شغلي النهاردة",
+      ),
+      ...items.map((item) => {
+        const isActive = active === item.path;
+
+        return el(
+          "a",
+          {
+            href: `#${item.path}`,
+            onClick: () => {
+              if (window.innerWidth < UI.mobileBreakpoint) emit("sidebar:close-mobile");
+            },
+            class: cx(
+              "hx-press flex items-center gap-3 px-3 py-2.5 rounded-2xl mx-1 transition-all cursor-pointer",
+              isActive
+                ? "bg-blue-600 text-white shadow-md"
+                : "bg-white/70 dark:bg-white/10 hover:bg-white dark:hover:bg-white/15 border border-white/80 dark:border-white/10",
+            ),
+          },
+          el(
+            "span",
+            {
+              class: cx(
+                "grid place-items-center size-9 rounded-xl shrink-0",
+                isActive ? "bg-white/20" : "bg-blue-600/10 dark:bg-blue-400/15",
+              ),
+            },
+            icon(item.icon, {
+              size: 19,
+              class: isActive ? "text-white" : "text-blue-700 dark:text-blue-300",
+            }),
+          ),
+          el("span", { class: "min-w-0 flex-1 text-start" }, [
+            el(
+              "span",
+              {
+                class: cx(
+                  "block text-[13.5px] font-black truncate-1",
+                  isActive ? "text-white" : "text-slate-900 dark:text-white",
+                ),
+              },
+              item.label,
+            ),
+            el(
+              "span",
+              {
+                class: cx(
+                  "block text-[11px] truncate-1",
+                  isActive ? "text-white/80" : "text-slate-500 dark:text-slate-400",
+                ),
+              },
+              item.hint,
+            ),
+          ]),
+        );
+      }),
+    );
   }
 
   function renderLink(entry, active, collapsed) {
@@ -138,9 +242,116 @@ export function sidebar() {
     );
   }
 
+  /**
+   * مجموعة فرعية مطوية داخل قسم — «عمليات المخزون التفصيلية».
+   *
+   * مطوية افتراضيًا: شاشات يحتاجها أمين المخزن لكن لا تُفتح كل ساعة، فلا
+   * تُطيل القائمة على من يمر عليها. وتُفتح تلقائيًا إن كانت إحدى شاشاتها
+   * هي المفتوحة الآن — وإلا بدا المستخدم في شاشة لا يجد لها أثرًا في
+   * القائمة.
+   */
+  function renderSubGroup(group, active) {
+    const items = group.children.filter((child) => can(child.permission));
+    const hasActive = items.some((child) => child.path === active);
+    const key = `sub:${group.label}`;
+    const isOpen = expanded.has(key) || hasActive;
+
+    const toggle = el(
+      "button",
+      {
+        type: "button",
+        class: cx(
+          "hx-press w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl",
+          "text-[12.5px] transition-all cursor-pointer",
+          hasActive
+            ? "text-blue-700 dark:text-blue-300 font-black"
+            : "text-slate-600 dark:text-slate-300 font-bold hover:bg-white/50 dark:hover:bg-white/10",
+        ),
+        "aria-expanded": String(isOpen),
+        onClick: () => {
+          if (expanded.has(key)) expanded.delete(key);
+          else expanded.add(key);
+          paint();
+        },
+      },
+      el("span", { class: "truncate-1 text-start" }, group.label),
+      el(
+        "span",
+        {
+          class: cx(
+            "shrink-0 flex items-center gap-1.5 text-slate-400",
+            isOpen && "text-slate-500",
+          ),
+        },
+        el("span", { class: "text-[10px] font-black num" }, String(items.length)),
+        el(
+          "span",
+          { class: cx("transition-transform duration-200", isOpen && "rotate-180") },
+          icon("chevronDown", { size: 13 }),
+        ),
+      ),
+    );
+
+    return el(
+      "div",
+      { class: "mt-1 pt-1 border-t border-white/50 dark:border-white/10" },
+      toggle,
+      isOpen
+        ? el(
+            "div",
+            { class: "hx-page-in space-y-0.5 ps-2.5 pe-1 py-0.5" },
+            ...items.map((child) => {
+              const isActive = child.path === active;
+
+              return el(
+                "a",
+                {
+                  href: `#${child.path}`,
+                  onClick: () => {
+                    if (window.innerWidth < UI.mobileBreakpoint) emit("sidebar:close-mobile");
+                  },
+                  class: cx(
+                    "flex items-center gap-2 px-3 py-1.5 rounded-lg text-[12.5px] transition-all cursor-pointer",
+                    isActive
+                      ? "bg-white dark:bg-slate-800 text-blue-700 dark:text-blue-300 font-black shadow-xs"
+                      : "text-slate-600 dark:text-slate-300 hover:bg-white/60 dark:hover:bg-white/10 font-semibold",
+                  ),
+                  "aria-current": isActive ? "page" : undefined,
+                },
+                el(
+                  "span",
+                  {
+                    class: cx(
+                      "size-1.5 rounded-full shrink-0",
+                      isActive ? "bg-blue-600 dark:bg-blue-400" : "bg-slate-300 dark:bg-slate-600",
+                    ),
+                  },
+                ),
+                el("span", { class: "truncate-1 text-start" }, child.label),
+              );
+            }),
+          )
+        : null,
+    );
+  }
+
   function renderGroup(entry, active, collapsed) {
-    const children = entry.children.filter((child) => can(child.permission));
-    const hasActiveChild = children.some((child) => child.path === active);
+    /*
+     * الطفل قد يكون شاشة أو **مجموعة فرعية مطوية**. المجموعة تُعرض إن ملك
+     * المستخدم صلاحيتها وكان فيها طفل واحد يملكه على الأقل — مجموعة بعنوان
+     * تُفتح على فراغ أسوأ من غيابها.
+     */
+    const children = entry.children.filter((child) => {
+      if (!can(child.permission)) return false;
+      if (child.children) return child.children.some((grandchild) => can(grandchild.permission));
+      return true;
+    });
+
+    const hasActiveChild = children.some(
+      (child) =>
+        child.path === active ||
+        (child.children ?? []).some((grandchild) => grandchild.path === active),
+    );
 
     const isOpen = expanded.has(entry.key) && !collapsed;
 
@@ -220,6 +431,8 @@ export function sidebar() {
               class: "hx-page-in my-0.5 space-y-0.5 overflow-hidden ps-2 pe-1",
             },
             ...children.map((child) => {
+              if (child.children) return renderSubGroup(child, active);
+
               const isActive = child.path === active;
 
               return el(

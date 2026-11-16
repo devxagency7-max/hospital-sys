@@ -24,6 +24,12 @@ import {
 } from "../js/core/permissions.js";
 import { createIssue, createTransfer, createReceipt } from "../js/mock/services/inventory.service.js";
 import { dispenseItemToPatient } from "../js/mock/services/dispensing.service.js";
+import {
+  navigation,
+  flatScreens,
+  shortcutsForRole,
+  ROLE_SHORTCUTS,
+} from "../js/config/navigation.js";
 import { all, find } from "../js/mock/db.js";
 
 const HUB = 1;
@@ -94,7 +100,22 @@ section("حدود كل دور: التمريض لا يملك سلطة أمين ا
 loginAs("nurse", [PHARMACY], "ممرضة القسم الداخلي");
 assert("الدور الحالي تمريض", currentRole().key === "nurse");
 assert("التمريض يملك الصرف للمريض", can("inv.dispense.patient"));
-assert("التمريض يملك عرض المخزون", can("inv.view"));
+assert("التمريض يملك طلب نواقص قسمه", can("inv.requisition.create"));
+assert("التمريض يملك رؤية إشغال الغرف", can("reception.occupancy.view"));
+assert("التمريض يملك سجل المرضى", can("patients.view"));
+
+/*
+ * التضييق مقصود: `inv.view` وحدها كانت تفتح قسم المخازن كاملًا للممرضة —
+ * دليل الأصناف وحركات المخزون وإدارة المستودعات. وهي تصرف لمريضها وتطلب
+ * نواقص قسمها، لا تدير مخزنًا.
+ */
+assert("التمريض لا يملك عرض المخازن العام", !can("inv.view"));
+assert("التمريض لا يملك دليل الأصناف", !can("inv.items.view"));
+assert("التمريض لا يملك حركات المخزون", !can("inv.movements.view"));
+assert("التمريض لا يملك إدارة المستودعات", !can("inv.warehouse.view"));
+assert("التمريض لا يملك العمليات التفصيلية", !can("inv.operations.view"));
+assert("التمريض لا يملك استعلام وسداد الحسابات", !can("reception.view"));
+assert("التمريض لا يملك فواتير المرضى", !can("patients.invoices.view"));
 assert("التمريض لا يملك تسجيل استلام من مورد", !can("inv.receipt.create"));
 assert("التمريض لا يملك تسوية جرد", !can("inv.adjustment.create"));
 assert("التمريض لا يملك إدارة الأصناف", !can("inv.item.manage"));
@@ -105,7 +126,9 @@ loginAs("pharmacy", [PHARMACY], "أمين صيدلية فرعية");
 assert("الصيدلية الفرعية تملك فحص واستلام الشحنات", can("inv.requisition.inspect"));
 assert("الصيدلية الفرعية تملك طلب النواقص", can("inv.requisition.create"));
 assert("الصيدلية الفرعية تملك الجرد", can("inv.count.manage"));
+assert("الصيدلية الفرعية تملك العمليات التفصيلية", can("inv.operations.view"));
 assert("الصيدلية الفرعية لا تملك استلام مورد خارجي", !can("inv.receipt.create"));
+assert("الصيدلية الفرعية لا تملك إدارة المستودعات", !can("inv.warehouse.view"));
 assert("الصيدلية الفرعية لا تملك اعتماد الأسعار", !can("pricing.manage"));
 
 loginAs("reception", [], "موظفة استقبال");
@@ -276,5 +299,100 @@ assert("يوجد أمين لكل مخزن فرعي على الأقل",
 
 assert("كل دور مستخدم معرَّف في كتالوج الأدوار",
   users.every((u) => Boolean(ROLES[u.role])));
+
+/* ==========================================================================
+   8. حجم القائمة لكل دور — حارس ضد تضخّم الشريط
+   ========================================================================== */
+
+section("حجم الشريط الجانبي لكل دور");
+
+/** الشاشات التي يراها دور فعلًا في الشريط. */
+function visibleScreensFor(roleKey) {
+  setRole(roleKey);
+  const out = [];
+
+  for (const entry of navigation) {
+    if (!entry.children) {
+      if (can(entry.permission)) out.push(entry.label);
+      continue;
+    }
+    for (const child of entry.children) {
+      if (!can(child.permission)) continue;
+      if (child.children) {
+        out.push(...child.children.filter((g) => can(g.permission)).map((g) => g.label));
+      } else {
+        out.push(child.label);
+      }
+    }
+  }
+
+  return out;
+}
+
+/*
+ * حارس ضد العودة للمشكلة: صلاحية واسعة واحدة (`inv.view`) كانت تفتح للممرضة
+ * أحد عشر شاشة وهي تحتاج خمسًا. الحد ليس رقمًا جماليًا — هو إنذار مبكر بأن
+ * صلاحية اتّسعت أكثر من دورها.
+ */
+const SIDEBAR_BUDGET = {
+  nurse: 6,
+  reception: 8,
+  pharmacy: 18,
+  inv: 20,
+  billing: 12,
+};
+
+for (const [role, budget] of Object.entries(SIDEBAR_BUDGET)) {
+  const screens = visibleScreensFor(role);
+  assert(
+    `«${ROLES[role].label}» يرى ${screens.length} شاشة (الحد ${budget})`,
+    screens.length <= budget,
+  );
+}
+
+/* الاختصارات: ثلاثة كحد أقصى، وكلها مسارات حقيقية يملكها الدور. */
+for (const roleKey of Object.keys(ROLES)) {
+  const shortcuts = shortcutsForRole(roleKey);
+  assert(`اختصارات «${roleKey}» ثلاثة فأقل`, shortcuts.length <= 3);
+
+  setRole(roleKey);
+  const owned = shortcuts.filter((sc) => can(sc.permission));
+  assert(
+    `كل اختصارات «${roleKey}» ضمن صلاحياته`,
+    owned.length === shortcuts.length,
+  );
+}
+
+/*
+ * لا مسار يظهر مرتين في الشريط. تكرر فعلًا: `/inv/price-reviews` كان
+ * مُدرجًا في «المحاسبة المالية» و«المخازن» باسمين مختلفين، فكان صاحب
+ * الدورين يرى الشاشة نفسها مرتين ولا يعرف الفرق.
+ */
+const allPaths = flatScreens().map((s) => s.path);
+const duplicatePaths = allPaths.filter((path, i) => allPaths.indexOf(path) !== i);
+assert(
+  `لا شاشة مكررة في الشريط${duplicatePaths.length ? ` (${[...new Set(duplicatePaths)].join(", ")})` : ""}`,
+  duplicatePaths.length === 0,
+);
+
+const navPaths = new Set(allPaths);
+for (const [roleKey, shortcuts] of Object.entries(ROLE_SHORTCUTS)) {
+  assert(
+    `اختصارات «${roleKey}» تشاور على شاشات مسجَّلة`,
+    shortcuts.every((sc) => navPaths.has(sc.path)),
+  );
+}
+
+/*
+ * الشاشات المفقودة من الشريط: كانت تسع شاشات مخزون بمسارات بلا رابط —
+ * أمين المخزن لا يصل للجرد الفعلي ولا للتسويات من أصله.
+ */
+loginAs("inv", null, "مدير المخازن");
+const invScreens = visibleScreensFor("inv");
+for (const essential of ["الجرد الفعلي", "التسويات المخزنية", "تتبّع الصلاحية", "إذن إضافة"]) {
+  assert(`أمين المخزن يصل إلى «${essential}» من الشريط`, invScreens.includes(essential));
+}
+
+loginAsAdmin();
 
 report();

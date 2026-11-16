@@ -140,25 +140,25 @@ export default async function requisitionsPage() {
 
       return [
         statTile({
-          title: "بانتظار مراجعة الرئيسي",
+          label: "بانتظار مراجعة الرئيسي",
           value: pending,
           tone: pending > 0 ? "warning" : "neutral",
           hint: pending > 0 ? "⚠️ يتطلب قرار توفير فوري أو مناقلة" : "لا توجد طلبات معلقة",
         }),
         statTile({
-          title: "في الطريق للفروع",
+          label: "في الطريق للفروع",
           value: inTransit,
           tone: "brand",
           hint: "شحنات جاري توصيلها للمخازن الفرعية",
         }),
         statTile({
-          title: "استلامات بها عجز / خلاف",
+          label: "استلامات بها عجز / خلاف",
           value: discrepancy,
           tone: discrepancy > 0 ? "danger" : "neutral",
           hint: "فروقات بين المحول والمستلم الفعلي",
         }),
         statTile({
-          title: "طلبات مكتملة ومطابقة",
+          label: "طلبات مكتملة ومطابقة",
           value: completed,
           tone: "success",
           hint: "تم استلامها ومطابقتها 100% بالفرع",
