@@ -1322,7 +1322,22 @@ export function reviewPriceByAccountant(id, payload, { user } = {}) {
  * قائمة طلبات النواقص والتوريد مع الفلترة والإحصائيات اللحظية.
  */
 export function listRequisitions(params = {}) {
-  const allReqs = all("requisitions");
+  /*
+   * اللوحة مقصورة على نطاق المستخدم.
+   *
+   * أمين مخزن فرع 1 لا شأن له بطلبات فرع 3: رؤيتها تكشف احتياجات أقسام
+   * ليست مسؤوليته، وتُغرق لوحته بما لا يملك التصرف فيه أصلًا. أما من بلا
+   * نطاق — مدير المخازن وأمين الرئيسي — فيرى الجميع لأن التوزيع عمله.
+   */
+  const scope = allowedWarehouseIds();
+
+  const allReqs = all("requisitions").filter(
+    (row) =>
+      scope === null ||
+      scope.includes(String(row.branchId)) ||
+      scope.includes(String(row.sourceBranchId)),
+  );
+
   const filtered = allReqs.filter((row) => {
     if (params.status && params.status !== "all" && row.status !== params.status) return false;
     if (params.branchId && String(row.branchId) !== String(params.branchId)) return false;

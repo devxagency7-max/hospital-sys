@@ -101,6 +101,21 @@ export const PERMISSIONS = {
   "inv.valuation.view": "عرض تقييم المخزون",
   "inv.dispense.patient": "صرف أدوية ومستلزمات لمريض",
   "inv.requisition.create": "إنشاء طلب نواقص من فرع",
+
+  /*
+   * «يطلب نواقص» ≠ «يدير طلبات النواقص».
+   *
+   * شاشة طلبات النواقص لوحة إدارة سلاسل إمداد: طلبات كل الفروع، وأزرار
+   * شحن وتوزيع وأوامر شراء، وتصدير. الممرضة تطلب احتياج قسمها — ولا تدير
+   * توزيع المستشفى. فُصل مفتاح العرض عن مفتاح الإنشاء.
+   */
+  "inv.requisition.view": "عرض لوحة إدارة طلبات النواقص (كل الفروع)",
+
+  /*
+   * شاشة «نواقص قسمي» لمن يطلب فقط. من يملك لوحة الإدارة يُنشئ طلبه منها،
+   * فعرض الشاشتين له تكرار: مدخلان لعمل واحد.
+   */
+  "inv.requisition.own": "طلب نواقص القسم ومتابعته (شاشة مبسطة)",
   "inv.requisition.fulfill": "اعتماد وشحن طلبات النواقص",
   "inv.requisition.inspect": "فحص واستلام الشحنات بالفرع",
 
@@ -218,7 +233,38 @@ export const ROLES = {
     label: "أمين المخازن",
     permissions: [
       "dashboard.view",
-      "inv.*",
+
+      /*
+       * صلاحيات مُعدَّدة لا `inv.*`.
+       *
+       * الـwildcard هو أصل كل ما سبق: `inv.view` فتحت قسم المخازن كاملًا
+       * للممرضة، و`inv.*` تمنح مدير المخازن شاشة «نواقص قسمي» — وهو
+       * الرئيسي، لا قسم يطلب منه. الوضوح هنا أرخص من مفاجأة لاحقة.
+       */
+      "inv.view",
+      "inv.item.manage",
+      "inv.items.view",
+      "inv.warehouse.manage",
+      "inv.warehouse.view",
+      "inv.movements.view",
+      "inv.operations.view",
+      "inv.valuation.view",
+
+      "inv.receipt.create",
+      "inv.issue.create",
+      "inv.transfer.create",
+      "inv.return.create",
+      "inv.adjustment.create",
+      "inv.adjustment.approve",
+      "inv.count.manage",
+      "inv.dispense.patient",
+
+      "inv.requisition.view",
+      "inv.requisition.create",
+      "inv.requisition.fulfill",
+      "inv.requisition.inspect",
+      /* لا `inv.requisition.own`: الرئيسي لا يطلب من نفسه. */
+
       "reports.view",
       "reports.inventory.view",
       "reports.export",
@@ -249,7 +295,10 @@ export const ROLES = {
        */
       "inv.dispense.patient",
       "inv.issue.create",
+
+      /* تطلب احتياج قسمها فقط — لا `inv.requisition.view` ولا `.fulfill`. */
       "inv.requisition.create",
+      "inv.requisition.own",
 
       "patients.view",
       "reception.occupancy.view",
@@ -274,6 +323,7 @@ export const ROLES = {
       "inv.issue.create",
       "inv.transfer.create",
       "inv.requisition.create",
+      "inv.requisition.view",
       "inv.requisition.inspect",
       "inv.count.manage",
       "inv.adjustment.create",

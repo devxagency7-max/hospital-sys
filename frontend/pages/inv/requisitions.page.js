@@ -91,6 +91,7 @@ export default async function requisitionsPage() {
     actions: (ctx) => [
       button({
         label: "طلب نواقص جديد",
+        permission: "inv.requisition.create",
         variant: "primary",
         icon: "plus",
         onClick: () => openNewRequisitionModal(ctx, { warehouses, items }),
@@ -442,6 +443,7 @@ async function openRequisitionDetailsModal(reqId, ctx, { warehouses }) {
                     variant: "primary",
                     size: "sm",
                     icon: "check",
+                    permission: "inv.requisition.fulfill",
                     onClick: () =>
                       runAction(
                         async () => {
@@ -463,6 +465,7 @@ async function openRequisitionDetailsModal(reqId, ctx, { warehouses }) {
                     variant: "secondary",
                     size: "sm",
                     icon: "refresh",
+                    permission: "inv.requisition.fulfill",
                     onClick: () =>
                       runAction(
                         async () => {
@@ -482,6 +485,7 @@ async function openRequisitionDetailsModal(reqId, ctx, { warehouses }) {
                 variant: canFulfillHub ? "ghost" : "primary",
                 size: "sm",
                 icon: "plus",
+                permission: "inv.requisition.fulfill",
                 onClick: () =>
                   runAction(
                     async () => {
@@ -497,6 +501,7 @@ async function openRequisitionDetailsModal(reqId, ctx, { warehouses }) {
                 variant: "ghost",
                 size: "sm",
                 icon: "close",
+                permission: "inv.requisition.fulfill",
                 onClick: () => {
                   const reason = window.prompt("سبب الرفض أو الإلغاء (إلزامي للتوثيق):");
                   if (!reason?.trim()) return;
@@ -583,6 +588,7 @@ async function openRequisitionDetailsModal(reqId, ctx, { warehouses }) {
                   variant: "primary",
                   size: "sm",
                   icon: "check",
+                  permission: "inv.requisition.fulfill",
                   onClick: () =>
                     runAction(
                       async () => {
@@ -659,6 +665,7 @@ async function openRequisitionDetailsModal(reqId, ctx, { warehouses }) {
                     variant: "secondary",
                     size: "sm",
                     icon: "truck",
+                    permission: "inv.requisition.inspect",
                     onClick: () =>
                       runAction(
                         async () => {
@@ -675,6 +682,7 @@ async function openRequisitionDetailsModal(reqId, ctx, { warehouses }) {
                 variant: "success",
                 size: "sm",
                 icon: "check",
+                permission: "inv.requisition.inspect",
                 onClick: async () => {
                   await branchInspectAndReceive(req.id, {
                     receivedQty: Number(qtyInput.value),
@@ -690,6 +698,7 @@ async function openRequisitionDetailsModal(reqId, ctx, { warehouses }) {
                 variant: "danger",
                 size: "sm",
                 icon: "warning",
+                permission: "inv.requisition.inspect",
                 onClick: async () => {
                   const val = Number(qtyInput.value);
                   const dispatched = Number(req.dispatchedQty || req.requestedQty);

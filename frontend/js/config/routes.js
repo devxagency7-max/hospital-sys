@@ -320,6 +320,12 @@ const IMPLEMENTED = [
     load: () => import("../../pages/inv/balances.page.js"),
   },
   {
+    path: "/inv/my-requisitions",
+    title: "نواقص قسمي",
+    permission: "inv.requisition.own",
+    load: () => import("../../pages/inv/my-requisitions.page.js"),
+  },
+  {
     path: "/inv/dispense",
     title: "صرف أدوية ومستلزمات لمريض",
     permission: "inv.issue.create",
