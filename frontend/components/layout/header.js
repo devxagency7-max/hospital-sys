@@ -448,6 +448,16 @@ function roleSwitcher() {
     if (label) label.textContent = currentRole().label;
   }
 
+  /*
+   * الاسم يتبع الجلسة لا ضغطة الزر وحدها.
+   *
+   * كان `paintLabel` يُنادى من معالج الاختيار فقط، فإن تغيّرت الجلسة من
+   * مكان آخر — تسجيل دخول، تجديد توكن بدور مختلف — بقي الزر يعرض الدور
+   * القديم بينما الشريط والصلاحيات تغيّرت فعلًا. مستخدم يقرأ «مدير النظام»
+   * وهو يعمل بصلاحيات تمريض.
+   */
+  on("session:changed", paintLabel);
+
   host.appendChild(toggle);
   return host;
 }

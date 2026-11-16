@@ -10,17 +10,35 @@ import { el, cx } from "../../js/core/dom.js";
 import { icon } from "../common/icon.js";
 import { button } from "../common/button.js";
 import { navigate } from "../../js/core/router.js";
+import { can } from "../../js/core/permissions.js";
 
 /** أنواع البحث — كل نوع وشاشته التي يُرسَل إليها. */
+/*
+ * كل وجهة بحث تحمل صلاحية وجهتها.
+ *
+ * كانت الوجهات الأربع تُعرض للجميع، فكانت الممرضة تُدعى للبحث في «العملاء»
+ * و«الموردون» و«قيود اليومية» — شاشات لا تملك فتح واحدة منها. البحث الذي
+ * ينتهي بصفحة «غير مصرح» ليس اختصارًا، هو وعد كاذب.
+ */
 const MODES = [
-  { key: "customers", label: "العملاء", icon: "users", path: "/fin/customers", placeholder: "اسم العميل أو كوده أو رقم هاتفه…" },
-  { key: "suppliers", label: "الموردون", icon: "truck", path: "/fin/suppliers", placeholder: "اسم المورد أو كوده…" },
-  { key: "items", label: "الأصناف", icon: "inventory", path: "/inv/items", placeholder: "اسم الصنف أو كوده أو الباركود…" },
-  { key: "journal", label: "قيود اليومية", icon: "accounting", path: "/gl/journal", placeholder: "رقم القيد أو وصفه أو مرجعه…" },
+  { key: "patients", label: "المرضى", icon: "hospital", path: "/patients", placeholder: "اسم المريض أو كوده أو رقم هاتفه…", permission: "patients.view" },
+  { key: "customers", label: "العملاء", icon: "users", path: "/fin/customers", placeholder: "اسم العميل أو كوده أو رقم هاتفه…", permission: "fin.view" },
+  { key: "suppliers", label: "الموردون", icon: "truck", path: "/fin/suppliers", placeholder: "اسم المورد أو كوده…", permission: "fin.view" },
+  { key: "items", label: "الأصناف", icon: "inventory", path: "/inv/items", placeholder: "اسم الصنف أو كوده أو الباركود…", permission: "inv.items.view" },
+  { key: "journal", label: "قيود اليومية", icon: "accounting", path: "/gl/journal", placeholder: "رقم القيد أو وصفه أو مرجعه…", permission: "gl.view" },
 ];
 
+/**
+ * بحث واستعلام سريع.
+ *
+ * يُرجع `null` إن لم يملك المستخدم أي وجهة بحث — صندوق بحث بلا وجهة واحدة
+ * مسموحة لا فائدة منه، وعرضه فارغًا يُوهم بأن النظام معطّل.
+ */
 export function heroSearch() {
-  let mode = MODES[0];
+  const modes = MODES.filter((item) => can(item.permission));
+  if (!modes.length) return null;
+
+  let mode = modes[0];
 
   const input = el("input", {
     type: "search",
@@ -47,7 +65,7 @@ export function heroSearch() {
   const tabs = el(
     "div",
     { class: "flex items-center gap-1.5 flex-wrap" },
-    ...MODES.map((item) =>
+    ...modes.map((item) =>
       el(
         "button",
         {

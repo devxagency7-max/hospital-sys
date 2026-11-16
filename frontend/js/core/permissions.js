@@ -234,7 +234,13 @@ export const ROLES = {
   nurse: {
     label: "تمريض وصرف للمريض",
     permissions: [
-      "dashboard.view",
+      /*
+       * لا `dashboard.view`.
+       *
+       * لوحة التحكم نظرة إدارية على الأداء المالي والمحاسبي. بعد حجب ما
+       * لا تملكه الممرضة لم يتبقَّ فيها شيء — صفحة فارغة تُفتح بالخطأ.
+       * شاشتها الأولى هي شغلها: صرف الأدوية.
+       */
 
       /*
        * لا `inv.view` ولا `inv.items.view` ولا `inv.warehouse.view`:
@@ -259,7 +265,7 @@ export const ROLES = {
   pharmacy: {
     label: "أمين صيدلية فرعية",
     permissions: [
-      "dashboard.view",
+      /* لا `dashboard.view` — انظر التعليق في دور التمريض. */
       "inv.view",
       "inv.movements.view",
       "inv.items.view",
@@ -272,8 +278,11 @@ export const ROLES = {
       "inv.count.manage",
       "inv.adjustment.create",
 
-      /* لا `inv.warehouse.view`: إدارة المستودعات قرار مدير المخازن. */
-      "reception.occupancy.view",
+      /*
+       * لا `inv.warehouse.view`: إدارة المستودعات قرار مدير المخازن.
+       * ولا `reception.occupancy.view`: شاشة الصرف تعرض الغرف المشغولة
+       * بنفسها، فلوحة الإشغال المستقلة تكرار لا يضيف شيئًا لأمين صيدلية.
+       */
       "patients.view",
       "reports.view",
       "reports.inventory.view",

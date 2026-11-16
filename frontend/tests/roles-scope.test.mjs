@@ -28,6 +28,7 @@ import {
   navigation,
   flatScreens,
   shortcutsForRole,
+  landingPathForRole,
   ROLE_SHORTCUTS,
 } from "../js/config/navigation.js";
 import { all, find } from "../js/mock/db.js";
@@ -391,6 +392,63 @@ loginAs("inv", null, "مدير المخازن");
 const invScreens = visibleScreensFor("inv");
 for (const essential of ["الجرد الفعلي", "التسويات المخزنية", "تتبّع الصلاحية", "إذن إضافة"]) {
   assert(`أمين المخزن يصل إلى «${essential}» من الشريط`, invScreens.includes(essential));
+}
+
+/* ==========================================================================
+   9. منطقية الشريط — لا قسم خارج دور صاحبه
+   ========================================================================== */
+
+section("منطقية الشريط: لا يرى الدور قسمًا ليس من شغله");
+
+/** أسماء الأقسام التي يراها دور. */
+function sectionsFor(roleKey) {
+  setRole(roleKey);
+  return navigation
+    .filter((entry) =>
+      entry.children
+        ? entry.children.some(
+            (c) => can(c.permission) && (!c.children || c.children.some((g) => can(g.permission))),
+          )
+        : can(entry.permission),
+    )
+    .map((entry) => entry.label);
+}
+
+/*
+ * الأقسام تُسمّى بالوظيفة لا بالإدارة المالكة.
+ *
+ * كان القسم اسمه «الاستقبال والغرف»، فكانت الممرضة ترى قسم «استقبال»
+ * لتصل إلى غرف قسمها — والنظام بذلك يصف عملها بعمل غيرها. وكانت ترى
+ * «المرضى والفواتير» وهي لا تملك فاتورة واحدة.
+ */
+const FORBIDDEN_SECTIONS = {
+  nurse: ["الاستقبال", "الفواتير", "التحصيل", "المحاسبة", "الموارد البشرية", "الإعدادات"],
+  pharmacy: ["الاستقبال", "الفواتير", "التحصيل", "المحاسبة", "الموارد البشرية"],
+  reception: ["المحاسبة", "الموارد البشرية", "المخازن"],
+  hr: ["المخازن", "المرضى", "الغرف", "التحصيل"],
+};
+
+for (const [role, forbidden] of Object.entries(FORBIDDEN_SECTIONS)) {
+  const sections = sectionsFor(role);
+  for (const word of forbidden) {
+    const offender = sections.find((label) => label.includes(word));
+    assert(
+      `«${ROLES[role].label}» لا يرى قسمًا فيه «${word}»${offender ? ` — وجد: ${offender}` : ""}`,
+      !offender,
+    );
+  }
+}
+
+/*
+ * دور بلا لوحة تحكم يجب أن تكون له شاشة بداية، وإلا فُتح النظام على
+ * «غير مصرح» عند أول دخول.
+ */
+for (const roleKey of Object.keys(ROLES)) {
+  setRole(roleKey);
+  if (can("dashboard.view")) continue;
+
+  const landing = landingPathForRole(roleKey);
+  assert(`«${roleKey}» بلا لوحة تحكم له شاشة بداية`, landing !== "/");
 }
 
 loginAsAdmin();

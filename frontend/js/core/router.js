@@ -9,8 +9,9 @@
  */
 
 import { el, render, clear } from "./dom.js";
-import { emit } from "./events.js";
-import { can } from "./permissions.js";
+import { emit, on } from "./events.js";
+import { landingPathForRole } from "../config/navigation.js";
+import { can, currentRole } from "./permissions.js";
 import { toApiError } from "./errors.js";
 import { runCleanups } from "./lifecycle.js";
 
@@ -97,6 +98,21 @@ export function createRouter({ outlet: outletElement, routes: routeList, hooks: 
 
   window.addEventListener("hashchange", handleChange);
 
+  /*
+   * تغيّر الجلسة يُعيد رسم الشاشة الحالية.
+   *
+   * الشريط والترويسة كانا وحدهما يستمعان لـ`session:changed`، فكان محتوى
+   * الصفحة يبقى كما رُسم بصلاحيات الدور السابق: شاشة رُسمت لمدير النظام
+   * تُبقي «ربح الشهر» و«النقدية والبنوك» معروضين بعد التحوّل إلى دور
+   * تمريض لا يملك رؤيتهما — حتى يُنتقَل منها يدويًا.
+   *
+   * إعادة الرسم هنا تُغلق الباب على فئة الأخطاء هذه كلها: أي تغيّر في
+   * الجلسة (تبديل دور، تجديد توكن بصلاحيات مختلفة، سحب صلاحية) يُعيد
+   * تقييم الشاشة بصلاحيات اللحظة.
+   */
+  const onSessionChange = () => handleChange();
+  const offSession = on("session:changed", onSessionChange);
+
   return {
     start: handleChange,
     navigate,
@@ -107,6 +123,7 @@ export function createRouter({ outlet: outletElement, routes: routeList, hooks: 
     resolve: (path) => match(path),
     stop() {
       window.removeEventListener("hashchange", handleChange);
+      offSession?.();
     },
   };
 }
@@ -176,6 +193,21 @@ async function handleChange() {
   }
 
   const { route, params } = found;
+
+  /*
+   * الجذر «/» لوحة تحكم إدارية لا يملكها كل دور.
+   *
+   * الأدوار التشغيلية (تمريض، صيدلية فرعية) لا لوحة تحكم لها — فتحها على
+   * «غير مصرح» عند أول دخول رسالةٌ خاطئة: ليست ممنوعة من النظام، بل
+   * شاشتها الأولى شيء آخر. نوجّهها لشاشة بداية دورها بدل ذلك.
+   */
+  if (path === "/" && !can(route.permission)) {
+    const landing = landingPathForRole(currentRole().key);
+    if (landing && landing !== "/") {
+      navigate(landing, { replace: true });
+      return;
+    }
+  }
 
   if (route.redirect) {
     navigate(typeof route.redirect === "function" ? route.redirect(params) : route.redirect, {
