@@ -618,8 +618,37 @@ const PLANNED_DETAIL = [
   { path: "/inv/counts/:id", label: "تفاصيل جرد", permission: "inv.count.manage", module: "inv" },
 ];
 
+/**
+ * صلاحية كل شاشة في خريطة التنقل، مفهرسة بمسارها.
+ *
+ * ═══════════════════════════════════════════════════════════════════════════
+ *  مصدر واحد للصلاحية: خريطة التنقل.
+ *
+ *  كانت الصلاحية مكتوبة مرتين — مرة في `navigation.js` لتقرير ما يظهر في
+ *  الشريط، ومرة هنا لتقرير ما يُفتح فعلًا. وقائمتان تصفان الشيء نفسه
+ *  تتباعدان حتمًا: ضُيّقت صلاحيات الشريط ولم تُحدَّث هنا، فصارت اثنتا عشرة
+ *  شاشة تظهر للمستخدم في القائمة ثم تردّه بـ«لا تملك صلاحية الوصول».
+ *
+ *  وهذا أسوأ من منعه ابتداءً: النظام يَعِد ثم يُخلف، والمستخدم لا يعرف
+ *  أهو خطأ في النظام أم في صلاحياته.
+ *
+ *  الآن: ما كان في الشريط تُؤخذ صلاحيته منه. وما ليس فيه (شاشات التفاصيل
+ *  التي تُفتح من صف في جدول) يحتفظ بصلاحيته المكتوبة هنا.
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+function navigationPermissions() {
+  return new Map(flatScreens().map((screen) => [screen.path, screen.permission]));
+}
+
 export function buildRoutes() {
   const implementedPaths = new Set([...IMPLEMENTED, ...DYNAMIC].map((route) => route.path));
+  const navPermissions = navigationPermissions();
+
+  /** يُسقط صلاحية الشريط على المسار المنفَّذ المقابل له. */
+  const withNavPermission = (route) =>
+    navPermissions.has(route.path)
+      ? { ...route, permission: navPermissions.get(route.path) }
+      : route;
 
   /** كل شاشة في خريطة التنقل ليست منفَّذة بعد → صفحة «مخطَّطة». */
   const planned = flatScreens()
@@ -646,5 +675,10 @@ export function buildRoutes() {
    * الترتيب يحكم المطابقة: المسارات الثابتة أولًا فيسبق `/gl/journal/new`
    * النمط `/gl/journal/:id`، وإلا التقط النمط المتغيّر كلمة «new» كمُعرِّف.
    */
-  return [...IMPLEMENTED, ...DYNAMIC, ...planned, ...plannedDetail];
+  return [
+    ...IMPLEMENTED.map(withNavPermission),
+    ...DYNAMIC,
+    ...planned,
+    ...plannedDetail,
+  ];
 }

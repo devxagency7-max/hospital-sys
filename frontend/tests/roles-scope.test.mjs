@@ -31,6 +31,7 @@ import {
   landingPathForRole,
   ROLE_SHORTCUTS,
 } from "../js/config/navigation.js";
+import { buildRoutes } from "../js/config/routes.js";
 import { all, find } from "../js/mock/db.js";
 
 const HUB = 1;
@@ -449,6 +450,82 @@ for (const roleKey of Object.keys(ROLES)) {
 
   const landing = landingPathForRole(roleKey);
   assert(`«${roleKey}» بلا لوحة تحكم له شاشة بداية`, landing !== "/");
+}
+
+/* ==========================================================================
+   10. لا رابط يَعِد ثم يُخلف — الحارس الأهم
+   ========================================================================== */
+
+section("كل رابط يراه الدور يفتح فعلًا");
+
+/*
+ * ═══════════════════════════════════════════════════════════════════════════
+ *  كانت الصلاحية مكتوبة مرتين: في `navigation.js` لتقرير ما يظهر في
+ *  الشريط، وفي `routes.js` لتقرير ما يُفتح فعلًا. فتباعدت القائمتان
+ *  وصارت اثنتا عشرة شاشة تظهر للمستخدم ثم تردّه بـ«لا تملك صلاحية الوصول».
+ *
+ *  وهذا أسوأ من منعه ابتداءً: النظام يَعِد ثم يُخلف.
+ *
+ *  هذا الفحص هو ما يمنع عودتها: لكل دور، كل رابط مرئي في شريطه — ومعه كل
+ *  اختصار — يجب أن يقابله مسار مسجَّل يملك الدور صلاحيته.
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+const builtRoutes = buildRoutes();
+const staticRoute = (path) =>
+  builtRoutes.find((route) => !route.path.includes(":") && route.path === path);
+
+/* أولًا: لا تعارض بين صلاحية الشريط وصلاحية المسار — أيًّا كان الدور. */
+const permissionConflicts = flatScreens()
+  .map((screen) => ({ screen, route: staticRoute(screen.path) }))
+  .filter(({ screen, route }) => !route || String(route.permission) !== String(screen.permission));
+
+assert(
+  `لا شاشة بصلاحيتين مختلفتين بين الشريط والمسار${
+    permissionConflicts.length
+      ? ` (${permissionConflicts.map((c) => c.screen.path).join(", ")})`
+      : ""
+  }`,
+  permissionConflicts.length === 0,
+);
+
+/* ثانيًا: الفحص الفعلي لكل دور. */
+function visibleLinksFor(roleKey) {
+  setRole(roleKey);
+  const out = [];
+
+  for (const entry of navigation) {
+    if (!entry.children) {
+      if (can(entry.permission)) out.push(entry);
+      continue;
+    }
+    for (const child of entry.children) {
+      if (child.children) {
+        out.push(...child.children.filter((g) => can(g.permission)));
+        continue;
+      }
+      if (can(child.permission)) out.push(child);
+    }
+  }
+
+  return out;
+}
+
+for (const roleKey of Object.keys(ROLES)) {
+  setRole(roleKey);
+
+  const links = [...visibleLinksFor(roleKey), ...shortcutsForRole(roleKey).filter((sc) => can(sc.permission))];
+
+  const broken = links.filter((link) => {
+    const route = staticRoute(link.path);
+    return !route || !can(route.permission);
+  });
+
+  assert(
+    `«${ROLES[roleKey].label}» — كل روابطه الـ${links.length} تفتح${
+      broken.length ? ` (مكسور: ${broken.map((b) => b.label).join(", ")})` : ""
+    }`,
+    broken.length === 0,
+  );
 }
 
 loginAsAdmin();
