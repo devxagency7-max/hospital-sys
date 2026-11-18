@@ -138,13 +138,17 @@ function render(host, data) {
       title: "الإيراد والمصروف والربح — شهريًا",
       subtitle: "من بداية السنة المالية. الشهر الأخير جزئي.",
       body: revenueChart({
-        primaryLabel: "الإيراد",
-        secondaryLabel: "صافي الربح",
-        description: "رسم بياني للإيراد وصافي الربح شهريًا من بداية السنة المالية",
+        description: "رسم بياني للإيراد والمصروف وصافي الربح شهريًا من بداية السنة المالية",
+        lines: [
+          { key: "revenue", label: "الإيراد", strokeColor: "var(--color-brand-400)", dotClass: "bg-brand-400" },
+          { key: "expenses", label: "المصروف", strokeColor: "var(--color-danger-300)", dotClass: "bg-danger-300", dash: true },
+          { key: "profit", label: "صافي الربح", strokeColor: "var(--color-success-300)", dotClass: "bg-success-300", dash: true },
+        ],
         series: (data.monthlyTrend ?? []).map((row) => ({
           date: `${row.period}-01`,
-          invoiced: row.revenue,
-          collected: row.profit,
+          revenue: row.revenue,
+          expenses: row.expenses,
+          profit: row.profit,
         })),
       }),
     }),

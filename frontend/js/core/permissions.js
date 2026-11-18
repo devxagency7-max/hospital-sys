@@ -200,6 +200,7 @@ export const ROLES = {
       "inv.movements.view",
       "inv.items.view",
       "patients.invoices.view",
+      "patients.manage",
       "reports.view",
       "reports.financial.view",
       "reports.export",
@@ -230,7 +231,7 @@ export const ROLES = {
   },
 
   inv: {
-    label: "أمين المخازن",
+    label: "مدير المخازن",
     permissions: [
       "dashboard.view",
 

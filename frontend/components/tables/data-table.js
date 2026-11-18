@@ -114,7 +114,7 @@ export function dataTable({
   const stateHost = el("div");
   const bulkBar = el("div", { class: "hidden" });
   const paginationHost = el("div");
-  const filterHost = el("div", { class: "hidden flex-wrap items-end gap-3 px-3 pb-3" });
+  const filterHost = el("div", { class: "flex flex-wrap items-end gap-3 px-3 pb-3" });
 
   const tableScroll = el(
     "div",
@@ -663,19 +663,6 @@ export function dataTable({
     render(columnsMenu, toggle);
   }
 
-  const filtersToggle = filters.length
-    ? button({
-        label: "فلاتر",
-        icon: "filter",
-        variant: "secondary",
-        size: "md",
-        onClick: () => {
-          const isHidden = filterHost.classList.toggle("hidden");
-          filterHost.classList.toggle("flex", !isHidden);
-        },
-      })
-    : null;
-
   const toolbar = el(
     "div",
     { class: "flex flex-wrap items-center justify-between gap-3 p-3" },
@@ -693,7 +680,6 @@ export function dataTable({
       "div",
       { class: "flex items-center gap-2" },
       ...[toolbarActions].flat().filter(Boolean),
-      filtersToggle,
       columnsMenu,
       iconButton("refresh", { label: "تحديث", size: "icon", onClick: load }),
     ),
@@ -706,7 +692,7 @@ export function dataTable({
     {
       class: "glass-card rounded-2xl shadow-card overflow-hidden",
     },
-    el("div", { class: "no-print" }, toolbar, filterHost),
+    el("div", { class: "no-print" }, toolbar, filters.length ? filterHost : null),
     bulkBar,
     tableScroll,
     stateHost,

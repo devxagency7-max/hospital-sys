@@ -1,9 +1,12 @@
 /**
- * رسم الإيرادات — SVG مرسوم يدويًا، بلا مكتبة رسوم بيانية خارجية.
+ * رسم الإيرادات والمصروفات والربح — SVG مرسوم يدويًا، بلا مكتبة رسوم بيانية خارجية.
  *
  * نفس منطق js/core/dom.js#svg ومكوّن الأيقونات: لا طلب شبكة إضافي، ولا حزمة
  * عشرات الكيلوبايتات لرسم خط واحد. السلسلة الزمنية هنا صغيرة بما يكفي
- * (أسبوعان) ليكون الرسم اليدوي أبسط من إدارة تبعية رسوم بيانية كاملة.
+ * (أسابيع أو أشهر) ليكون الرسم اليدوي أبسط من إدارة تبعية رسوم بيانية كاملة.
+ *
+ * الخطوط عامة العدد (`lines`) — الليجند تحتها تِسييك فعلي يُخفي أو يُظهر كل
+ * خط بالضغط عليه، لا نقاط زخرفية بلا أثر.
  */
 
 import { el, svg, cx, clear } from "../../js/core/dom.js";
@@ -20,227 +23,248 @@ function shortDayMonth(isoDate) {
 }
 
 const WIDTH = 640;
-const HEIGHT = 200;
-const PAD_TOP = 16;
-const PAD_BOTTOM = 28;
+const HEIGHT = 128;
+const PAD_TOP = 12;
+const PAD_BOTTOM = 22;
 const PAD_START = 8;
 const PAD_END = 8;
 
 /**
  * @param {object} options
- * @param {Array<{date:string, invoiced:number, collected:number}>} options.series
+ * @param {Array<{date:string, [key:string]: number}>} options.series
+ * @param {Array<{key:string, label:string, color:string, dash?:boolean}>} options.lines
  * @param {boolean} [options.loading]
  */
 export function revenueChart({
   series = [],
+  lines = [],
   loading = false,
-  /**
-   * تسميات السلسلتين. قابلة للتغيير لأن نفس الرسم يخدم «إيراد مقابل ربح»
-   * في لوحة التحكم و«مفوتر مقابل محصَّل» في تقارير الذمم — تثبيتها في الكود
-   * يجعل الرسم يكذب على قارئه في أحد الاستخدامين.
-   */
-  primaryLabel = "القيمة الأولى",
-  secondaryLabel = "القيمة الثانية",
-  description = "رسم بياني لسلسلتين زمنيتين",
+  description = "رسم بياني لعدة سلاسل زمنية",
 } = {}) {
   if (loading) return chartSkeleton();
-  if (!series.length) return chartEmpty();
+  if (!series.length || !lines.length) return chartEmpty();
 
-  const maxValue = Math.max(1, ...series.map((point) => Math.max(point.invoiced, point.collected)));
-  const plotWidth = WIDTH - PAD_START - PAD_END;
-  const plotHeight = HEIGHT - PAD_TOP - PAD_BOTTOM;
-  const stepX = series.length > 1 ? plotWidth / (series.length - 1) : 0;
+  /** الخطوط المرئية حاليًا — الكل ظاهر افتراضًا. */
+  const visible = new Set(lines.map((line) => line.key));
 
-  const xAt = (index) => PAD_START + stepX * index;
-  const yAt = (value) => PAD_TOP + plotHeight * (1 - value / maxValue);
+  const host = el("div", { class: "relative" });
 
-  const invoicedPoints = series.map((point, index) => [xAt(index), yAt(point.invoiced)]);
-  const collectedPoints = series.map((point, index) => [xAt(index), yAt(point.collected)]);
+  function paint() {
+    clear(host);
+    host.appendChild(buildChart());
+  }
 
-  const linePath = (points) =>
-    points.map(([x, y], index) => `${index === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
+  function buildChart() {
+    const activeLines = lines.filter((line) => visible.has(line.key));
+    const maxValue = Math.max(1, ...series.flatMap((row) => lines.map((line) => row[line.key] ?? 0)));
+    const plotWidth = WIDTH - PAD_START - PAD_END;
+    const plotHeight = HEIGHT - PAD_TOP - PAD_BOTTOM;
+    const stepX = series.length > 1 ? plotWidth / (series.length - 1) : 0;
 
-  const areaPath = (points) =>
-    `${linePath(points)} L${points[points.length - 1][0].toFixed(1)},${(HEIGHT - PAD_BOTTOM).toFixed(1)} ` +
-    `L${points[0][0].toFixed(1)},${(HEIGHT - PAD_BOTTOM).toFixed(1)} Z`;
+    const xAt = (index) => PAD_START + stepX * index;
+    const yAt = (value) => PAD_TOP + plotHeight * (1 - value / maxValue);
 
-  /* --- خطوط إرشادية أفقية (شبكة خفيفة جدًا، للقراءة لا للزخرفة) --- */
-  const gridLines = [0, 0.5, 1].map((fraction) =>
-    svg("line", {
-      x1: PAD_START,
-      x2: WIDTH - PAD_END,
-      y1: PAD_TOP + plotHeight * fraction,
-      y2: PAD_TOP + plotHeight * fraction,
-      stroke: "currentColor",
-      class: "text-line",
-      "stroke-width": 1,
-      "stroke-dasharray": fraction === 1 ? "0" : "3 4",
-    }),
-  );
+    const pointsByLine = new Map(
+      lines.map((line) => [line.key, series.map((row, index) => [xAt(index), yAt(row[line.key] ?? 0)])]),
+    );
 
-  /* --- تسميات المحور السيني: أول/أوسط/آخر تاريخ فقط، لا تاريخ تحت كل نقطة --- */
-  const labelIndexes = series.length > 1 ? [0, Math.floor((series.length - 1) / 2), series.length - 1] : [0];
-  const xLabels = [...new Set(labelIndexes)].map((index) =>
-    svg(
-      "text",
+    const linePath = (points) =>
+      points.map(([x, y], index) => `${index === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
+
+    const areaPath = (points) =>
+      `${linePath(points)} L${points[points.length - 1][0].toFixed(1)},${(HEIGHT - PAD_BOTTOM).toFixed(1)} ` +
+      `L${points[0][0].toFixed(1)},${(HEIGHT - PAD_BOTTOM).toFixed(1)} Z`;
+
+    const gridLines = [0, 0.5, 1].map((fraction) =>
+      svg("line", {
+        x1: PAD_START,
+        x2: WIDTH - PAD_END,
+        y1: PAD_TOP + plotHeight * fraction,
+        y2: PAD_TOP + plotHeight * fraction,
+        stroke: "currentColor",
+        class: "text-line",
+        "stroke-width": 1,
+        "stroke-dasharray": fraction === 1 ? "0" : "3 4",
+      }),
+    );
+
+    const labelIndexes = series.length > 1 ? [0, Math.floor((series.length - 1) / 2), series.length - 1] : [0];
+    const xLabels = [...new Set(labelIndexes)].map((index) =>
+      svg(
+        "text",
+        {
+          x: xAt(index),
+          y: HEIGHT - 6,
+          "text-anchor": index === 0 ? "start" : index === series.length - 1 ? "end" : "middle",
+          class: "fill-faint text-[10px] num",
+        },
+        shortDayMonth(series[index].date),
+      ),
+    );
+
+    const tooltip = el(
+      "div",
       {
-        x: xAt(index),
-        y: HEIGHT - 8,
-        "text-anchor": index === 0 ? "start" : index === series.length - 1 ? "end" : "middle",
-        class: "fill-faint text-[10px] num",
+        class:
+          "pointer-events-none absolute z-10 hidden min-w-[9rem] rounded-[var(--radius-control)] " +
+          "border border-line bg-surface px-3 py-2 shadow-raised text-xs",
       },
-      shortDayMonth(series[index].date),
-    ),
-  );
+    );
 
-  /* --- نقطة تفاعلية مخفية لكل يوم + تلميح عند التحويم --- */
-  const tooltip = el(
-    "div",
-    {
-      class:
-        "pointer-events-none absolute z-10 hidden min-w-[9rem] rounded-[var(--radius-control)] " +
-        "border border-line bg-surface px-3 py-2 shadow-raised text-xs",
-    },
-  );
+    const hoverDots = series.map((row, index) => {
+      const dots = activeLines.map((line) => {
+        const [x, y] = pointsByLine.get(line.key)[index];
+        return svg("circle", { cx: x, cy: y, r: 3.5, class: cx(line.dotClass, "opacity-0 transition-opacity duration-150") });
+      });
 
-  const hoverDots = series.map((point, index) => {
-    const [cx1, cy1] = invoicedPoints[index];
-    const [, cy2] = collectedPoints[index];
+      const hitArea = svg("rect", {
+        x: xAt(index) - stepX / 2,
+        y: 0,
+        width: stepX || plotWidth,
+        height: HEIGHT,
+        fill: "transparent",
+      });
 
-    const hitArea = svg("rect", {
-      x: xAt(index) - stepX / 2,
-      y: 0,
-      width: stepX || plotWidth,
-      height: HEIGHT,
-      fill: "transparent",
-    });
-
-    const dotInvoiced = svg("circle", {
-      cx: cx1,
-      cy: cy1,
-      r: 3.5,
-      class: "fill-brand-400 opacity-0 transition-opacity duration-150",
-    });
-    const dotCollected = svg("circle", {
-      cx: cx1,
-      cy: cy2,
-      r: 3.5,
-      class: "fill-success-300 opacity-0 transition-opacity duration-150",
-    });
-
-    hitArea.addEventListener("mouseenter", () => {
-      dotInvoiced.classList.remove("opacity-0");
-      dotCollected.classList.remove("opacity-0");
-
-      tooltip.classList.remove("hidden");
-      tooltip.style.insetInlineStart = `${(cx1 / WIDTH) * 100}%`;
-      tooltip.style.top = "0";
-      clear(tooltip);
-      tooltip.appendChild(
-        el(
-          "div",
-          {},
-          el("p", { class: "font-medium text-ink mb-1" }, fmt.dateLong(point.date)),
+      hitArea.addEventListener("mouseenter", () => {
+        dots.forEach((dot) => dot.classList.remove("opacity-0"));
+        tooltip.classList.remove("hidden");
+        tooltip.style.insetInlineStart = `${(xAt(index) / WIDTH) * 100}%`;
+        tooltip.style.top = "0";
+        clear(tooltip);
+        tooltip.appendChild(
           el(
             "div",
-            { class: "flex items-center gap-1.5 text-muted" },
-            el("span", { class: "size-1.5 rounded-full bg-brand-400 shrink-0" }),
-            el("span", {}, primaryLabel),
-            el("span", { class: "ms-auto num text-ink" }, fmt.amount(point.invoiced)),
+            {},
+            el("p", { class: "font-medium text-ink mb-1" }, fmt.dateLong(row.date)),
+            ...activeLines.map((line) =>
+              el(
+                "div",
+                { class: "flex items-center gap-1.5 text-muted mt-0.5 first:mt-0" },
+                el("span", { class: cx("size-1.5 rounded-full shrink-0", line.dotClass) }),
+                el("span", {}, line.label),
+                el("span", { class: "ms-auto num text-ink" }, fmt.amount(row[line.key] ?? 0)),
+              ),
+            ),
           ),
-          el(
-            "div",
-            { class: "flex items-center gap-1.5 text-muted mt-0.5" },
-            el("span", { class: "size-1.5 rounded-full bg-success-300 shrink-0" }),
-            el("span", {}, secondaryLabel),
-            el("span", { class: "ms-auto num text-ink" }, fmt.amount(point.collected)),
+        );
+      });
+
+      hitArea.addEventListener("mouseleave", () => {
+        dots.forEach((dot) => dot.classList.add("opacity-0"));
+        tooltip.classList.add("hidden");
+      });
+
+      return { hitArea, dots };
+    });
+
+    const chart = svg(
+      "svg",
+      {
+        viewBox: `0 0 ${WIDTH} ${HEIGHT}`,
+        class: "w-full h-auto overflow-visible",
+        role: "img",
+        "aria-label": description,
+      },
+      svg(
+        "defs",
+        {},
+        ...lines.map((line) =>
+          svg(
+            "linearGradient",
+            { id: `hx-revenue-fill-${line.key}`, x1: "0", y1: "0", x2: "0", y2: "1" },
+            svg("stop", { offset: "0%", "stop-color": line.strokeColor, "stop-opacity": "0.22" }),
+            svg("stop", { offset: "100%", "stop-color": line.strokeColor, "stop-opacity": "0" }),
           ),
         ),
-      );
-    });
-
-    hitArea.addEventListener("mouseleave", () => {
-      dotInvoiced.classList.add("opacity-0");
-      dotCollected.classList.add("opacity-0");
-      tooltip.classList.add("hidden");
-    });
-
-    return { hitArea, dotInvoiced, dotCollected };
-  });
-
-  const chart = svg(
-    "svg",
-    {
-      viewBox: `0 0 ${WIDTH} ${HEIGHT}`,
-      class: "w-full h-auto overflow-visible",
-      role: "img",
-      "aria-label": description,
-    },
-    svg(
-      "defs",
-      {},
-      svg(
-        "linearGradient",
-        { id: "hx-revenue-fill", x1: "0", y1: "0", x2: "0", y2: "1" },
-        svg("stop", { offset: "0%", "stop-color": "var(--color-brand-400)", "stop-opacity": "0.28" }),
-        svg("stop", { offset: "100%", "stop-color": "var(--color-brand-400)", "stop-opacity": "0" }),
       ),
-    ),
-    ...gridLines,
-    // منطقة الفوترة المظلَّلة أولًا (الأعمق)، ثم خط التحصيل فوقها.
-    svg("path", { d: areaPath(invoicedPoints), fill: "url(#hx-revenue-fill)", stroke: "none" }),
-    svg("path", {
-      d: linePath(invoicedPoints),
-      fill: "none",
-      stroke: "var(--color-brand-400)",
-      "stroke-width": 2,
-      "stroke-linecap": "round",
-      "stroke-linejoin": "round",
-    }),
-    svg("path", {
-      d: linePath(collectedPoints),
-      fill: "none",
-      stroke: "var(--color-success-300)",
-      "stroke-width": 2,
-      "stroke-linecap": "round",
-      "stroke-linejoin": "round",
-      "stroke-dasharray": "5 4",
-    }),
-    ...xLabels,
-    ...hoverDots.flatMap((d) => [d.dotInvoiced, d.dotCollected]),
-    ...hoverDots.map((d) => d.hitArea),
-  );
+      ...gridLines,
+      ...activeLines.flatMap((line, order) => {
+        const points = pointsByLine.get(line.key);
+        const parts = [];
+        // تعبئة الأعمق (أول خط ظاهر) فقط — خطوط متعددة مملوءة تتزاحم بصريًا.
+        if (order === 0) parts.push(svg("path", { d: areaPath(points), fill: `url(#hx-revenue-fill-${line.key})`, stroke: "none" }));
+        parts.push(
+          svg("path", {
+            d: linePath(points),
+            fill: "none",
+            stroke: line.strokeColor,
+            "stroke-width": 2,
+            "stroke-linecap": "round",
+            "stroke-linejoin": "round",
+            "stroke-dasharray": line.dash ? "5 4" : undefined,
+          }),
+        );
+        return parts;
+      }),
+      ...xLabels,
+      ...hoverDots.flatMap((d) => d.dots),
+      ...hoverDots.map((d) => d.hitArea),
+    );
 
-  // الرسم يدخل بتمدد أفقي خفيف عند أول ظهور — حركة واحدة بسيطة، لا تتكرر.
-  chart.style.transformOrigin = "0% 100%";
-  chart.animate(
-    [
-      { transform: "scaleY(0.85)", opacity: 0 },
-      { transform: "scaleY(1)", opacity: 1 },
-    ],
-    { duration: 420, easing: "cubic-bezier(.16,1,.3,1)" },
-  );
+    chart.style.transformOrigin = "0% 100%";
+    chart.animate(
+      [
+        { transform: "scaleY(0.85)", opacity: 0 },
+        { transform: "scaleY(1)", opacity: 1 },
+      ],
+      { duration: 420, easing: "cubic-bezier(.16,1,.3,1)" },
+    );
 
-  return el(
-    "div",
-    { class: "relative" },
-    el(
+    return el(
       "div",
-      { class: "flex items-center gap-4 mb-3 text-xs" },
-      legendDot("bg-brand-400", primaryLabel),
-      legendDot("bg-success-300", secondaryLabel, "border-dashed"),
-    ),
-    el("div", { class: "relative" }, chart, tooltip),
-  );
-}
+      { class: "space-y-2.5" },
+      legend(),
+      el("div", { class: "relative" }, chart, tooltip),
+    );
+  }
 
-function legendDot(colorClass, label, extra) {
-  return el(
-    "span",
-    { class: "flex items-center gap-1.5 text-muted" },
-    el("span", { class: cx("size-2 rounded-full shrink-0", colorClass, extra) }),
-    label,
-  );
+  function legend() {
+    return el(
+      "div",
+      { class: "flex flex-wrap items-center gap-2 text-xs", role: "group", "aria-label": "إظهار أو إخفاء خطوط الرسم" },
+      ...lines.map((line) => {
+        const checked = visible.has(line.key);
+        return el(
+          "button",
+          {
+            type: "button",
+            role: "checkbox",
+            "aria-checked": String(checked),
+            class: cx(
+              "hx-press flex items-center gap-1.5 px-2 py-1 rounded-full border transition-colors",
+              checked ? "border-line bg-subtle text-ink" : "border-line text-faint opacity-60",
+            ),
+            onClick: () => {
+              if (checked && visible.size === 1) return; // لا تُخفِ آخر خط ظاهر
+              if (checked) visible.delete(line.key);
+              else visible.add(line.key);
+              paint();
+            },
+          },
+          el(
+            "span",
+            {
+              class: cx(
+                "grid place-items-center size-3.5 rounded-sm border shrink-0 transition-colors",
+                checked ? [line.dotClass, "border-transparent"] : "border-line-strong",
+              ),
+            },
+            checked
+              ? svg(
+                  "svg",
+                  { viewBox: "0 0 24 24", class: "size-2.5 text-white", fill: "none", stroke: "currentColor", "stroke-width": 3 },
+                  svg("path", { d: "M20 6L9 17l-5-5", "stroke-linecap": "round", "stroke-linejoin": "round" }),
+                )
+              : null,
+          ),
+          line.label,
+        );
+      }),
+    );
+  }
+
+  paint();
+  return host;
 }
 
 function chartSkeleton() {
@@ -248,14 +272,14 @@ function chartSkeleton() {
     "div",
     { class: "space-y-3" },
     el("div", { class: "flex gap-4" }, el("div", { class: "hx-skeleton h-3 w-16" }), el("div", { class: "hx-skeleton h-3 w-16" })),
-    el("div", { class: "hx-skeleton w-full", style: { height: "200px" } }),
+    el("div", { class: "hx-skeleton w-full", style: { height: `${HEIGHT}px` } }),
   );
 }
 
 function chartEmpty() {
   return el(
     "div",
-    { class: "flex flex-col items-center justify-center text-center py-16 text-faint" },
-    el("p", { class: "text-sm" }, "لا توجد بيانات إيرادات كافية لعرض الرسم بعد."),
+    { class: "flex flex-col items-center justify-center text-center py-10 text-faint" },
+    el("p", { class: "text-sm" }, "لا توجد بيانات كافية لعرض الرسم بعد."),
   );
 }

@@ -21,6 +21,22 @@ import { toast } from "../feedback/toast.js";
 const expanded = new Set();
 let lastNavigatedPath = null;
 
+/**
+ * مسارات اختصارات الدور الحالي («شغلي النهاردة») — تُستبعد من القائمة
+ * الجانبية نفسها. الاختصار أعلى الشريط هو الطريق الوحيد للشاشة، فتكرارها
+ * كخانة تحت قسم مطوي يعني ضغطتين لنفس الوجهة ومكانين لتذكّرها.
+ */
+let hiddenByShortcut = new Set();
+
+function refreshShortcutPaths() {
+  const role = currentRole();
+  hiddenByShortcut = new Set(
+    shortcutsForRole(role.key)
+      .filter((item) => can(item.permission))
+      .map((item) => item.path),
+  );
+}
+
 function syncRouteExpansion(active) {
   if (active !== lastNavigatedPath) {
     lastNavigatedPath = active;
@@ -69,6 +85,7 @@ export function sidebar() {
     const collapsed = appState.get().sidebarCollapsed;
 
     syncRouteExpansion(active);
+    refreshShortcutPaths();
 
     element.dataset.collapsed = String(collapsed);
     element.classList.toggle("sidebar-expanded", !collapsed);
@@ -82,7 +99,12 @@ export function sidebar() {
 
         const visibleChildren = entry.children.filter((child) => {
           if (!can(child.permission)) return false;
-          if (child.children) return child.children.some((grandchild) => can(grandchild.permission));
+          if (child.children) {
+            return child.children.some(
+              (grandchild) => can(grandchild.permission) && !hiddenByShortcut.has(grandchild.path),
+            );
+          }
+          if (child.path && hiddenByShortcut.has(child.path)) return false;
           return true;
         });
 
@@ -272,7 +294,9 @@ export function sidebar() {
    * القائمة.
    */
   function renderSubGroup(group, active) {
-    const items = group.children.filter((child) => can(child.permission));
+    const items = group.children.filter(
+      (child) => can(child.permission) && !hiddenByShortcut.has(child.path),
+    );
     const hasActive = items.some((child) => child.path === active);
     const key = `sub:${group.label}`;
     const isOpen = expanded.has(key) || hasActive;
@@ -364,7 +388,12 @@ export function sidebar() {
      */
     const children = entry.children.filter((child) => {
       if (!can(child.permission)) return false;
-      if (child.children) return child.children.some((grandchild) => can(grandchild.permission));
+      if (child.children) {
+        return child.children.some(
+          (grandchild) => can(grandchild.permission) && !hiddenByShortcut.has(grandchild.path),
+        );
+      }
+      if (child.path && hiddenByShortcut.has(child.path)) return false;
       return true;
     });
 

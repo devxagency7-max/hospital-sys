@@ -44,7 +44,7 @@ export default async function transfersPage() {
       button({
         label: "تحويل مخزني جديد",
         variant: "primary",
-        icon: "refresh",
+        icon: "truck",
         permission: "inv.transfer.create",
         onClick: () => openTransferModal(context, { items, warehouses }),
       }),
@@ -101,7 +101,7 @@ export default async function transfersPage() {
           label: "عمليات التحويل المنفذة",
           value: integer(meta.total),
           tone: "neutral",
-          icon: "refresh",
+          icon: "truck",
         }),
         statTile({
           label: "الوحدات المنقولة بين المخازن",
