@@ -10,7 +10,7 @@
 import { el, cx, render } from "../../js/core/dom.js";
 import { icon } from "../common/icon.js";
 import { navigation, shortcutsForRole } from "../../js/config/navigation.js";
-import { can, canAny, currentUser, currentRole } from "../../js/core/permissions.js";
+import { can, currentUser, currentRole } from "../../js/core/permissions.js";
 import { appState, writePreference } from "../../js/core/store.js";
 import { on, emit } from "../../js/core/events.js";
 import { APP, UI } from "../../js/core/config.js";
@@ -75,10 +75,31 @@ export function sidebar() {
     element.classList.toggle("sidebar-collapsed", collapsed);
 
     const groups = navigation
-      .filter((entry) =>
-        entry.children ? canAny(entry.children.map((child) => child.permission)) : can(entry.permission),
-      )
-      .map((entry) => (entry.children ? renderGroup(entry, active, collapsed) : renderLink(entry, active, collapsed)));
+      .map((entry) => {
+        if (!entry.children) {
+          return can(entry.permission) ? renderLink(entry, active, collapsed) : null;
+        }
+
+        const visibleChildren = entry.children.filter((child) => {
+          if (!can(child.permission)) return false;
+          if (child.children) return child.children.some((grandchild) => can(grandchild.permission));
+          return true;
+        });
+
+        if (!visibleChildren.length) return null;
+
+        /*
+         * دور يملك صلاحية شاشة واحدة فقط من المجموعة لا يستحق قائمة منسدلة
+         * بعنصر واحد — يُعرض المدخل مباشرةً برابط المجموعة، لا بخانة تحتها.
+         */
+        if (visibleChildren.length === 1 && !visibleChildren[0].children) {
+          const only = visibleChildren[0];
+          return renderLink({ icon: entry.icon, label: entry.label, path: only.path, permission: only.permission }, active, collapsed);
+        }
+
+        return renderGroup(entry, active, collapsed);
+      })
+      .filter(Boolean);
 
     render(navHost, shortcutsBlock(active, collapsed), ...groups);
     render(footerHost, footer(collapsed));
