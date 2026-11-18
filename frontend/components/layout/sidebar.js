@@ -10,12 +10,11 @@
 import { el, cx, render } from "../../js/core/dom.js";
 import { icon } from "../common/icon.js";
 import { navigation, shortcutsForRole } from "../../js/config/navigation.js";
-import { can, currentUser, currentRole } from "../../js/core/permissions.js";
+import { can, currentUser, currentRole, exitApp } from "../../js/core/permissions.js";
 import { appState, writePreference } from "../../js/core/store.js";
 import { on, emit } from "../../js/core/events.js";
 import { APP, UI } from "../../js/core/config.js";
 import { initials } from "../../js/core/format.js";
-import { toast } from "../feedback/toast.js";
 
 /** المجموعات المفتوحة — نُبقيها في الذاكرة فلا تُطوى عند كل انتقال. */
 const expanded = new Set();
@@ -661,7 +660,10 @@ function footer(collapsed) {
             "hx-press grid place-items-center size-10 rounded-2xl mx-auto text-red-500 hover:bg-red-50/60 dark:hover:bg-red-950/30 transition-colors cursor-pointer",
           title: "تسجيل الخروج",
           "aria-label": "تسجيل الخروج من الشريط الجانبي",
-          onClick: () => toast.info("تسجيل الخروج يتطلب نظام مصادقة — غير منفَّذ بعد."),
+          onClick: () => {
+            exitApp();
+            window.location.reload();
+          },
         },
         icon("logout", { size: 18, class: "text-red-500" }),
       ),
@@ -737,7 +739,10 @@ function footer(collapsed) {
           "hx-press w-full flex items-center justify-center gap-2 py-1.5 rounded-xl text-xs font-bold cursor-pointer transition-colors " +
           "text-red-500 hover:text-red-600 hover:bg-red-50/50 dark:hover:bg-red-950/20",
         "aria-label": "تسجيل الخروج من الشريط الجانبي",
-        onClick: () => toast.info("تسجيل الخروج يتطلب نظام مصادقة — غير منفَّذ بعد."),
+        onClick: () => {
+          exitApp();
+          window.location.reload();
+        },
       },
       icon("logout", { size: 15, class: "text-red-500" }),
       el("span", {}, "تسجيل الخروج"),

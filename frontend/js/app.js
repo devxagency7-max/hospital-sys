@@ -6,6 +6,7 @@
 
 import { el, render, qs } from "./core/dom.js";
 import { appShell, skipLink } from "../components/layout/app-shell.js";
+import { loginScreen } from "../components/auth/login-screen.js";
 import { createRouter } from "./core/router.js";
 import { buildRoutes } from "./config/routes.js";
 import { tableSkeleton, errorState, forbiddenState, notFoundState } from "../components/feedback/states.js";
@@ -15,6 +16,7 @@ import { ErrorCode } from "./core/errors.js";
 import { APP, LOCALE } from "./core/config.js";
 import { initTheme } from "./core/theme.js";
 import { initBackgroundStudio } from "./core/background-studio.js";
+import { hasEnteredApp, enterAsRole } from "./core/permissions.js";
 
 function boot() {
   const root = qs("#app");
@@ -37,6 +39,29 @@ function boot() {
   initTheme();
   initBackgroundStudio();
 
+  /*
+   * بوابة الدخول — تُفتح أول حاجة بدل الدخول التلقائي بدور مدير النظام.
+   * اختيار الدور يُحفظ (permissions.js#enterAsRole) فلا تتكرر البوابة عند
+   * كل تحديث للصفحة، تمامًا كتسجيل الدخول في أي تطبيق حقيقي. "تسجيل
+   * الخروج" في الهيدر يمسح المحفوظ ويعيد تحميل الصفحة فتظهر من جديد.
+   */
+  if (!hasEnteredApp()) {
+    render(
+      root,
+      loginScreen({
+        onEnter: (roleKey) => {
+          enterAsRole(roleKey);
+          startApp(root);
+        },
+      }),
+    );
+    return;
+  }
+
+  startApp(root);
+}
+
+function startApp(root) {
   /* --- الإطار --- */
   const shell = appShell();
   render(root, skipLink(), shell.element);

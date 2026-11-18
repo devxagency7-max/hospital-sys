@@ -18,6 +18,7 @@
  */
 
 import { emit } from "./events.js";
+import { readPreference, writePreference } from "./store.js";
 
 /**
  * كتالوج الصلاحيات.
@@ -380,6 +381,23 @@ let session = {
   },
 };
 
+/**
+ * بوابة الدخول — شاشة اللوج إن في js/app.js.
+ *
+ * الدور المحفوظ من آخر دخول (`sessionRole`) يُستعاد عند تحميل الصفحة، فلا
+ * يُعاد السؤال "ادخل بأي دور؟" عند كل تحديث (F5) — تمامًا كتسجيل الدخول في
+ * أي تطبيق حقيقي. تسجيل الخروج (`exitApp`) يمسح المحفوظ فتعود البوابة.
+ */
+const savedRole = readPreference("sessionRole", null);
+let entered = Boolean(savedRole && ROLES[savedRole]);
+
+if (entered) {
+  session = {
+    ...session,
+    user: { ...session.user, role: savedRole, jobTitle: ROLES[savedRole].label },
+  };
+}
+
 /** مجموعة الصلاحيات المحسوبة — تُعاد بناؤها عند تغيير الدور فقط. */
 let granted = new Set();
 
@@ -389,6 +407,24 @@ function rebuild() {
 }
 
 rebuild();
+
+/** هل دخل المستخدم باختيار دوره من شاشة اللوج إن؟ */
+export function hasEnteredApp() {
+  return entered;
+}
+
+/** الدخول من شاشة اللوج إن — يضبط الدور ويحفظه لإعادة التحميل. */
+export function enterAsRole(roleKey) {
+  setRole(roleKey);
+  entered = true;
+  writePreference("sessionRole", roleKey);
+}
+
+/** تسجيل الخروج — يمسح الدور المحفوظ فتظهر شاشة اللوج إن من جديد. */
+export function exitApp() {
+  entered = false;
+  writePreference("sessionRole", null);
+}
 
 export function currentUser() {
   return session.user;

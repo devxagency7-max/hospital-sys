@@ -17,6 +17,19 @@ const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 const problems = [];
 let currentPath = "";
 
+/*
+ * شاشة اللوج إن تفتح أول حاجة الآن بدل الدخول التلقائي بدور مدير النظام
+ * (js/app.js + components/auth/login-screen.js). الدور المختار يُحفظ في
+ * localStorage (permissions.js#enterAsRole) فيكفي دخول واحد كمدير النظام
+ * هنا — نفس الجلسة تبقى فعّالة لكل زيارة page.goto التالية في هذا الاختبار.
+ */
+currentPath = "(تسجيل الدخول)";
+await page.goto(`${BASE}/#/`, { waitUntil: "load" });
+await page.getByRole("button", { name: /مدير النظام/ }).click();
+await page.waitForFunction(() => Boolean(document.querySelector("#page h1, #page [data-page-title]")), {
+  timeout: 2000,
+});
+
 page.on("console", (msg) => {
   if (msg.type() !== "error") return;
   const text = msg.text();

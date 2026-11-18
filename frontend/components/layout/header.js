@@ -4,23 +4,21 @@
  * يضم: زر طي الشريط، شريط تقدّم الطلبات، بحث سريع (لوحة أوامر)، إشعارات
  * المخزون، وقائمة المستخدم.
  *
- * مبدّل القسم (أقصى اليسار) ميزة أساسية بطلب المالك: مدير النظام يرى كل
- * شيء، وكل دور آخر يرى موديوله فقط — والزر يبدّل بينهم فورًا. عند ربط
- * المصادقة الحقيقية يُقيَّد الزر بصلاحية إدارية أو يُستبدل بتسجيل الدخول.
+ * الدخول بدور مختلف الآن من شاشة اللوج إن (js/app.js + components/auth/
+ * login-screen.js) لا من زر في الهيدر — التبديل الفوري بين الأدوار كان
+ * أداة تطوير مؤقتة، واستُبدل ببوابة دخول حقيقية الشكل.
  */
 
 import { el, cx, render, qs } from "../../js/core/dom.js";
 import { icon } from "../common/icon.js";
 import { iconButton } from "../common/button.js";
 import { initials } from "../../js/core/format.js";
-import { currentUser, currentRole, ROLES, setRole } from "../../js/core/permissions.js";
-import { landingPathForRole } from "../../js/config/navigation.js";
+import { currentUser, currentRole, exitApp } from "../../js/core/permissions.js";
 import { appState } from "../../js/core/store.js";
 import { on } from "../../js/core/events.js";
 import { toggleCollapsed } from "./sidebar.js";
 import { notificationsPanel } from "./notifications-panel.js";
 import { openCommandPalette } from "../common/command-palette.js";
-import { toast } from "../feedback/toast.js";
 import { describeDataLayer } from "../../js/api/meta.api.js";
 import { setTheme, currentThemePreference } from "../../js/core/theme.js";
 import { navigate } from "../../js/core/router.js";
@@ -80,8 +78,6 @@ export function header({ onOpenMobileNav } = {}) {
     }),
     notificationsPanel(),
     userMenuHost,
-    /* آخر عنصر في RTL = أقصى اليسار — مكان زر تبديل القسم بطلب المالك. */
-    roleSwitcher(),
   );
 
   /* --- بطاقة المستخدم وقائمتها --- */
@@ -159,8 +155,9 @@ export function header({ onOpenMobileNav } = {}) {
           tone: "danger",
           onClick: () => {
             closeUserPanel();
-            // صريح لا مُقلَّد: لا نظام مصادقة بعد (Phase 7)، فلا تسجيل خروج فعلي.
-            toast.info("تسجيل الخروج يتطلب نظام مصادقة — غير منفَّذ بعد (Phase 7).");
+            // يمسح الدور المحفوظ ويعيد تحميل الصفحة — فتظهر شاشة اللوج إن من جديد.
+            exitApp();
+            window.location.reload();
           },
         }),
       ),
@@ -342,122 +339,3 @@ function dataLayerBadge() {
   );
 }
 
-/**
- * زر تبديل القسم — في أقصى يسار الهيدر.
- *
- * يعرض الدور الحالي ويفتح قائمة بالأدوار الخمسة: مدير النظام يرى كل شيء،
- * وكل دور آخر يرى موديوله وتقاريره فقط. التبديل يُعيد رسم الشريط الجانبي
- * ولوحة التحكم فورًا، ويعيد التوجيه إن كانت الشاشة الحالية ممنوعة.
- */
-function roleSwitcher() {
-  const host = el("div", { class: "relative" });
-
-  let panel = null;
-
-  function closePanel() {
-    panel?.remove();
-    panel = null;
-    toggle.setAttribute("aria-expanded", "false");
-  }
-
-  const toggle = el(
-    "button",
-    {
-      type: "button",
-      class:
-        "hx-press inline-flex items-center gap-1.5 h-8 ps-2.5 pe-2 rounded-[var(--radius-control)] " +
-        "bg-brand-50 border border-brand-200 text-brand-300 text-xs font-semibold " +
-        "hover:bg-brand-100 hover:border-brand-300 transition-colors shrink-0",
-      title: "تبديل القسم — اختر الدور الذي تعمل به",
-      "aria-haspopup": "true",
-      "aria-expanded": "false",
-      onClick: () => {
-        if (panel) {
-          closePanel();
-          return;
-        }
-
-        panel = el(
-          "div",
-          {
-            class:
-              "absolute top-full end-0 mt-1.5 z-30 w-60 bg-surface border border-line " +
-              "rounded-[var(--radius-card)] shadow-overlay p-1.5 hx-rise",
-            role: "menu",
-          },
-          el(
-            "p",
-            { class: "px-2 py-1.5 text-[10px] text-faint leading-snug border-b border-line mb-1" },
-            "اختر القسم الذي تعمل عليه — كل دور يرى شاشات موديوله فقط، ومدير النظام يرى كل شيء.",
-          ),
-          ...Object.entries(ROLES).map(([key, role]) =>
-            el(
-              "button",
-              {
-                type: "button",
-                role: "menuitem",
-                class: cx(
-                  "w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-[var(--radius-control)] text-start text-sm transition-colors",
-                  currentRole().key === key
-                    ? "bg-brand-50 text-brand-300 font-semibold"
-                    : "text-ink hover:bg-subtle",
-                ),
-                onClick: () => {
-                  setRole(key);
-                  closePanel();
-                  paintLabel();
-
-                  /*
-                   * ننتقل لشاشة بداية الدور لا نكتفي بإعادة التوجيه.
-                   *
-                   * الشاشة الحالية قد تكون ممنوعة على الدور الجديد، وحتى
-                   * إن كانت مسموحة فهي غالبًا ليست ما يبدأ به صاحب الدور
-                   * يومه: الاستقبال يبدأ على لوحة الإشغال، والتمريض على
-                   * شاشة الصرف، وأمين المخزن على طلبات النواقص.
-                   */
-                  navigate(landingPathForRole(key));
-                },
-              },
-              el("span", {}, role.label),
-              currentRole().key === key ? icon("check", { size: 14 }) : null,
-            ),
-          ),
-        );
-
-        host.appendChild(panel);
-        toggle.setAttribute("aria-expanded", "true");
-
-        setTimeout(() => {
-          const onOutside = (evt) => {
-            if (!host.contains(evt.target)) {
-              closePanel();
-              document.removeEventListener("mousedown", onOutside);
-            }
-          };
-          document.addEventListener("mousedown", onOutside);
-        }, 0);
-      },
-    },
-    icon("users", { size: 14 }),
-    el("span", { dataset: { roleLabel: "" }, class: "max-sm:hidden" }, currentRole().label),
-    icon("chevronDown", { size: 12 }),
-  );
-
-  function paintLabel() {
-    const label = qs("[data-role-label]", toggle);
-    if (label) label.textContent = currentRole().label;
-  }
-
-  /*
-   * الاسم يتبع الجلسة لا ضغطة الزر وحدها.
-   *
-   * كان `paintLabel` يُنادى من معالج الاختيار فقط، فإن تغيّرت الجلسة من
-   * مكان آخر — تسجيل دخول، تجديد توكن بدور مختلف — بقي الزر يعرض الدور
-   * القديم بينما الشريط والصلاحيات تغيّرت فعلًا. مستخدم يقرأ «مدير النظام»
-   * وهو يعمل بصلاحيات تمريض.
-   */
-  on("session:changed", paintLabel);
-
-  host.appendChild(toggle);
-  return host;
-}
