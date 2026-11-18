@@ -119,6 +119,7 @@ export const navigation = [
       { label: "التحويلات بين الحسابات", path: "/fin/transfers", permission: "fin.cashbox.transact" },
       { label: "الحسابات البنكية", path: "/fin/banks", permission: "fin.view" },
       { label: "المطابقة البنكية", path: "/fin/bank-reconciliation", permission: "fin.bank.reconcile" },
+      { label: "أسعار الصرف", path: "/fin/exchange-rates", permission: "pricing.fx.manage" },
 
       { label: "الأصول الثابتة", path: "/fin/assets", permission: "fin.asset.manage" },
       { label: "الإهلاك الدوري", path: "/fin/depreciation", permission: "fin.asset.depreciate" },

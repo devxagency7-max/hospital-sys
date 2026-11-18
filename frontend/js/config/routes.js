@@ -220,6 +220,12 @@ const IMPLEMENTED = [
     load: () => import("../../pages/fin/taxes.page.js"),
   },
   {
+    path: "/fin/exchange-rates",
+    title: "أسعار الصرف",
+    permission: "pricing.fx.manage",
+    load: () => import("../../pages/fin/exchange-rates.page.js"),
+  },
+  {
     path: "/fin/statements",
     title: "القوائم المالية",
     permission: "fin.statements.view",
