@@ -22,12 +22,15 @@ import {
   dateColumn,
 } from "../_shared/cells.js";
 import { listBalances } from "../../js/api/inventory.api.js";
-import { getWarehouses, getItemCategories, toOptions } from "../../js/api/lookups.api.js";
+import { getWarehouses, getItemCategories, getItems, getCostCenters, toOptions } from "../../js/api/lookups.api.js";
+import { openReceiptModal, openIssueModal } from "./_shared/stock-modals.js";
 
 export default async function balancesPage() {
-  const [warehouses, categories] = await Promise.all([
+  const [warehouses, categories, items, costCenters] = await Promise.all([
     getWarehouses(),
     getItemCategories(),
+    getItems(),
+    getCostCenters(),
   ]);
 
   return listPage({
@@ -38,25 +41,25 @@ export default async function balancesPage() {
     initialParams: { sort: "warehouseName", order: "asc" },
     fetch: listBalances,
 
-    actions: () => [
+    actions: (context) => [
       button({
-        label: "إذن إضافة",
+        label: "إذن إضافة من المورد",
         variant: "primary",
         icon: "plus",
         permission: "inv.receipt.create",
-        onClick: () => navigate("/inv/receipts"),
+        onClick: () => openReceiptModal(context, { items, warehouses }),
       }),
       button({
-        label: "إذن صرف",
+        label: "إذن صرف (استهلاك داخلي)",
         variant: "secondary",
         icon: "minus",
         permission: "inv.issue.create",
-        onClick: () => navigate("/inv/issues"),
+        onClick: () => openIssueModal(context, { items, warehouses, costCenters }),
       }),
       button({
-        label: "تحويل مخزني",
-        variant: "ghost",
-        icon: "refresh",
+        label: "تحويل مخزني (بين المخازن)",
+        variant: "secondary",
+        icon: "truck",
         permission: "inv.transfer.create",
         onClick: () => navigate("/inv/transfers"),
       }),

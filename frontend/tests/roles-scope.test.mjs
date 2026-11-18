@@ -391,7 +391,7 @@ for (const [roleKey, shortcuts] of Object.entries(ROLE_SHORTCUTS)) {
  */
 loginAs("inv", null, "مدير المخازن");
 const invScreens = visibleScreensFor("inv");
-for (const essential of ["الجرد الفعلي", "التسويات المخزنية", "تتبّع الصلاحية", "إذن إضافة"]) {
+for (const essential of ["الجرد الفعلي", "التسويات المخزنية", "تتبّع الصلاحية", "المستودعات والفروع"]) {
   assert(`أمين المخزن يصل إلى «${essential}» من الشريط`, invScreens.includes(essential));
 }
 

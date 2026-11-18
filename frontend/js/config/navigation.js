@@ -198,8 +198,6 @@ export const navigation = [
           { label: "التشغيلات", path: "/inv/batches", permission: "inv.operations.view" },
           { label: "أرصدة المخزون", path: "/inv/balances", permission: "inv.operations.view" },
           { label: "المستودعات والفروع", path: "/inv/warehouses", permission: "inv.warehouse.view" },
-          { label: "إذن إضافة", path: "/inv/receipts", permission: "inv.receipt.create" },
-          { label: "إذن صرف", path: "/inv/issues", permission: "inv.issue.create" },
           { label: "تحويل مخزني", path: "/inv/transfers", permission: "inv.transfer.create" },
           { label: "تصنيفات الأصناف", path: "/inv/categories", permission: "inv.item.manage" },
         ],
@@ -301,7 +299,7 @@ export const ROLE_SHORTCUTS = {
 
   inv: [
     { label: "طلبات النواقص", hint: "شحن للفروع", path: "/inv/requisitions", icon: "inbox", permission: "inv.requisition.view" },
-    { label: "إذن إضافة", hint: "استلام من مورد", path: "/inv/receipts", icon: "download", permission: "inv.receipt.create" },
+    { label: "حركات المخزون", hint: "إذن إضافة من المورد", path: "/inv/movements", icon: "download", permission: "inv.receipt.create" },
     { label: "الجرد الفعلي", hint: "عدّ ومطابقة", path: "/inv/counts", icon: "columns", permission: "inv.count.manage" },
   ],
 

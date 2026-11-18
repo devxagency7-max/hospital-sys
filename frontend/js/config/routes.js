@@ -368,18 +368,6 @@ const IMPLEMENTED = [
     load: () => import("../../pages/inv/price-reviews.page.js"),
   },
   {
-    path: "/inv/receipts",
-    title: "إذن إضافة",
-    permission: "inv.receipt.create",
-    load: () => import("../../pages/inv/receipts.page.js"),
-  },
-  {
-    path: "/inv/issues",
-    title: "إذن صرف",
-    permission: "inv.issue.create",
-    load: () => import("../../pages/inv/issues.page.js"),
-  },
-  {
     path: "/inv/transfers",
     title: "تحويل مخزني",
     permission: "inv.transfer.create",
