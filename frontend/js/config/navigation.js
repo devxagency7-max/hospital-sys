@@ -176,7 +176,6 @@ export const navigation = [
       { label: "الأصناف والمخزون", path: "/inv/items", permission: "inv.items.view" },
       { label: "مطابقة فواتير الموردين", path: "/inv/invoice-matching", permission: "fin.supplier.invoice" },
       { label: "مراجعة وتسعير الأصناف", path: "/inv/price-reviews", permission: "pricing.manage" },
-      { label: "المستودعات والفروع", path: "/inv/warehouses", permission: "inv.warehouse.view" },
 
       /*
        * مجموعة فرعية مطوية: عمليات يحتاجها أمين المخزن يوميًا لكنها كانت
@@ -197,6 +196,7 @@ export const navigation = [
           { label: "تتبّع الصلاحية", path: "/inv/expiry", permission: "inv.operations.view" },
           { label: "التشغيلات", path: "/inv/batches", permission: "inv.operations.view" },
           { label: "أرصدة المخزون", path: "/inv/balances", permission: "inv.operations.view" },
+          { label: "المستودعات والفروع", path: "/inv/warehouses", permission: "inv.warehouse.view" },
           { label: "إذن إضافة", path: "/inv/receipts", permission: "inv.receipt.create" },
           { label: "إذن صرف", path: "/inv/issues", permission: "inv.issue.create" },
           { label: "تحويل مخزني", path: "/inv/transfers", permission: "inv.transfer.create" },
