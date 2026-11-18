@@ -124,7 +124,7 @@ assert("التمريض لا يملك إدارة الأصناف", !can("inv.item.
 assert("التمريض لا يملك اعتماد الأسعار", !can("pricing.manage"));
 assert("التمريض لا يملك الموارد البشرية", !can("hr.view"));
 
-loginAs("pharmacy", [PHARMACY], "أمين صيدلية فرعية");
+loginAs("pharmacy", [PHARMACY], "أمين مخزن فرعي");
 assert("الصيدلية الفرعية تملك فحص واستلام الشحنات", can("inv.requisition.inspect"));
 assert("الصيدلية الفرعية تملك طلب النواقص", can("inv.requisition.create"));
 assert("الصيدلية الفرعية تملك الجرد", can("inv.count.manage"));

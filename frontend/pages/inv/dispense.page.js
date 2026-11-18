@@ -32,6 +32,7 @@ import {
 import { listRooms } from "../../js/api/rooms.api.js";
 import { listPatients } from "../../js/api/patients.api.js";
 import { listWarehouses } from "../../js/api/inventory.api.js";
+import { allowedWarehouseIds } from "../../js/core/permissions.js";
 
 export default async function dispensePage() {
   const container = el("div", { class: "space-y-4" });
@@ -73,8 +74,18 @@ export default async function dispensePage() {
 
   try {
     const result = await listWarehouses({ perPage: 50 });
-    warehouses = (result.data ?? []).filter((w) => w.status === "active");
-    /* الافتراضي أول مخزن فرعي — الصيدلية هي من تصرف للمريض لا المخزن المركزي. */
+    const active = (result.data ?? []).filter((w) => w.status === "active");
+
+    /*
+     * أمين المخزن الفرعي يصرف من مخزنه هو فقط — عرض كل الفروع كأزرار جنب
+     * بعضها (مخزن 1، مخزن 2، مخزن 3...) كان يلخبطه بمخازن غيره لا شغل له
+     * بها. `allowedWarehouseIds` تُعيد `null` لمن بلا قيد (مدير النظام
+     * ومدير المخازن) فيبقى الاختيار بينها متاحًا لهما فقط.
+     */
+    const allowed = allowedWarehouseIds();
+    warehouses = allowed === null ? active : active.filter((w) => allowed.includes(String(w.id)));
+
+    /* الافتراضي أول مخزن فرعي — أمين المخزن الفرعي هو من يصرف للمريض لا المركزي. */
     warehouseId = (warehouses.find((w) => !w.isHub) ?? warehouses[0])?.id ?? null;
   } catch (error) {
     host.appendChild(errorState({ error, title: "فشل تحميل المخازن" }));
@@ -122,6 +133,19 @@ export default async function dispensePage() {
   /* ------------------------------------------------------ warehouse picker */
 
   function warehousePicker() {
+    /* مخزن واحد في النطاق — تسمية لا اختيار. لا داعي لصف أزرار على سؤال له جواب واحد. */
+    if (warehouses.length <= 1) {
+      return el(
+        "div",
+        {
+          class:
+            "flex items-center gap-2 p-3 rounded-2xl border border-line bg-subtle/40 text-xs",
+        },
+        el("span", { class: "font-bold text-muted" }, "الصرف من مخزن:"),
+        el("span", { class: "font-bold text-ink" }, warehouses[0]?.name ?? "—"),
+      );
+    }
+
     return el(
       "div",
       {
