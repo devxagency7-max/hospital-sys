@@ -213,14 +213,8 @@ export const navigation = [
     key: "reports",
     label: "التقارير",
     icon: "reports",
+    path: "/reports",
     permission: "reports.view",
-    children: [
-      { label: "مركز التقارير", path: "/reports", permission: "reports.view" },
-      { label: "التقارير المالية", path: "/reports/financial", permission: "reports.financial.view" },
-      { label: "تقارير الذمم", path: "/reports/receivables", permission: "reports.financial.view" },
-      { label: "تقارير الموارد البشرية", path: "/reports/hr", permission: "reports.hr.view" },
-      { label: "تقارير المخازن", path: "/reports/inventory", permission: "reports.inventory.view" },
-    ],
   },
 
   /* ======================================================================
