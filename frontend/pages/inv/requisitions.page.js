@@ -9,8 +9,8 @@
  * 5) مرحلة الفحص والعد عند الاستلام بالفرع: تسجيل الفعلي، وإثبات أي عجز أو تلف بلحظته.
  */
 
-import { el, cx } from "../../js/core/dom.js";
-import { button, buttonGroup } from "../../components/common/button.js";
+import { el, cx, render } from "../../js/core/dom.js";
+import { button, buttonGroup, iconButton } from "../../components/common/button.js";
 import { badge } from "../../components/common/badge.js";
 import { statTile } from "../../components/common/card.js";
 import { listPage, runAction } from "../_shared/list-page.js";
@@ -118,16 +118,6 @@ export default async function requisitionsPage() {
         options: [
           { value: "", label: "جميع الفروع" },
           ...warehouses.filter((w) => !w.isHub && w.id !== 1).map((w) => ({ value: w.id, label: w.name })),
-        ],
-      },
-      {
-        key: "urgency",
-        label: "درجة الأهمية",
-        options: [
-          { value: "all", label: "الكل" },
-          { value: "urgent", label: "عاجل جداً" },
-          { value: "high", label: "مرتفع" },
-          { value: "normal", label: "عادي" },
         ],
       },
     ],
@@ -314,34 +304,21 @@ async function openRequisitionDetailsModal(reqId, ctx, { warehouses }) {
             "p-5 rounded-2xl bg-subtle/50 dark:bg-subtle/30 border border-line space-y-4 shadow-2xs",
         },
         [
-          /* الشريط العلوي للبطاقة: الكود، الحالة، درجة الأهمية */
-          el("div", { class: "flex flex-wrap items-center justify-between gap-3" }, [
-            el("div", { class: "flex items-center gap-2" }, [
-              el(
-                "span",
-                {
-                  class:
-                    "font-mono font-bold text-xs px-2.5 py-1 rounded-md bg-white dark:bg-slate-800 border border-line text-ink num shadow-2xs",
-                },
-                req.code,
-              ),
-              badge(STATUS_CONFIG[req.status]?.fullLabel || STATUS_CONFIG[req.status]?.label || req.status, {
-                tone: STATUS_CONFIG[req.status]?.tone || "neutral",
-                dot: true,
-                size: "sm",
-              }),
-            ]),
-            badge(
-              req.urgency === "urgent"
-                ? "أهمية: عاجل جداً"
-                : req.urgency === "high"
-                  ? "أهمية: مرتفعة"
-                  : "أهمية: عادي",
+          /* الشريط العلوي للبطاقة: الكود والحالة */
+          el("div", { class: "flex flex-wrap items-center gap-2" }, [
+            el(
+              "span",
               {
-                tone: req.urgency === "urgent" ? "danger" : req.urgency === "high" ? "warning" : "neutral",
-                size: "sm",
+                class:
+                  "font-mono font-bold text-xs px-2.5 py-1 rounded-md bg-white dark:bg-slate-800 border border-line text-ink num shadow-2xs",
               },
+              req.code,
             ),
+            badge(STATUS_CONFIG[req.status]?.fullLabel || STATUS_CONFIG[req.status]?.label || req.status, {
+              tone: STATUS_CONFIG[req.status]?.tone || "neutral",
+              dot: true,
+              size: "sm",
+            }),
           ]),
 
           /* اسم الصنف والكمية */
@@ -786,20 +763,71 @@ function openNewRequisitionModal(ctx, { warehouses, items }) {
     label: `${i.name} (${i.code || ""})`,
   }));
 
+  /*
+   * طلب واحد قد يحمل أكثر من صنف ناقص — أمين الفرع لا يفتح نافذة جديدة
+   * لكل صنف. كل سطر يتحول لاحقًا إلى طلب نواقص مستقل بكوده الخاص (`createRequisition`
+   * لم يتغيّر، والمطابقة الثلاثية والشحن والاستلام لكل صنف على حدة كما هي)؛
+   * التعدد هنا تجربة إدخال فقط، لا تغييرًا في شكل المستند.
+   */
   const form = {
     branchId: branchOptions[0]?.value ?? "2",
-    itemId: itemOptions[0]?.value ?? "1",
-    requestedQty: 10,
-    urgency: "normal",
     notes: "طلب احتياج رصيد للفرع",
+    lines: [{ itemId: itemOptions[0]?.value ?? "1", requestedQty: 10 }],
   };
+
+  const linesHost = el("div", { class: "space-y-2.5" });
+
+  function paintLines() {
+    render(
+      linesHost,
+      ...form.lines.map((line, index) =>
+        el(
+          "div",
+          { class: "flex items-end gap-2" },
+          el(
+            "div",
+            { class: "flex-1" },
+            selectField({
+              label: index === 0 ? "الصنف المطلوب" : null,
+              required: true,
+              value: line.itemId,
+              options: itemOptions,
+              onChange: value((v) => (line.itemId = v)),
+            }),
+          ),
+          el(
+            "div",
+            { class: "w-28 shrink-0" },
+            textField({
+              label: index === 0 ? "الكمية" : null,
+              type: "number",
+              value: String(line.requestedQty),
+              required: true,
+              onInput: numberValue((v) => (line.requestedQty = v)),
+            }),
+          ),
+          form.lines.length > 1
+            ? iconButton("trash", {
+                label: "حذف هذا الصنف",
+                onClick: () => {
+                  form.lines.splice(index, 1);
+                  paintLines();
+                },
+              })
+            : el("span", { class: "size-9 shrink-0" }),
+        ),
+      ),
+    );
+  }
+
+  paintLines();
 
   formModal({
     title: "إنشاء طلب نواقص واحتياج للفرع",
-    subtitle: "إرسال طلب عاجل من الفرع للمخزن الرئيسي بتوثيق زمني لحظي",
+    subtitle: "إرسال طلب عاجل من الفرع للمخزن الرئيسي بتوثيق زمني لحظي — صنف واحد أو أكثر في نفس الطلب",
     size: "md",
     submitLabel: "إرسال الطلب للمخزن الرئيسي",
-    success: "تم إنشاء طلب النواقص بنجاح وإشعار المخزن الرئيسي",
+    success: "تم إرسال الطلب للمخزن الرئيسي بنجاح",
 
     body: () =>
       el(
@@ -812,29 +840,15 @@ function openNewRequisitionModal(ctx, { warehouses, items }) {
           options: branchOptions,
           onChange: value((v) => (form.branchId = v)),
         }),
-        selectField({
-          label: "الصنف المطلوب",
-          required: true,
-          value: form.itemId,
-          options: itemOptions,
-          onChange: value((v) => (form.itemId = v)),
-        }),
-        textField({
-          label: "الكمية المطلوبة",
-          type: "number",
-          value: String(form.requestedQty),
-          required: true,
-          onInput: numberValue((v) => (form.requestedQty = v)),
-        }),
-        selectField({
-          label: "درجة الأهمية",
-          value: form.urgency,
-          options: [
-            { value: "normal", label: "عادي" },
-            { value: "high", label: "مرتفع" },
-            { value: "urgent", label: "عاجل وطارئ" },
-          ],
-          onChange: value((v) => (form.urgency = v)),
+        linesHost,
+        button({
+          label: "+ إضافة صنف آخر",
+          variant: "secondary",
+          size: "sm",
+          onClick: () => {
+            form.lines.push({ itemId: itemOptions[0]?.value ?? "1", requestedQty: 10 });
+            paintLines();
+          },
         }),
         notesField({
           label: "ملاحظات وتبرير الاحتياج",
@@ -845,16 +859,21 @@ function openNewRequisitionModal(ctx, { warehouses, items }) {
       ),
 
     onSubmit: async () => {
-      if (!form.branchId || !form.itemId || !(Number(form.requestedQty) > 0)) {
-        throw new Error("يرجى تحديد الفرع والصنف والكمية المطلوبة بدقة.");
+      if (!form.branchId || !form.lines.length) {
+        throw new Error("يرجى تحديد الفرع وصنف واحد على الأقل.");
       }
-      await createRequisition({
-        branchId: Number(form.branchId),
-        itemId: Number(form.itemId),
-        requestedQty: Number(form.requestedQty),
-        urgency: form.urgency,
-        notes: form.notes,
-      });
+      if (form.lines.some((line) => !line.itemId || !(Number(line.requestedQty) > 0))) {
+        throw new Error("يرجى تحديد صنف وكمية صحيحة لكل سطر.");
+      }
+
+      for (const line of form.lines) {
+        await createRequisition({
+          branchId: Number(form.branchId),
+          itemId: Number(line.itemId),
+          requestedQty: Number(line.requestedQty),
+          notes: form.notes,
+        });
+      }
       ctx.refresh?.();
     },
   });

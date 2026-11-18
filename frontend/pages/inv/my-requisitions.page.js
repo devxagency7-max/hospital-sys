@@ -16,9 +16,9 @@
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
-import { el, clear, cx } from "../../js/core/dom.js";
+import { el, clear, cx, render as renderNode } from "../../js/core/dom.js";
 import { pageHeader } from "../../components/layout/breadcrumbs.js";
-import { button } from "../../components/common/button.js";
+import { button, iconButton } from "../../components/common/button.js";
 import { badge } from "../../components/common/badge.js";
 import { loadingState, errorState, emptyState } from "../../components/feedback/states.js";
 import { formModal, selectField, notesField, value, numberValue } from "../_shared/forms.js";
@@ -160,8 +160,7 @@ export default async function myRequisitionsPage() {
             el(
               "p",
               { class: "text-[11px] text-muted" },
-              `${req.code} · طلبت ${integer(req.requestedQty)} ${req.unit}` +
-                (req.urgency === "urgent" ? " · عاجل" : ""),
+              `${req.code} · طلبت ${integer(req.requestedQty)} ${req.unit}`,
             ),
           ]),
           badge(status.label, { tone: status.tone, dot: true, size: "sm" }),
@@ -209,38 +208,76 @@ export default async function myRequisitionsPage() {
       return;
     }
 
-    const form = { itemId: "", requestedQty: 1, urgency: "normal", notes: "" };
+    const itemOptions = [
+      { value: "", label: "— اختر الصنف —" },
+      ...allowed.map((i) => ({ value: String(i.id), label: `${i.name} (${i.code})` })),
+    ];
+
+    /* طلب واحد قد يضم أكثر من صنف ناقص — لا تفتح نافذة جديدة لكل صنف. */
+    const form = { lines: [{ itemId: "", requestedQty: 1 }], notes: "" };
+
+    const linesHost = el("div", { class: "space-y-2.5" });
+
+    function paintLines() {
+      renderNode(
+        linesHost,
+        ...form.lines.map((line, index) =>
+          el(
+            "div",
+            { class: "flex items-end gap-2" },
+            el(
+              "div",
+              { class: "flex-1" },
+              selectField({
+                label: index === 0 ? "الصنف الناقص" : null,
+                required: true,
+                value: line.itemId,
+                options: itemOptions,
+                onChange: value((v) => (line.itemId = v)),
+              }),
+            ),
+            el(
+              "div",
+              { class: "w-24 shrink-0" },
+              selectField({
+                label: index === 0 ? "الكمية" : null,
+                required: true,
+                type: "number",
+                min: "1",
+                value: String(line.requestedQty),
+                onInput: numberValue((v) => (line.requestedQty = v)),
+              }),
+            ),
+            form.lines.length > 1
+              ? iconButton("trash", {
+                  label: "حذف هذا الصنف",
+                  onClick: () => {
+                    form.lines.splice(index, 1);
+                    paintLines();
+                  },
+                })
+              : el("span", { class: "size-9 shrink-0" }),
+          ),
+        ),
+      );
+    }
+
+    paintLines();
 
     formModal({
       title: "طلب نواقص جديد",
-      subtitle: `باسم ${myWarehouse.name}`,
+      subtitle: `باسم ${myWarehouse.name} — صنف واحد أو أكثر في نفس الطلب`,
       submitLabel: "إرسال الطلب",
       body: () => [
-        selectField({
-          label: "الصنف الناقص",
-          required: true,
-          options: [
-            { value: "", label: "— اختر الصنف —" },
-            ...allowed.map((i) => ({ value: String(i.id), label: `${i.name} (${i.code})` })),
-          ],
-          onChange: value((v) => (form.itemId = v)),
-        }),
-        selectField({
-          label: "الكمية المطلوبة",
-          required: true,
-          type: "number",
-          min: "1",
-          value: "1",
-          onInput: numberValue((v) => (form.requestedQty = v)),
-        }),
-        selectField({
-          label: "درجة الأهمية",
-          options: [
-            { value: "normal", label: "عادي" },
-            { value: "high", label: "مرتفع" },
-            { value: "urgent", label: "عاجل وطارئ" },
-          ],
-          onChange: value((v) => (form.urgency = v)),
+        linesHost,
+        button({
+          label: "+ إضافة صنف آخر",
+          variant: "secondary",
+          size: "sm",
+          onClick: () => {
+            form.lines.push({ itemId: "", requestedQty: 1 });
+            paintLines();
+          },
         }),
         notesField({
           label: "سبب الاحتياج",
@@ -248,25 +285,32 @@ export default async function myRequisitionsPage() {
         }),
       ],
       onSubmit: async () => {
-        if (!form.itemId) {
-          toast.warning("اختر الصنف أولًا.");
+        if (form.lines.some((line) => !line.itemId)) {
+          toast.warning("اختر الصنف في كل سطر.");
           return false;
         }
-        if (!(Number(form.requestedQty) > 0)) {
-          toast.warning("أدخل كمية أكبر من صفر.");
+        if (form.lines.some((line) => !(Number(line.requestedQty) > 0))) {
+          toast.warning("أدخل كمية أكبر من صفر في كل سطر.");
           return false;
         }
 
-        const created = await createRequisition({
-          branchId: myWarehouse.id,
-          itemId: Number(form.itemId),
-          requestedQty: Number(form.requestedQty),
-          urgency: form.urgency,
-          notes: form.notes || undefined,
-        });
+        const codes = [];
+        for (const line of form.lines) {
+          const created = await createRequisition({
+            branchId: myWarehouse.id,
+            itemId: Number(line.itemId),
+            requestedQty: Number(line.requestedQty),
+            notes: form.notes || undefined,
+          });
+          codes.push(created.code);
+        }
 
         await render();
-        toast.success(`أُرسل الطلب ${created.code} — بانتظار مراجعة المخزن الرئيسي`);
+        toast.success(
+          codes.length > 1
+            ? `أُرسلت ${codes.length} طلبات (${codes.join("، ")}) — بانتظار مراجعة المخزن الرئيسي`
+            : `أُرسل الطلب ${codes[0]} — بانتظار مراجعة المخزن الرئيسي`,
+        );
         return true;
       },
     });
