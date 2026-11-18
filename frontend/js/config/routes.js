@@ -326,10 +326,10 @@ const IMPLEMENTED = [
     load: () => import("../../pages/inv/balances.page.js"),
   },
   {
-    path: "/inv/my-requisitions",
-    title: "نواقص قسمي",
-    permission: "inv.requisition.own",
-    load: () => import("../../pages/inv/my-requisitions.page.js"),
+    path: "/inv/returns",
+    title: "استرجاع صرف من مريض",
+    permission: "inv.dispense.return",
+    load: () => import("../../pages/inv/returns.page.js"),
   },
   {
     path: "/inv/dispense",

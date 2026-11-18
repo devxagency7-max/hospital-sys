@@ -24,9 +24,8 @@ const ROLE_ENTRIES = [
   { key: "gl", icon: "accounting", hint: "القيود والحسابات العامة، ويعتمد أسعار بيع الأصناف" },
   { key: "fin", icon: "money", hint: "العملاء والموردون والخزائن والبنوك" },
   { key: "hr", icon: "users", hint: "الحضور والإجازات ومسيّرات الرواتب" },
-  { key: "inv", icon: "inventory", hint: "يدير كل المخازن والفروع، ويشحن ويستلم من الموردين" },
-  { key: "pharmacy", icon: "inventory", hint: "أمين مخزن فرعي واحد — يصرف للمرضى بورقة الطلب، ويطلب نواقصه" },
-  { key: "nurse", icon: "heart", hint: "يصرف الأدوية لمريضه، ويطلب نواقص قسمه" },
+  { key: "inv", icon: "building", hint: "يستلم من الموردين ويشحن للفروع، ويضيف الأصناف والكميات" },
+  { key: "pharmacy", icon: "inventory", hint: "يصرف للمرضى بورقة الطلب، ويطلب نواقصه ويستلم شحناته" },
   { key: "billing", icon: "billing", hint: "فواتير المرضى وسنداتهم وتحصيلاتهم" },
 ];
 

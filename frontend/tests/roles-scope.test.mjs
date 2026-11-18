@@ -63,7 +63,7 @@ function loginAsAdmin() {
 
 section("كتالوج الأدوار يغطي كل دور تشغيلي فعلي");
 
-const expectedRoles = ["admin", "reception", "gl", "fin", "hr", "inv", "nurse", "pharmacy", "billing"];
+const expectedRoles = ["admin", "reception", "gl", "fin", "hr", "inv", "pharmacy", "billing"];
 for (const key of expectedRoles) {
   assert(`الدور «${key}» معرَّف`, Boolean(ROLES[key]));
 }
@@ -97,41 +97,35 @@ assert(
    2. حدود الدور
    ========================================================================== */
 
-section("حدود كل دور: التمريض لا يملك سلطة أمين المخزن");
-
-loginAs("nurse", [PHARMACY], "ممرضة القسم الداخلي");
-assert("الدور الحالي تمريض", currentRole().key === "nurse");
-assert("التمريض يملك الصرف للمريض", can("inv.dispense.patient"));
-assert("التمريض يملك طلب نواقص قسمه", can("inv.requisition.create"));
-assert("التمريض يملك رؤية إشغال الغرف", can("reception.occupancy.view"));
-assert("التمريض يملك سجل المرضى", can("patients.view"));
-
-/*
- * التضييق مقصود: `inv.view` وحدها كانت تفتح قسم المخازن كاملًا للممرضة —
- * دليل الأصناف وحركات المخزون وإدارة المستودعات. وهي تصرف لمريضها وتطلب
- * نواقص قسمها، لا تدير مخزنًا.
- */
-assert("التمريض لا يملك عرض المخازن العام", !can("inv.view"));
-assert("التمريض لا يملك دليل الأصناف", !can("inv.items.view"));
-assert("التمريض لا يملك حركات المخزون", !can("inv.movements.view"));
-assert("التمريض لا يملك إدارة المستودعات", !can("inv.warehouse.view"));
-assert("التمريض لا يملك العمليات التفصيلية", !can("inv.operations.view"));
-assert("التمريض لا يملك استعلام وسداد الحسابات", !can("reception.view"));
-assert("التمريض لا يملك فواتير المرضى", !can("patients.invoices.view"));
-assert("التمريض لا يملك تسجيل استلام من مورد", !can("inv.receipt.create"));
-assert("التمريض لا يملك تسوية جرد", !can("inv.adjustment.create"));
-assert("التمريض لا يملك إدارة الأصناف", !can("inv.item.manage"));
-assert("التمريض لا يملك اعتماد الأسعار", !can("pricing.manage"));
-assert("التمريض لا يملك الموارد البشرية", !can("hr.view"));
+section("حدود كل دور: المخزن الفرعي لا يُدخل كمية ولا يُخرجها بقراره");
 
 loginAs("pharmacy", [PHARMACY], "أمين مخزن فرعي");
-assert("الصيدلية الفرعية تملك فحص واستلام الشحنات", can("inv.requisition.inspect"));
-assert("الصيدلية الفرعية تملك طلب النواقص", can("inv.requisition.create"));
-assert("الصيدلية الفرعية تملك الجرد", can("inv.count.manage"));
-assert("الصيدلية الفرعية تملك العمليات التفصيلية", can("inv.operations.view"));
-assert("الصيدلية الفرعية لا تملك استلام مورد خارجي", !can("inv.receipt.create"));
-assert("الصيدلية الفرعية لا تملك إدارة المستودعات", !can("inv.warehouse.view"));
-assert("الصيدلية الفرعية لا تملك اعتماد الأسعار", !can("pricing.manage"));
+assert("الدور الحالي مخزن فرعي", currentRole().key === "pharmacy");
+
+/* ما يملكه: الصرف لمريضه، واسترجاعه، وطلب نواقصه وتتبّعها وفحص الوارد. */
+assert("المخزن الفرعي يملك الصرف للمريض", can("inv.dispense.patient"));
+assert("المخزن الفرعي يملك استرجاع ما صُرف", can("inv.dispense.return"));
+assert("المخزن الفرعي يملك طلب النواقص", can("inv.requisition.create"));
+assert("المخزن الفرعي يتتبّع طلباته", can("inv.requisition.view"));
+assert("المخزن الفرعي يفحص ويستلم الوارد", can("inv.requisition.inspect"));
+assert("المخزن الفرعي يملك الجرد", can("inv.count.manage"));
+assert("المخزن الفرعي يملك العمليات التفصيلية", can("inv.operations.view"));
+
+/*
+ * الحدّ الجوهري: رصيد الفرع لا يزيد إلا بشحنة من الرئيسي يفحصها، ولا ينقص
+ * إلا بصرف لمريض. فلا استلام من مورد، ولا إضافة صنف، ولا تحويل بقراره
+ * لفرع آخر — التحويل يبدأ بأمر من الرئيسي عبر طلب نواقص.
+ */
+assert("المخزن الفرعي لا يستلم من مورد", !can("inv.receipt.create"));
+assert("المخزن الفرعي لا يضيف صنفًا ولا يعدّله", !can("inv.item.manage"));
+assert("المخزن الفرعي لا يُحوّل لفرع آخر بقراره", !can("inv.transfer.create"));
+assert("المخزن الفرعي لا يشحن للفروع", !can("inv.requisition.fulfill"));
+assert("المخزن الفرعي لا يدير المستودعات", !can("inv.warehouse.view"));
+assert("المخزن الفرعي لا يعتمد الأسعار", !can("pricing.manage"));
+assert("المخزن الفرعي لا يرى ملفات المرضى", !can("patients.view"));
+assert("المخزن الفرعي لا يرى فواتير المرضى", !can("patients.invoices.view"));
+assert("المخزن الفرعي لا يملك استعلام وسداد الحسابات", !can("reception.view"));
+assert("المخزن الفرعي لا يملك الموارد البشرية", !can("hr.view"));
 
 loginAs("reception", [], "موظفة استقبال");
 assert("الاستقبال يملك فتح الإقامة", can("patients.admissions.manage"));
@@ -141,9 +135,11 @@ assert("الاستقبال لا يملك المخزون", !can("inv.issue.create
 assert("الاستقبال لا يملك الترحيل المحاسبي", !can("gl.journal.post"));
 assert("الاستقبال لا يملك الرواتب", !can("hr.payroll.view"));
 
-loginAs("inv", null, "مدير المخازن");
-assert("مدير المخازن يملك كل المخزون", can("inv.receipt.create") && can("inv.adjustment.approve"));
-assert("مدير المخازن لا يملك اعتماد أسعار البيع", !can("pricing.manage"));
+loginAs("inv", null, "أمين المخزن الرئيسي");
+assert("المخزن الرئيسي يملك كل المخزون", can("inv.receipt.create") && can("inv.adjustment.approve"));
+assert("المخزن الرئيسي يُحوّل بين المخازن", can("inv.transfer.create"));
+assert("المخزن الرئيسي يملك الاسترجاع كالفرع", can("inv.dispense.return"));
+assert("المخزن الرئيسي لا يملك اعتماد أسعار البيع", !can("pricing.manage"));
 
 loginAsAdmin();
 assert("مدير النظام يملك كل شيء",
@@ -230,9 +226,9 @@ const chargeable = all("items").find(
   (i) => i.patientChargeable && (i.warehouseIds ?? []).includes(PHARMACY) && !i.trackBatches,
 );
 
-loginAs("nurse", [PHARMACY], "ممرضة");
+loginAs("pharmacy", [PHARMACY], "أمين مخزن فرعي");
 
-let nurseOutOfScope = false;
+let branchOutOfScope = false;
 try {
   dispenseItemToPatient({
     patientId: patient.id,
@@ -241,17 +237,17 @@ try {
     quantity: 1,
   });
 } catch {
-  nurseOutOfScope = true;
+  branchOutOfScope = true;
 }
-assert("الممرضة لا تصرف من المخزن الرئيسي", nurseOutOfScope);
+assert("المخزن الفرعي لا يصرف من المخزن الرئيسي", branchOutOfScope);
 
 if (chargeable) {
-  const nurseDispense = dispenseItemToPatient(
+  const branchDispense = dispenseItemToPatient(
     { patientId: patient.id, itemId: chargeable.id, warehouseId: PHARMACY, quantity: 1 },
-    { user: { name: "ممرضة" } },
+    { user: { name: "أمين مخزن فرعي" } },
   );
-  assert("الممرضة تصرف من صيدليتها", Boolean(nurseDispense.movement?.id));
-  assert("الصرف حمَّل المريض", Boolean(nurseDispense.charge?.id));
+  assert("المخزن الفرعي يصرف من مخزنه", Boolean(branchDispense.movement?.id));
+  assert("الصرف حمَّل المريض", Boolean(branchDispense.charge?.id));
 }
 
 /* ==========================================================================
@@ -279,11 +275,11 @@ section("بيانات المستخدمين: كل أمين مخزن مُسند ل
 
 const users = all("users");
 assert("يوجد مستخدمون بأدوار تشغيلية جديدة",
-  users.some((u) => u.role === "nurse") &&
+  users.some((u) => u.role === "inv") &&
     users.some((u) => u.role === "pharmacy") &&
     users.some((u) => u.role === "reception"));
 
-const storeUsers = users.filter((u) => ["inv", "pharmacy", "nurse"].includes(u.role));
+const storeUsers = users.filter((u) => ["inv", "pharmacy"].includes(u.role));
 assert("كل مستخدم مخزني له حقل نطاق معرَّف",
   storeUsers.every((u) => u.warehouseIds === null || Array.isArray(u.warehouseIds)));
 
@@ -332,14 +328,13 @@ function visibleScreensFor(roleKey) {
 }
 
 /*
- * حارس ضد العودة للمشكلة: صلاحية واسعة واحدة (`inv.view`) كانت تفتح للممرضة
- * أحد عشر شاشة وهي تحتاج خمسًا. الحد ليس رقمًا جماليًا — هو إنذار مبكر بأن
- * صلاحية اتّسعت أكثر من دورها.
+ * حارس ضد العودة للمشكلة: صلاحية واسعة واحدة (`inv.view`) كانت تفتح للمخزن
+ * الفرعي أحد عشر شاشة وهو يحتاج خمسًا. الحد ليس رقمًا جماليًا — هو إنذار
+ * مبكر بأن صلاحية اتّسعت أكثر من دورها.
  */
 const SIDEBAR_BUDGET = {
-  nurse: 6,
   reception: 8,
-  pharmacy: 18,
+  pharmacy: 16,
   inv: 20,
   billing: 12,
 };
@@ -418,13 +413,12 @@ function sectionsFor(roleKey) {
 /*
  * الأقسام تُسمّى بالوظيفة لا بالإدارة المالكة.
  *
- * كان القسم اسمه «الاستقبال والغرف»، فكانت الممرضة ترى قسم «استقبال»
- * لتصل إلى غرف قسمها — والنظام بذلك يصف عملها بعمل غيرها. وكانت ترى
- * «المرضى والفواتير» وهي لا تملك فاتورة واحدة.
+ * كان القسم اسمه «الاستقبال والغرف»، فكان أمين المخزن الفرعي يرى قسم
+ * «استقبال» ليصل إلى ما يخصه — والنظام بذلك يصف عمله بعمل غيره. وكان يرى
+ * «المرضى والفواتير» وهو لا يملك فاتورة واحدة.
  */
 const FORBIDDEN_SECTIONS = {
-  nurse: ["الاستقبال", "الفواتير", "التحصيل", "المحاسبة", "الموارد البشرية", "الإعدادات"],
-  pharmacy: ["الاستقبال", "الفواتير", "التحصيل", "المحاسبة", "الموارد البشرية"],
+  pharmacy: ["الاستقبال", "الفواتير", "التحصيل", "المحاسبة", "الموارد البشرية", "المرضى"],
   reception: ["المحاسبة", "الموارد البشرية", "المخازن"],
   hr: ["المخازن", "المرضى", "الغرف", "التحصيل"],
 };
@@ -535,34 +529,25 @@ for (const roleKey of Object.keys(ROLES)) {
 section("فصل شاشة الإدارة عن شاشة التنفيذ");
 
 /*
- * «يطلب نواقص» ≠ «يدير طلبات النواقص».
+ * «يطلب ويتتبّع» ≠ «يشحن ويوزّع».
  *
- * شاشة `/inv/requisitions` لوحة إدارة سلاسل إمداد: طلبات كل الفروع وأزرار
- * شحن ومناقلة وأوامر شراء. كانت الممرضة تراها كاملة وتملك فيها زر الشحن
- * من المخزن الرئيسي — لأن الشاشة رُبطت بـ`inv.requisition.create`.
+ * الشاشة واحدة (`/inv/requisitions`) والفارق صلاحية `fulfill` وحدها: الفرع
+ * يطلب ويتابع ويفحص الوارد، والرئيسي وحده يشحن ويُناقل ويُصدر أمر الشراء.
  */
-loginAs("nurse", [PHARMACY], "ممرضة");
-assert("التمريض يملك طلب النواقص", can("inv.requisition.create"));
-assert("التمريض يملك شاشة قسمه المبسطة", can("inv.requisition.own"));
-assert("التمريض لا يملك لوحة إدارة النواقص", !can("inv.requisition.view"));
-assert("التمريض لا يملك شحن الطلبات", !can("inv.requisition.fulfill"));
-assert("التمريض لا يملك فحص واستلام الشحنات", !can("inv.requisition.inspect"));
+loginAs("pharmacy", [PHARMACY], "أمين مخزن فرعي");
+assert("المخزن الفرعي يطلب نواقصه", can("inv.requisition.create"));
+assert("المخزن الفرعي يتتبّع طلباته على نفس الشاشة", can("inv.requisition.view"));
+assert("المخزن الفرعي يفحص ويستلم", can("inv.requisition.inspect"));
+assert("المخزن الفرعي لا يشحن للفروع", !can("inv.requisition.fulfill"));
 
-loginAs("pharmacy", [PHARMACY], "أمين صيدلية");
-assert("الصيدلية الفرعية ترى لوحة النواقص (بنطاق مخزنها)", can("inv.requisition.view"));
-assert("الصيدلية الفرعية تفحص وتستلم", can("inv.requisition.inspect"));
-assert("الصيدلية الفرعية لا تشحن للفروع", !can("inv.requisition.fulfill"));
-assert("الصيدلية الفرعية لا ترى الشاشة المبسطة (لها اللوحة)", !can("inv.requisition.own"));
-
-loginAs("inv", null, "مدير المخازن");
-assert("مدير المخازن يشحن ويوزّع", can("inv.requisition.fulfill"));
-assert("مدير المخازن لا يرى «نواقص قسمي» — الرئيسي لا يطلب من نفسه",
-  !can("inv.requisition.own"));
+loginAs("inv", null, "أمين المخزن الرئيسي");
+assert("المخزن الرئيسي يشحن ويوزّع", can("inv.requisition.fulfill"));
+assert("المخزن الرئيسي يفحص الوارد من المورد", can("inv.requisition.inspect"));
 
 /*
- * نطاق المخازن مشترك بين أربعة فاعلين: التمريض يصرف، والصيدلية الفرعية
- * تطلب وتستلم، وأمين الرئيسي يشحن ويوزّع، والمحاسب يُسعّر. فالـwildcard
- * عليه يمنح كل واحد منهم عمل الثلاثة الآخرين — وهو أصل كل ما سبق.
+ * نطاق المخازن مشترك بين ثلاثة فاعلين: المخزن الفرعي يصرف ويطلب ويستلم،
+ * وأمين الرئيسي يشحن ويوزّع ويستلم من المورد، والمحاسب يُسعّر. فالـwildcard
+ * عليه يمنح كل واحد منهم عمل الآخرَين — وهو أصل كل ما سبق.
  *
  * (`gl.*` لمحاسب عام أمر آخر: النطاق كله عمله، ولا يشاركه فيه فاعل بدور
  * مختلف. القاعدة ليست «لا wildcards» بل «لا wildcard على نطاق مشترك».)

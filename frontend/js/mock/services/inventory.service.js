@@ -43,7 +43,7 @@ const DEFAULT_SURPLUS_THRESHOLD = 15;
  *  مواصفةٌ له لا بديل عنه.)
  * ═══════════════════════════════════════════════════════════════════════════
  */
-function assertWarehouseInScope(warehouse, action = "التصرف") {
+export function assertWarehouseInScope(warehouse, action = "التصرف") {
   if (canAccessWarehouse(warehouse?.id)) return;
 
   const allowed = (allowedWarehouseIds() ?? [])
@@ -97,7 +97,7 @@ export function currentBalance(itemId, warehouseId) {
 }
 
 /** يُحدّث صف الرصيد المخزَّن بعد حركة — عرض مُشتَق يُعاد حسابه، لا مصدر حقيقة. */
-function refreshBalance(itemId, warehouseId) {
+export function refreshBalance(itemId, warehouseId) {
   const item = find("items", itemId);
   const warehouse = find("warehouses", warehouseId);
   const result = valuate(bucketFor(itemId, warehouseId), methodFor(item, warehouse));

@@ -75,11 +75,11 @@ const USER_SEEDS = [
   { id: 14, name: "رامي عادل خليل", username: "r.khalil", role: "fin", employeeId: 21, departmentId: 4, jobTitle: "مسؤول تعاقدات ومطالبات أول" },
   { id: 15, name: "شيماء باسم النجار", username: "s.naggar", role: "hr", employeeId: 13, departmentId: 3, jobTitle: "أخصائي موارد بشرية" },
 
-  /* --- الاستقبال والتمريض والصيدليات الفرعية --- */
+  /* --- الاستقبال والمخازن الفرعية --- */
   { id: 16, name: "منى صابر عبد الله", username: "m.saber", role: "reception", employeeId: 23, departmentId: 8, jobTitle: "موظفة استقبال وخدمة مرضى", warehouseIds: [] },
   { id: 17, name: "هند درويش فتحي", username: "h.darwish", role: "reception", employeeId: 24, departmentId: 8, jobTitle: "مسؤولة استقبال — الوردية المسائية", warehouseIds: [] },
-  { id: 18, name: "أمل فؤاد السيد", username: "a.fouad", role: "nurse", employeeId: 25, departmentId: 7, jobTitle: "ممرضة القسم الداخلي", warehouseIds: [2] },
-  { id: 19, name: "سعاد ناصر حامد", username: "s.nasser", role: "nurse", employeeId: 26, departmentId: 7, jobTitle: "ممرضة العناية المركزة", warehouseIds: [4] },
+  { id: 18, name: "أمل فؤاد السيد", username: "a.fouad", role: "pharmacy", employeeId: 25, departmentId: 6, jobTitle: "أمينة مخزن القسم الداخلي (فرع 1)", warehouseIds: [2] },
+  { id: 19, name: "سعاد ناصر حامد", username: "s.nasser", role: "pharmacy", employeeId: 26, departmentId: 6, jobTitle: "أمينة مخزن العناية المركزة (فرع 3)", warehouseIds: [4] },
   { id: 20, name: "طارق إبراهيم مرسي", username: "t.morsy", role: "pharmacy", employeeId: 27, departmentId: 6, jobTitle: "أمين مخزن الطوارئ (فرع 3)", warehouseIds: [4] },
   { id: 21, name: "ياسمين القاضي سعد", username: "y.kady", role: "pharmacy", employeeId: 31, departmentId: 6, jobTitle: "أمينة مخزن العيادات (فرع 2)", warehouseIds: [3] },
   { id: 22, name: "رضا عبد اللطيف", username: "r.latif", role: "billing", employeeId: 32, departmentId: 2, jobTitle: "مسؤول حسابات المرضى والمطالبات", warehouseIds: [] },

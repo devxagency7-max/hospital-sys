@@ -34,3 +34,17 @@ export async function dispenseBasketToPatient(data) {
   const payload = await http.post("/dispensing/basket", data);
   return payload.data;
 }
+
+/** بنود الصرف القابلة للاسترجاع — غير المفوترة وحدها، في نطاق مخزن المستخدم. */
+export function listReturnableDispenses(params = {}) {
+  return fetchList("/dispensing/returnable", params);
+}
+
+/**
+ * استرجاع كمية من بند صُرف: ترجع للرف بتكلفتها الأصلية، وتُرفع عن حساب
+ * المريض. بند مفوتر يُرفض — يُعالج بإشعار دائن.
+ */
+export async function returnDispensedToPatient(data) {
+  const payload = await http.post("/dispensing/return", data);
+  return payload.data;
+}

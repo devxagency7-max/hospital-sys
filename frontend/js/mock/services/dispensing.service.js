@@ -20,8 +20,10 @@
 import { notFound, validationError, ruleViolation } from "../../core/errors.js";
 import * as money from "../../core/money.js";
 import { db, all, find, insert, update, query } from "../db.js";
-import { audit } from "./posting.service.js";
-import { createIssue } from "./inventory.service.js";
+import { audit, postDocument } from "./posting.service.js";
+import { SourceType } from "../../domain/posting.js";
+import { allowedWarehouseIds } from "../../core/permissions.js";
+import { createIssue, refreshBalance, assertWarehouseInScope } from "./inventory.service.js";
 import { REFERENCE_DATE } from "../seed.js";
 
 const TODAY = REFERENCE_DATE.toISOString().slice(0, 10);
@@ -268,7 +270,209 @@ export function dispenseBasketToPatient(payload, { user } = {}) {
 }
 
 /* ==========================================================================
-   3) الاستعلام — ما صُرف لمريض وما حُمِّل عليه
+   3) الاسترجاع — عكس الصرف بطرفيه
+   ========================================================================== */
+
+/**
+ * يسترجع كمية من صنف صُرف لمريض: ترجع للرف، وتُرفع عن حسابه.
+ *
+ * ═══════════════════════════════════════════════════════════════════════════
+ *  الاسترجاع ليس «صرفًا بكمية سالبة».
+ *
+ *  لو عاملناه كذلك لدخلت الكمية الرفَّ بتكلفة اليوم (أو بمتوسط الرصيد
+ *  الحالي)، فيُولِّد مجرد الاسترجاع ربحًا أو خسارة من فراغ. الكمية عائدة
+ *  **بعينها**، فترجع بتكلفة حركة صرفها الأصلية المثبَّتة عليها.
+ *
+ *  والحارس الأهم: **بند فُوتر لا يُسترجع من هنا.** الفاتورة الصادرة لا
+ *  تُعدَّل — يُعالَج فرقها بإشعار دائن. ورفض ذلك صراحةً أسلم من تعديل صامت
+ *  لمستند صدر للمريض.
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
+ * @param {object} payload
+ * @param {number} payload.chargeId  سطر التحميل المراد استرجاعه
+ * @param {number} payload.quantity  الكمية المرتجعة (≤ المصروفة)
+ * @param {string} [payload.reason]
+ * @returns {{movement, charge, returnedQuantity, refunded, journalEntry}}
+ */
+export function returnDispensedToPatient(payload, { user } = {}) {
+  const errors = {};
+  if (!payload?.chargeId) errors.chargeId = "بند الصرف مطلوب.";
+  if (!(Number(payload?.quantity) > 0)) errors.quantity = "الكمية المرتجعة يجب أن تكون أكبر من صفر.";
+  if (Object.keys(errors).length) throw validationError(errors);
+
+  const charge = find("admissionCharges", payload.chargeId);
+  if (!charge) throw notFound("بند الصرف غير موجود.");
+
+  if (charge.source !== "pharmacy") {
+    throw ruleViolation("هذا البند ليس صرفًا من مخزن — لا يُسترجع من هنا.", { field: "chargeId" });
+  }
+
+  /* فاتورة صادرة لا تُعدَّل — تُعالج بإشعار دائن لا بحذف سطر من دفترها. */
+  if (charge.invoiceId) {
+    throw ruleViolation(
+      `البند «${charge.serviceName}» مُدرج في فاتورة صادرة بالفعل — لا يُسترجع من هنا. ` +
+        "أصدر إشعارًا دائنًا للمريض بدلًا من تعديل فاتورة صدرت.",
+      { field: "chargeId" },
+    );
+  }
+
+  const quantity = Number(payload.quantity);
+  if (quantity > charge.quantity) {
+    throw ruleViolation(
+      `المصروف من «${charge.serviceName}» هو ${charge.quantity} فقط، والمطلوب استرجاعه ${quantity}.`,
+      { field: "quantity" },
+    );
+  }
+
+  const item = find("items", charge.itemId);
+  if (!item) throw notFound("الصنف غير موجود.");
+
+  const warehouse = find("warehouses", charge.warehouseId);
+  if (!warehouse) throw notFound("المخزن غير موجود.");
+
+  /* المستخدم يسترجع إلى مخزنه هو — نفس حارس أي حركة مخزنية. */
+  assertWarehouseInScope(warehouse, "استرجاع صرف");
+
+  const date = payload.date ?? TODAY;
+
+  /*
+   * التكلفة والسعر من البند الأصلي لا من قيمة اليوم. البند يحمل
+   * `unitCost` المحسوبة بمحرك التقييم لحظة الصرف و`unitPrice` المعتمد
+   * وقتها — وهما ما يُعكَس بهما تمامًا.
+   */
+  const returnedCost = money.multiply(charge.unitCost ?? 0, quantity);
+  const refunded = money.multiply(charge.unitPrice ?? 0, quantity);
+
+  const sequence = all("stockMovements").filter((row) => row.documentType === "dispense_return").length + 1;
+  const reference = `RET-2026-${String(sequence).padStart(4, "0")}`;
+
+  const movement = insert("stockMovements", {
+    itemId: item.id,
+    itemCode: item.code,
+    itemName: item.name,
+    warehouseId: warehouse.id,
+    warehouseName: warehouse.name,
+    type: "return_in",
+    typeLabel: "مرتجع وارد",
+    date,
+    quantity,
+    unitCost: charge.unitCost ?? 0,
+    totalCost: returnedCost,
+    costingMethod: charge.costingMethod ?? null,
+    reference,
+    documentType: "dispense_return",
+    reason: payload.reason?.trim() || "استرجاع صرف من مريض",
+    patientId: charge.patientId,
+    patientName: charge.patientName,
+    admissionId: charge.admissionId ?? null,
+    admissionCode: charge.admissionCode ?? null,
+    relatedChargeId: charge.id,
+    relatedMovementId: charge.movementId ?? null,
+    performedBy: user?.name ?? "—",
+    notes: payload.notes ?? null,
+  });
+
+  const balance = refreshBalance(item.id, warehouse.id);
+
+  /*
+   * رفع المبلغ عن حساب المريض: استرجاع جزئي يُنقص الكمية والمبلغ، وكامل
+   * يحذف السطر. لا نُبقي سطرًا بكمية صفر — دفتر الاستحقاق يُقرأ كما هو في
+   * كشف الحساب، وسطر بصفر يربك قارئه.
+   */
+  let remainingCharge = null;
+
+  if (quantity === charge.quantity) {
+    db.admissionCharges = db.admissionCharges.filter((row) => String(row.id) !== String(charge.id));
+  } else {
+    const remainingQty = charge.quantity - quantity;
+    remainingCharge = update("admissionCharges", charge.id, {
+      quantity: remainingQty,
+      amount: money.multiply(charge.unitPrice ?? 0, remainingQty),
+      totalCost: money.multiply(charge.unitCost ?? 0, remainingQty),
+    });
+  }
+
+  const posting = postDocument({
+    sourceType: SourceType.DISPENSE_RETURN,
+    sourceId: movement.id,
+    document: {
+      totalCost: returnedCost,
+      warehouseName: warehouse.name,
+      patientName: charge.patientName,
+      inventoryAccountId: warehouse.inventoryAccountId ?? item.inventoryAccountId,
+      expenseAccountId: null,
+      costCenterId: null,
+    },
+    date,
+    description: `استرجاع ${reference} — ${item.name} من ${charge.patientName}`,
+    reference,
+    user,
+  });
+
+  audit({
+    action: "dispense.return",
+    actionLabel: "استرجاع صرف من مريض",
+    module: "المخازن",
+    entity: "stock_movement",
+    entityId: movement.id,
+    details:
+      `${reference} — ${item.name} × ${quantity} ${item.unit} ` +
+      `رجعت إلى ${warehouse.name} بتكلفة ${returnedCost} ج.م، ` +
+      `ورُفع ${refunded} ج.م عن حساب ${charge.patientName}`,
+    user,
+  });
+
+  return {
+    movement,
+    balance,
+    charge: remainingCharge,
+    fullyReturned: remainingCharge === null,
+    returnedQuantity: quantity,
+    returnedCost,
+    refunded,
+    journalEntry: posting.entry,
+  };
+}
+
+/** بنود الصرف القابلة للاسترجاع — غير المفوترة وحدها. */
+export function listReturnableDispenses(params = {}) {
+  const scope = allowedWarehouseIds();
+
+  const rows = all("admissionCharges")
+    .filter((c) => c.source === "pharmacy")
+    .filter((c) => !c.invoiceId)
+    .filter((c) => (scope === null ? true : scope.includes(String(c.warehouseId))))
+    .filter((c) => !params.patientId || String(c.patientId) === String(params.patientId))
+    .filter((c) => !params.warehouseId || String(c.warehouseId) === String(params.warehouseId))
+    .filter((c) => {
+      if (!params.search) return true;
+      const q = String(params.search).toLowerCase();
+      return (
+        String(c.serviceName ?? "").toLowerCase().includes(q) ||
+        String(c.patientName ?? "").toLowerCase().includes(q) ||
+        String(c.itemCode ?? "").toLowerCase().includes(q) ||
+        String(c.sourceRef ?? "").toLowerCase().includes(q)
+      );
+    })
+    .sort((a, b) => String(b.date).localeCompare(String(a.date)) || b.id - a.id);
+
+  const page = Number(params.page || 1);
+  const perPage = Number(params.perPage || 25);
+  const start = (page - 1) * perPage;
+
+  return {
+    data: rows.slice(start, start + perPage),
+    meta: {
+      total: rows.length,
+      page,
+      perPage,
+      totalPages: Math.ceil(rows.length / perPage) || 1,
+    },
+  };
+}
+
+/* ==========================================================================
+   4) الاستعلام — ما صُرف لمريض وما حُمِّل عليه
    ========================================================================== */
 
 /** سجل ما صُرف لمريض من أصناف، مع التكلفة وسعر التحميل وهامش كل بند. */

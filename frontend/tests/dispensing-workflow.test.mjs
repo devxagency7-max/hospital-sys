@@ -13,6 +13,8 @@ import {
   dispenseBasketToPatient,
   listDispensableItems,
   listPatientDispenses,
+  returnDispensedToPatient,
+  listReturnableDispenses,
 } from "../js/mock/services/dispensing.service.js";
 import { currentBalance } from "../js/mock/services/inventory.service.js";
 import { getAdmissionCostSummary } from "../js/mock/services/rooms.service.js";
@@ -274,5 +276,98 @@ for (const [label, payload] of guards) {
   }
   assert(`الصرف ${label} مرفوض`, blocked);
 }
+
+/* ==========================================================================
+   9. الاسترجاع — عكس الصرف بطرفيه
+   ========================================================================== */
+
+section("الاسترجاع: الكمية ترجع للرف والمبلغ يُرفع عن حساب المريض");
+
+/* صرف جديد نسترجعه، حتى لا نعتمد على بند صُرف في فحص سابق. */
+const retDispense = dispenseItemToPatient(
+  { patientId: inpatient.id, itemId: drug.itemId, warehouseId: PHARMACY_WH, quantity: 4 },
+  NURSE,
+);
+
+const retChargeId = retDispense.charge.id;
+const balanceAfterDispense = currentBalance(drug.itemId, PHARMACY_WH).onHand;
+const unitCostAtDispense = retDispense.charge.unitCost;
+const unitPriceAtDispense = retDispense.charge.unitPrice;
+
+/* --- استرجاع جزئي --- */
+const partialReturn = returnDispensedToPatient(
+  { chargeId: retChargeId, quantity: 1, reason: "المريض رفض الجرعة" },
+  NURSE,
+);
+
+assert("الاسترجاع الجزئي أنتج حركة مرتجع وارد", partialReturn.movement?.type === "return_in");
+assert("الاسترجاع الجزئي أعاد الكمية للرف",
+  currentBalance(drug.itemId, PHARMACY_WH).onHand === balanceAfterDispense + 1);
+assert("الاسترجاع الجزئي أبقى البند بكمية ناقصة", partialReturn.charge?.quantity === 3);
+assert("الاسترجاع الجزئي ليس استرجاعًا كاملًا", partialReturn.fullyReturned === false);
+assert("المبلغ المرفوع = سعر الوحدة × المرتجع",
+  money.toMinor(partialReturn.refunded) === money.toMinor(money.multiply(unitPriceAtDispense, 1)));
+
+/*
+ * الحارس الأهم: الكمية ترجع **بتكلفة صرفها الأصلية** لا بتكلفة اليوم.
+ * لو دخلت بتكلفة مختلفة لولّد مجرد الاسترجاع ربحًا أو خسارة من فراغ.
+ */
+assert("المرتجع دخل بتكلفة الصرف الأصلية",
+  money.toMinor(partialReturn.movement.unitCost) === money.toMinor(unitCostAtDispense));
+assert("قيد الاسترجاع متوازن ومُرحَّل", Boolean(partialReturn.journalEntry?.id));
+
+/* --- استرجاع الباقي: البند يُحذف بالكامل --- */
+const rest = returnDispensedToPatient({ chargeId: retChargeId, quantity: 3 }, NURSE);
+
+assert("استرجاع الباقي يُعلن أنه كامل", rest.fullyReturned === true);
+assert("البند اختفى من دفتر الاستحقاق بعد استرجاعه كاملًا",
+  !find("admissionCharges", retChargeId));
+assert("الرصيد عاد لما كان عليه قبل الصرف",
+  currentBalance(drug.itemId, PHARMACY_WH).onHand === balanceAfterDispense + 4);
+
+/* --- الحرّاس --- */
+section("حرّاس الاسترجاع");
+
+const freshDispense = dispenseItemToPatient(
+  { patientId: inpatient.id, itemId: drug.itemId, warehouseId: PHARMACY_WH, quantity: 2 },
+  NURSE,
+);
+
+let overReturn = false;
+try {
+  returnDispensedToPatient({ chargeId: freshDispense.charge.id, quantity: 5 }, NURSE);
+} catch {
+  overReturn = true;
+}
+assert("استرجاع أكثر من المصروف مرفوض", overReturn);
+
+let zeroReturn = false;
+try {
+  returnDispensedToPatient({ chargeId: freshDispense.charge.id, quantity: 0 }, NURSE);
+} catch {
+  zeroReturn = true;
+}
+assert("استرجاع بكمية صفر مرفوض", zeroReturn);
+
+/*
+ * فاتورة صادرة لا تُعدَّل: بند دخل فاتورة يُعالَج بإشعار دائن لا بالاسترجاع.
+ * نُحاكي الفوترة بوسم البند بـ`invoiceId` كما يفعل `createPatientInvoice`.
+ */
+update("admissionCharges", freshDispense.charge.id, { invoiceId: 9999 });
+
+let invoicedReturn = false;
+try {
+  returnDispensedToPatient({ chargeId: freshDispense.charge.id, quantity: 1 }, NURSE);
+} catch {
+  invoicedReturn = true;
+}
+assert("استرجاع بند مفوتر مرفوض — يُعالج بإشعار دائن", invoicedReturn);
+
+/* والقائمة لا تعرض أصلًا ما لا يُسترجع. */
+const returnable = listReturnableDispenses({ patientId: inpatient.id });
+assert("قائمة القابل للاسترجاع تستبعد المفوتر",
+  returnable.data.every((row) => !row.invoiceId));
+assert("قائمة القابل للاسترجاع لا تعرض البند المفوتر بعينه",
+  !returnable.data.some((row) => String(row.id) === String(freshDispense.charge.id)));
 
 report();

@@ -321,6 +321,10 @@ const ROUTES = {
   "POST /dispensing/basket": ({ body }) => ({
     data: dispensing.dispenseBasketToPatient(body, actor()),
   }),
+  "GET /dispensing/returnable": ({ params }) => dispensing.listReturnableDispenses(params),
+  "POST /dispensing/return": ({ body }) => ({
+    data: dispensing.returnDispensedToPatient(body, actor()),
+  }),
 
   /* --- دفتر استحقاق خدمات الإقامة ومحرك الرسم اليومي --- */
   "GET /patients/admission-charges": ({ params }) => rooms.listAdmissionCharges(params),

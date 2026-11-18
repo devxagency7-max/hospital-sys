@@ -575,6 +575,37 @@ export function inventoryIssueLines(issue, accountMap) {
 }
 
 /**
+ * استرجاع صنف صُرف لمريض — عكس إذن الصرف تمامًا.
+ *
+ * مدين المخزون، دائن تكلفة المبيعات. القيمة هي **تكلفة الصرف الأصلية
+ * المثبَّتة على حركته**، لا تكلفة اليوم ولا متوسط الرصيد الحالي: الكمية
+ * عائدة بعينها، فإدخالها بتكلفة مختلفة يخلق ربحًا أو خسارة من مجرد
+ * الاسترجاع.
+ *
+ * والإيراد لا يُعكَس هنا: الصرف لم يُرحِّل إيرادًا أصلًا — سجّل سطرًا في
+ * دفتر استحقاق المريض يُفوتَر لاحقًا. فرفع السطر من الدفتر هو عكس الإيراد،
+ * ويتم في الخدمة لا في قيد. وإن كان السطر قد فُوتر فعلًا فالاسترجاع يُرفض
+ * ويُحال لإشعار دائن — فاتورة صادرة لا تُعدَّل.
+ */
+export function dispenseReturnLines(entry, accountMap) {
+  const cost = money.round(entry?.totalCost ?? 0);
+
+  if (money.isZero(cost)) {
+    throw ruleViolation("استرجاع بتكلفة صفر لا يُرحَّل محاسبيًا.");
+  }
+
+  return [
+    debit(accountOr(entry?.inventoryAccountId, accountMap, "inventory"), cost, {
+      description: `ارتجاع مخزون — ${entry?.warehouseName ?? ""}`.trim(),
+    }),
+    credit(accountOr(entry?.expenseAccountId, accountMap, "costOfGoodsSold"), cost, {
+      description: `عكس تكلفة صرف مُسترجع — ${entry?.patientName ?? ""}`.trim(),
+      costCenterId: entry?.costCenterId ?? null,
+    }),
+  ];
+}
+
+/**
  * تسوية مخزنية. الاتجاه يحدد الطرفين:
  *   زيادة → مدين المخزون، دائن «زيادة المخزون»
  *   نقص   → مدين «عجز وتلف»، دائن المخزون
@@ -909,6 +940,7 @@ export const POSTING_RULES = Object.freeze({
   [SourceType.INVENTORY_DISPATCH]: inventoryDispatchLines,
   [SourceType.INVENTORY_TRANSIT_RECEIPT]: inventoryTransitReceiptLines,
   [SourceType.INVENTORY_TRANSIT_LOSS]: inventoryTransitLossLines,
+  [SourceType.DISPENSE_RETURN]: dispenseReturnLines,
   [SourceType.PURCHASE_INVOICE_MATCH]: purchaseInvoiceMatchLines,
 });
 

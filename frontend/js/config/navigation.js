@@ -170,9 +170,9 @@ export const navigation = [
     icon: "inventory",
     permission: "inv.view",
     children: [
-      { label: "نواقص قسمي", path: "/inv/my-requisitions", permission: "inv.requisition.own" },
-      { label: "طلبات النواقص والتوريد", path: "/inv/requisitions", permission: "inv.requisition.view" },
+      { label: "طلبات النواقص وتتبّعها", path: "/inv/requisitions", permission: "inv.requisition.view" },
       { label: "صرف أدوية لمريض", path: "/inv/dispense", permission: "inv.dispense.patient" },
+      { label: "استرجاع صرف من مريض", path: "/inv/returns", permission: "inv.dispense.return" },
       { label: "حركات المخزون", path: "/inv/movements", permission: "inv.movements.view" },
       { label: "الأصناف والمخزون", path: "/inv/items", permission: "inv.items.view" },
       { label: "مطابقة فواتير الموردين", path: "/inv/invoice-matching", permission: "fin.supplier.invoice" },
@@ -285,16 +285,10 @@ export const ROLE_SHORTCUTS = {
     { label: "سجل المرضى", hint: "بحث وتسجيل", path: "/patients", icon: "users", permission: "patients.view" },
   ],
 
-  nurse: [
-    { label: "صرف أدوية لمريض", hint: "غرفة ← أصناف ← تم", path: "/inv/dispense", icon: "inventory", permission: "inv.dispense.patient" },
-    { label: "إشغال الغرف", hint: "مرضى القسم", path: "/reception/occupancy", icon: "hospital", permission: "reception.occupancy.view" },
-    { label: "طلب نواقص", hint: "احتياج القسم", path: "/inv/my-requisitions", icon: "inbox", permission: "inv.requisition.create" },
-  ],
-
   pharmacy: [
     { label: "صرف أدوية لمريض", hint: "غرفة ← أصناف ← تم", path: "/inv/dispense", icon: "inventory", permission: "inv.dispense.patient" },
-    { label: "طلبات النواقص", hint: "طلب واستلام", path: "/inv/requisitions", icon: "inbox", permission: "inv.requisition.view" },
-    { label: "الجرد الفعلي", hint: "عدّ ومطابقة", path: "/inv/counts", icon: "columns", permission: "inv.count.manage" },
+    { label: "طلباتي وتتبّعها", hint: "طلب · متابعة · استلام", path: "/inv/requisitions", icon: "inbox", permission: "inv.requisition.view" },
+    { label: "استرجاع صرف", hint: "رفعه عن حساب المريض", path: "/inv/returns", icon: "refresh", permission: "inv.dispense.return" },
   ],
 
   inv: [

@@ -90,6 +90,7 @@ export const SourceType = Object.freeze({
   INVENTORY_DISPATCH: "inventory_dispatch",
   INVENTORY_TRANSIT_RECEIPT: "inventory_transit_receipt",
   INVENTORY_TRANSIT_LOSS: "inventory_transit_loss",
+  DISPENSE_RETURN: "dispense_return",
   PURCHASE_INVOICE_MATCH: "purchase_invoice_match",
 
   /* المحاسبة العامة */
@@ -126,6 +127,7 @@ export const SOURCE_LABELS = Object.freeze({
   [SourceType.INVENTORY_DISPATCH]: "شحن مخزني للفرع",
   [SourceType.INVENTORY_TRANSIT_RECEIPT]: "استلام شحنة بالفرع",
   [SourceType.INVENTORY_TRANSIT_LOSS]: "عجز شحنة تحت التحويل",
+  [SourceType.DISPENSE_RETURN]: "استرجاع صرف من مريض",
   [SourceType.PURCHASE_INVOICE_MATCH]: "مطابقة فاتورة مورد",
   [SourceType.PERIOD_CLOSING]: "إغلاق فترة",
   [SourceType.YEAR_CLOSING]: "إغلاق سنة مالية",
