@@ -119,7 +119,7 @@ export default async function receptionReceiptsPage() {
   // 3. جدول سندات القبض
   const tableCard = el(
     "section",
-    { class: "bg-surface border border-subtle rounded-xl p-5 shadow-sm flex flex-col gap-4" },
+    { class: "glass-card p-5 flex flex-col gap-4" },
     el(
       "div",
       { class: "flex items-center justify-between flex-wrap gap-2 border-b border-subtle pb-3" },

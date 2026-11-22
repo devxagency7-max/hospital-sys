@@ -97,7 +97,7 @@ export default async function payslipDetailPage(context) {
   /* بيانات الموظف والتعيين */
   const employeeCard = el(
     "div",
-    { class: "rounded-xl border border-border bg-surface p-5 shadow-sm" },
+    { class: "glass-card border-border p-5" },
     el("h2", { class: "text-base font-bold text-ink mb-4 pb-2 border-b border-border" }, "بيانات الموظف والوظيفة"),
     el(
       "div",
@@ -116,7 +116,7 @@ export default async function payslipDetailPage(context) {
   /* جدول مفردات الراتب: استحقاقات واستقطاعات جنبًا إلى جنب */
   const breakdownCard = el(
     "div",
-    { class: "rounded-xl border border-border bg-surface p-5 shadow-sm" },
+    { class: "glass-card border-border p-5" },
     el("h2", { class: "text-base font-bold text-ink mb-4 pb-2 border-b border-border" }, "تفاصيل مفردات المرتب"),
     el(
       "div",

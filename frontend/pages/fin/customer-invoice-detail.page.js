@@ -26,7 +26,7 @@ export default async function customerInvoiceDetailPage(context) {
   } catch (err) {
     return el(
       "div",
-      { class: "flex flex-col items-center justify-center p-12 text-center gap-4 bg-surface rounded-xl border border-border m-6 shadow-sm" },
+      { class: "glass-card flex flex-col items-center justify-center p-12 text-center gap-4 border-border m-6" },
       el("div", { class: "text-4xl" }, "🔍"),
       el("h2", { class: "text-lg font-bold text-ink" }, "فاتورة العميل غير موجودة أو تم حذفها"),
       el("p", { class: "text-sm text-muted" }, `لم يتم العثور على فاتورة بالمُعرّف #${invoiceId}`),
@@ -81,7 +81,7 @@ export default async function customerInvoiceDetailPage(context) {
 
   const heroCard = el(
     "div",
-    { class: "bg-surface border border-subtle rounded-xl p-5 shadow-sm" },
+    { class: "glass-card p-5" },
     el(
       "div",
       { class: "flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-subtle pb-4 mb-4" },
@@ -158,7 +158,7 @@ export default async function customerInvoiceDetailPage(context) {
 
   const linesCard = el(
     "div",
-    { class: "bg-surface border border-subtle rounded-xl p-5 shadow-sm overflow-hidden flex flex-col gap-3" },
+    { class: "glass-card p-5 overflow-hidden flex flex-col gap-3" },
     el(
       "div",
       { class: "flex items-center justify-between" },

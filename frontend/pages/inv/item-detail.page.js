@@ -76,7 +76,7 @@ export default async function itemDetailPage(context) {
   // 2. بطاقة الصنف التعريفية الرئيسية (Hero Item Card)
   const heroCard = el(
     "div",
-    { class: "bg-surface border border-subtle rounded-xl p-5 shadow-sm" },
+    { class: "glass-card p-5" },
     el(
       "div",
       { class: "flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-subtle pb-4 mb-4" },
@@ -161,7 +161,7 @@ export default async function itemDetailPage(context) {
   // 4. جدول الأرصدة في المخازن والصيدليات
   const balancesCard = el(
     "div",
-    { class: "bg-surface border border-subtle rounded-xl p-5 shadow-sm overflow-hidden flex flex-col gap-3" },
+    { class: "glass-card p-5 overflow-hidden flex flex-col gap-3" },
     el(
       "div",
       { class: "flex items-center justify-between" },
@@ -174,7 +174,7 @@ export default async function itemDetailPage(context) {
   // 5. جدول التشغيلات وتواريخ الصلاحية (Batches & Expiry)
   const batchesCard = el(
     "div",
-    { class: "bg-surface border border-subtle rounded-xl p-5 shadow-sm overflow-hidden flex flex-col gap-3" },
+    { class: "glass-card p-5 overflow-hidden flex flex-col gap-3" },
     el(
       "div",
       { class: "flex items-center justify-between" },
@@ -187,7 +187,7 @@ export default async function itemDetailPage(context) {
   // 6. حركات المخزون الأخيرة (Movements)
   const movementsCard = el(
     "div",
-    { class: "bg-surface border border-subtle rounded-xl p-5 shadow-sm overflow-hidden flex flex-col gap-3" },
+    { class: "glass-card p-5 overflow-hidden flex flex-col gap-3" },
     el(
       "div",
       { class: "flex items-center justify-between" },

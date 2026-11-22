@@ -218,7 +218,7 @@ export default async function receptionBillingPage(context) {
 
   const sidebarPanel = el(
     "aside",
-    { class: "lg:col-span-4 bg-surface border border-subtle rounded-xl p-4 shadow-sm flex flex-col gap-3" },
+    { class: "glass-card lg:col-span-4 p-4 flex flex-col gap-3" },
     el(
       "div",
       { class: "flex items-center justify-between gap-2" },
@@ -248,7 +248,7 @@ export default async function receptionBillingPage(context) {
       "section",
       {
         class:
-          "bg-surface border border-subtle rounded-xl p-5 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4",
+          "glass-card p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4",
       },
       el(
         "div",
@@ -393,7 +393,7 @@ function buildReceptionServicesSection(patient, summaryData) {
 
   const card = el(
     "section",
-    { class: "bg-surface border border-subtle rounded-xl p-5 shadow-sm flex flex-col gap-4" },
+    { class: "glass-card p-5 flex flex-col gap-4" },
     el(
       "div",
       { class: "flex items-center justify-between flex-wrap gap-2 border-b border-subtle pb-3" },
@@ -720,7 +720,7 @@ function buildReceptionReceiptsSection(patient, summaryData, onReceiptCreated) {
 
   const card = el(
     "section",
-    { class: "bg-surface border border-subtle rounded-xl p-5 shadow-sm flex flex-col gap-4" },
+    { class: "glass-card p-5 flex flex-col gap-4" },
     el(
       "div",
       { class: "flex items-center justify-between flex-wrap gap-2 border-b border-subtle pb-3" },

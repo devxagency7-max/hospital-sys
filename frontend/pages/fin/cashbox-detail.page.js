@@ -57,7 +57,7 @@ export default async function cashboxDetailPage(context) {
 
   const heroCard = el(
     "div",
-    { class: "bg-surface border border-subtle rounded-xl p-5 shadow-sm" },
+    { class: "glass-card p-5" },
     el(
       "div",
       { class: "flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-subtle pb-4 mb-4" },
@@ -136,7 +136,7 @@ export default async function cashboxDetailPage(context) {
 
   const movementsCard = el(
     "div",
-    { class: "bg-surface border border-subtle rounded-xl p-5 shadow-sm overflow-hidden flex flex-col gap-3" },
+    { class: "glass-card p-5 overflow-hidden flex flex-col gap-3" },
     el(
       "div",
       { class: "flex items-center justify-between" },

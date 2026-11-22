@@ -319,7 +319,9 @@ export default async function occupancyPage() {
 
     openModal({
       title: `${detail.name} — ${detail.roomType.name}`,
-      subtitle: `${detail.floor} · ${detail.wing} · ${detail.department}`,
+      /* الحقول الغائبة تُحذف لا تُطبع: الوحدة لا تحمل حقل قسم أصلًا، وكان
+         العنوان ينتهي بـ«· undefined» في كل نافذة وحدة. */
+      subtitle: [detail.floor, detail.wing, detail.roomType?.name].filter(Boolean).join(" · "),
       size: "md",
       body: (close) => {
         const content = el("div", { class: "space-y-4 text-sm" });

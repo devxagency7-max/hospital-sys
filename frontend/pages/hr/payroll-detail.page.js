@@ -119,7 +119,7 @@ export default async function payrollDetailPage(context) {
   if (depts.length > 0) {
     deptSection = el(
       "div",
-      { class: "rounded-xl border border-border bg-surface p-5 shadow-sm" },
+      { class: "glass-card border-border p-5" },
       el("h2", { class: "text-base font-bold text-ink mb-3 pb-2 border-b border-border" }, "توزيع الرواتب حسب الأقسام"),
       el(
         "div",
@@ -149,7 +149,7 @@ export default async function payrollDetailPage(context) {
   /* جدول قسائم رواتب الموظفين */
   const payslipsSection = el(
     "div",
-    { class: "rounded-xl border border-border bg-surface p-5 shadow-sm" },
+    { class: "glass-card border-border p-5" },
     el(
       "div",
       { class: "flex items-center justify-between mb-4 pb-2 border-b border-border flex-wrap gap-2" },

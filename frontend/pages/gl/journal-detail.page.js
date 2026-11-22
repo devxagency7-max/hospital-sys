@@ -138,7 +138,7 @@ export default async function journalDetailPage(context) {
   // 3. ترويسة بيانات القيد (Entry Header Card)
   const headerCard = el(
     "div",
-    { class: "bg-surface border border-subtle rounded-xl p-5 shadow-sm" },
+    { class: "glass-card p-5" },
     el(
       "div",
       { class: "border-b border-subtle pb-3 mb-4" },
@@ -178,7 +178,7 @@ export default async function journalDetailPage(context) {
   // 4. جدول أطراف القيد (Lines Table)
   const linesCard = el(
     "div",
-    { class: "bg-surface border border-subtle rounded-xl p-5 shadow-sm overflow-hidden flex flex-col gap-3" },
+    { class: "glass-card p-5 overflow-hidden flex flex-col gap-3" },
     el(
       "div",
       { class: "flex items-center justify-between flex-wrap gap-2" },

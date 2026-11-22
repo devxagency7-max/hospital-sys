@@ -132,7 +132,12 @@ export function openModal({
         "div",
         {
           class: cx(
-            "hx-rise bg-white dark:bg-slate-900 text-ink border border-line-strong/60 shadow-2xl w-full rounded-[var(--radius-card)] flex flex-col",
+            /*
+             * `overflow-hidden` لازمة لا تحسين: رأس النافذة وتذييلها لهما
+             * خلفية خاصة بهما، وبلا قصّ تظهر زواياهما القائمة خارج استدارة
+             * اللوحة — حافة بيضاء مربّعة فوق كل نافذة.
+             */
+            "hx-rise bg-white dark:bg-slate-900 text-ink border border-line-strong/60 shadow-2xl w-full rounded-[var(--radius-card)] overflow-hidden flex flex-col",
             "max-h-[min(90vh,52rem)]",
             SIZES[size] ?? SIZES.md,
           ),
@@ -172,7 +177,7 @@ export function openModal({
         footer
           ? el(
               "footer",
-              { class: "flex items-center justify-start gap-2.5 px-6 py-4 border-t border-line bg-subtle shrink-0 rounded-b-[var(--radius-card)]" },
+              { class: "flex items-center justify-start gap-2.5 px-6 py-4 border-t border-line bg-subtle shrink-0" },
               ...[typeof footer === "function" ? footer(close) : footer].flat().filter(Boolean),
             )
           : null,

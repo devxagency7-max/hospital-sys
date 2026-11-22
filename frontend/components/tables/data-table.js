@@ -22,12 +22,12 @@ import { tableSkeleton, emptyState, errorState } from "../feedback/states.js";
 import { readPreference, writePreference } from "../../js/core/store.js";
 import { registerCleanup } from "../../js/core/lifecycle.js";
 import { toApiError } from "../../js/core/errors.js";
-import { openDrawer } from "../modals/overlay.js";
+import { EMPTY as EMPTY_MARK } from "../../js/core/format.js";
+import { openModal } from "../modals/overlay.js";
 import { fitTableWidth, FIT_TOLERANCE, MIN_READABLE_WIDTH as MIN_COLUMN_WIDTH } from "./table-fit.js";
 
 /** لا جدول بأقل من هذا العدد مهما ضاقت الشاشة — صفٌّ بعمود واحد ليس جدولًا. */
 const MIN_VISIBLE_COLUMNS = 3;
-import { dataRow } from "../common/card.js";
 
 /**
  * @typedef {object} Column
@@ -477,13 +477,28 @@ export function dataTable({
    * نفسه، لا حقل يخمّنه هذا المكوّن من أسماء المفاتيح.
    */
   function rowTitle(row) {
-    const first = allColumns()[0];
-    if (!first) return "تفاصيل السجل";
+    /*
+     * أول عمود يحمل نصًا فعليًا — لا العمود الأول دائمًا: صفّ إقامة بلا رقم
+     * بعد كان عنوانه «—»، وهي لوحة لا تقول شيئًا عمّا فُتح. العمود التالي
+     * (اسم المريض) يقوله.
+     */
+    for (const column of allColumns()) {
+      const value = column.render ? column.render(row) : row[column.key];
 
-    const value = first.render ? first.render(row) : row[first.key];
-    const text = value instanceof Node ? nodeText(value) : String(value ?? "");
+      /*
+       * خلية «الاسم فوق الكود» تحمل سطرين، والعنوان يريد الأول وحده: «فاطمة
+       * حسن القاضي» لا «فاطمة حسن القاضي 4». `data-primary` تضعها
+       * `twoLineCell` على سطرها الأساسي.
+       */
+      const primary = value instanceof Node ? value.querySelector?.("[data-primary]") : null;
+      const text = (value instanceof Node ? nodeText(primary ?? value) : String(value ?? ""))
+        .replace(/\s+/g, " ")
+        .trim();
 
-    return text.replace(/\s+/g, " ").trim() || "تفاصيل السجل";
+      if (text && text !== EMPTY_MARK) return text;
+    }
+
+    return "تفاصيل السجل";
   }
 
   /**
@@ -511,23 +526,42 @@ export function dataTable({
    * ليكتشف أنه فتح الصف الخطأ ثم يرجع.
    */
   function openRowDetail(row) {
+    /*
+     * الحقل مُكدَّس: التسمية فوق والقيمة تحت — لا «تسمية ⟵ قيمة» في سطر
+     * واحد. في عمودين، قيمة الحقل الأيمن تلتصق بتسمية الحقل الذي يليه
+     * فيُقرأ الاثنان كلامًا واحدًا («تاريخ الخروج05/11/2026»). التكديس
+     * يفصلهما بلا فواصل رأسية ولا حشو إضافي.
+     */
     const fields = allColumns().map((column) => {
       const value = column.render ? column.render(row) : row[column.key];
       const empty = value === null || value === undefined || value === "";
 
-      return dataRow(column.label, value instanceof Node ? value : empty ? "—" : String(value));
+      return el(
+        "div",
+        { class: "min-w-0 py-2.5 border-b border-line/60" },
+        el("dt", { class: "text-[11px] font-semibold text-faint mb-1" }, column.label),
+        el(
+          "dd",
+          { class: "text-sm text-ink break-words" },
+          value instanceof Node ? value : empty ? EMPTY_MARK : String(value),
+        ),
+      );
     });
 
     const actions = rowActions?.(row) ?? null;
 
-    openDrawer({
+    openModal({
       title: rowTitle(row),
       subtitle: `كل بيانات السجل — ${fields.length} ${fields.length === 1 ? "حقل" : "حقلًا"}`,
-      size: "md",
+      size: "lg",
       body: el(
         "div",
         { class: "space-y-4" },
-        el("dl", {}, ...fields),
+        /*
+         * عمودان على الشاشات المتوسعة: سجلّ بعشرين حقلًا في عمود واحد يصير
+         * قائمة تُمرَّر — والهدف أن يرى المستخدم الصف كله دفعةً واحدة.
+         */
+        el("dl", { class: "grid grid-cols-1 sm:grid-cols-2 gap-x-7" }, ...fields),
         actions
           ? el(
               "div",
@@ -1115,7 +1149,7 @@ export function twoLineCell(primary, secondary, { isolateSecondary = true } = {}
   return el(
     "div",
     { class: "min-w-0" },
-    el("div", { class: "text-ink truncate-1" }, primary ?? "—"),
+    el("div", { class: "text-ink truncate-1", dataset: { primary: "" } }, primary ?? "—"),
     secondary
       ? el(
           "div",
