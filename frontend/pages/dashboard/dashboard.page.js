@@ -356,35 +356,22 @@ function render(host, data) {
     ),
   );
 
-  /* ================= تذييل: حالة النظام والشركة المطورة ================= */
+  /* ================= تذييل: حالة النظام ================= */
+  /*
+   * شعار الشركة المطوّرة كان مكرَّرًا هنا وفي تذييل الشريط الجانبي — والشريط
+   * ظاهر في كل شاشة بما فيها هذه. نسخة واحدة تكفي، والثانية كانت تطفو وسط
+   * لوحة تحكّم دور قليل المؤشرات بلا شيء حولها.
+   */
   host.appendChild(
     el(
       "div",
-      { class: "pt-4 pb-2 flex flex-col items-center justify-center gap-2.5 border-t border-line/40 mt-3" },
+      { class: "pt-4 pb-2 border-t border-line/40 mt-3" },
       el(
         "p",
-        { class: "text-[11px] text-faint text-center" },
+        { class: "text-[11px] text-muted text-center" },
         `المؤشرات حتى ${dateTime(data.asOf)} · الفترة ${data.period} · ` +
           `${integer(data.accounting.openPeriods)} فترة محاسبية مفتوحة · ` +
           `${integer(data.accounting.postedThisMonth)} قيد مُرحَّل هذا الشهر`,
-      ),
-      el(
-        "a",
-        {
-          href: "https://devsmartx.com",
-          target: "_blank",
-          rel: "noopener noreferrer",
-          class:
-            "inline-flex items-center gap-2.5 px-4 py-2 rounded-2xl bg-surface border border-line " +
-            "shadow-2xs hover:shadow-xs hover:border-blue-500/50 hover:bg-surface-alt transition-all group cursor-pointer",
-          title: "Dev SmartX",
-        },
-        el("img", {
-          src: "assets/devx_logo.jpg",
-          alt: "Dev SmartX",
-          class: "size-8.5 rounded-lg object-contain shadow-xs border border-white/80 group-hover:scale-105 transition-transform",
-        }),
-        el("span", { class: "text-xs font-bold text-ink group-hover:text-blue-600 transition-colors" }, "Dev SmartX"),
       ),
     ),
   );

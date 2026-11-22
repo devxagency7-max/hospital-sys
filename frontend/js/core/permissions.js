@@ -349,7 +349,14 @@ export const ROLES = {
       "dashboard.view",
       "patients.*",
       "reception.*",
-      "pricing.*",
+
+      /*
+       * لا `pricing.*` كاملة: إعلان سعر الصرف (`pricing.fx.manage`) قرار
+       * محاسبي يخصّ المحاسبة المالية — ومن يحاسب مريضًا يستعمل السعر ولا
+       * يُعلنه. كانت الشاشة تظهر لهذا الدور تحت «المحاسبة المالية» بلا سبب.
+       */
+      "pricing.tiers.manage",
+      "pricing.manage",
       "reports.view",
       "reports.financial.view",
       "reports.export",

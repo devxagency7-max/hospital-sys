@@ -28,31 +28,16 @@ import { getOccupancyBoard, getRoom, setRoomStatus, runDailyBedCharges } from ".
 import { listPatients, createAdmission } from "../../js/api/patients.api.js";
 
 /** لون ودلالة كل حالة — نفس المفتاح في كل الشاشة بلا استثناء. */
+/*
+ * الحالة تُقال بالشكل لا بالتعبئة: `.room-tile[data-status]` في
+ * tailwind.src.css يحمل لون الحافة والصبغة والنقطة لكل حالة. هنا يبقى
+ * ما تعرفه الشاشة وحدها — النص والنبرة.
+ */
 const STATUS_STYLE = {
-  vacant: {
-    label: "فاضية",
-    tone: "success",
-    tile: "border-emerald-500/40 bg-emerald-50 dark:bg-emerald-950/30 hover:border-emerald-500 hover:bg-emerald-100 dark:hover:bg-emerald-900/40",
-    dot: "bg-emerald-500",
-  },
-  occupied: {
-    label: "مشغولة",
-    tone: "danger",
-    tile: "border-rose-500/40 bg-rose-50 dark:bg-rose-950/30 hover:border-rose-500",
-    dot: "bg-rose-500",
-  },
-  cleaning: {
-    label: "تنظيف وتجهيز",
-    tone: "warning",
-    tile: "border-amber-500/40 bg-amber-50 dark:bg-amber-950/30 hover:border-amber-500",
-    dot: "bg-amber-500",
-  },
-  maintenance: {
-    label: "خارج الخدمة",
-    tone: "neutral",
-    tile: "border-slate-400/40 bg-slate-100 dark:bg-slate-800/60 hover:border-slate-500",
-    dot: "bg-slate-500",
-  },
+  vacant: { label: "فاضية", tone: "success" },
+  occupied: { label: "مشغولة", tone: "danger" },
+  cleaning: { label: "تنظيف وتجهيز", tone: "warning" },
+  maintenance: { label: "خارج الخدمة", tone: "neutral" },
 };
 
 export default async function occupancyPage() {
@@ -262,17 +247,14 @@ export default async function occupancyPage() {
       "button",
       {
         type: "button",
-        class: cx(
-          "text-start p-3 rounded-2xl border-2 transition-all duration-200",
-          "hover:-translate-y-0.5 hover:shadow-raised focus:outline-none focus:ring-2 focus:ring-brand-500/40",
-          style.tile,
-        ),
+        class: "room-tile text-start p-3 focus:outline-none focus:ring-2 focus:ring-brand-500/40",
+        dataset: { status: STATUS_STYLE[room.status] ? room.status : "maintenance" },
         onClick: () => openRoomSheet(room),
       },
       [
         el("div", { class: "flex items-center justify-between gap-2" }, [
           el("span", { class: "font-black text-ink text-sm ltr-isolate num" }, room.code),
-          el("span", { class: cx("size-2.5 rounded-full shrink-0", style.dot) }),
+          el("span", { class: "room-tile__dot size-2.5 rounded-full shrink-0" }),
         ]),
         el("p", { class: "text-[11px] text-muted truncate-1 mt-1" }, room.roomTypeName),
         el(

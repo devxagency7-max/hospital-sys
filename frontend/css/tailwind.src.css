@@ -643,6 +643,81 @@ aside[data-collapsed="false"] .rail-collapsed-only {
 }
 
 /* --------------------------------------------------------------------------
+   مربّعات إشغال الغرف (/reception/occupancy)
+
+   الشبكة تُقرأ بلمحة: «فين الفاضي؟» قبل أي تفصيلة أخرى. لكن تعبئة كل مربع
+   بلون حالته الصريح حوّلت الشاشة إلى جدار نعناعي مصمت يُخفي الخلفية ويصرخ
+   بالتساوي من كل مربع — فلا شيء يبرز لأن كل شيء بارز.
+
+   فالمربع هنا سطح زجاجي كبقية الواجهة، والحالة تُقال بثلاث إشارات هادئة
+   مجتمعة: شريط لوني على حافة البداية، ونقطة، وصبغة شفافة خفيفة فوق الزجاج.
+   تبقى الشبكة مقروءة بلمحة، ويبقى المربع من نفس النظام البصري.
+   -------------------------------------------------------------------------- */
+.room-tile {
+  --tile-accent: #64748b;
+  --tile-tint: rgb(100 116 139 / 0.08);
+
+  background-color: var(--color-glass-card);
+  background-image: linear-gradient(0deg, var(--tile-tint), var(--tile-tint)), var(--glass-bg-gradient);
+  backdrop-filter: blur(var(--glass-blur, 36px)) saturate(125%) brightness(105%);
+  border: 1px solid var(--color-glass-border);
+  border-inline-start: 4px solid var(--tile-accent);
+  border-radius: 1rem;
+  box-shadow: var(--shadow-card);
+  transition:
+    transform 0.2s var(--ease-premium),
+    box-shadow 0.2s var(--ease-premium),
+    background-color 0.2s ease;
+}
+
+.room-tile:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-raised);
+}
+
+.room-tile__dot {
+  background-color: var(--tile-accent);
+}
+
+.room-tile[data-status="vacant"] {
+  --tile-accent: #059669;
+  --tile-tint: rgb(16 185 129 / 0.1);
+}
+
+.room-tile[data-status="occupied"] {
+  --tile-accent: #e11d48;
+  --tile-tint: rgb(244 63 94 / 0.1);
+}
+
+.room-tile[data-status="cleaning"] {
+  --tile-accent: #d97706;
+  --tile-tint: rgb(245 158 11 / 0.13);
+}
+
+/* خارج الخدمة: بلا صبغة ولون حافة رمادي — الوحدة التي لا تُحجز لا تنادي. */
+.room-tile[data-status="maintenance"] {
+  --tile-accent: #94a3b8;
+  --tile-tint: rgb(100 116 139 / 0.06);
+  opacity: 0.72;
+}
+
+/* على الزجاج الداكن تحتاج الصبغة قوّة أعلى لتُرى أصلًا. */
+:root[data-theme="dark"] .room-tile[data-status="vacant"] {
+  --tile-accent: #34d399;
+  --tile-tint: rgb(16 185 129 / 0.18);
+}
+
+:root[data-theme="dark"] .room-tile[data-status="occupied"] {
+  --tile-accent: #fb7185;
+  --tile-tint: rgb(244 63 94 / 0.18);
+}
+
+:root[data-theme="dark"] .room-tile[data-status="cleaning"] {
+  --tile-accent: #fbbf24;
+  --tile-tint: rgb(245 158 11 / 0.2);
+}
+
+/* --------------------------------------------------------------------------
    زجاج النوافذ والأدراج
 
    النافذة تختلف عن الكرت: تقف فوق غطاء داكن يُعتِم الصفحة خلفها، فلا يصل
