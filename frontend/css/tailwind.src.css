@@ -278,6 +278,23 @@
     --shadow-modal: 0 32px 80px -12px rgba(0, 0, 0, 0.75),
       inset 0 1px 1px 0 rgba(255, 255, 255, 0.08);
 
+    /* مفردات التوكنات القديمة — راجع التعليل في كتلة السمة الفاتحة أدناه.
+       هنا تحديدًا كانت `--border-color` و`--text-*` معرَّفة في الفاتح وحده،
+       فالشاشات الثماني عشرة كانت بلا حدود ولا ألوان نصّ في السمة الداكنة. */
+    --bg-surface: var(--color-surface);
+    --bg-secondary: var(--color-subtle);
+    --bg-surface-alt: var(--color-subtle);
+    --border-color: var(--color-line);
+    --border-color-strong: var(--color-line-strong);
+    --text-primary: var(--color-ink);
+    --text-body: var(--color-ink);
+    --text-secondary: var(--color-muted);
+    --text-muted: var(--color-faint);
+    --text-inverse: #0a0e17;
+    --primary: var(--color-brand-300);
+    --danger-text: var(--color-danger-300);
+    --radius-input: var(--radius-control);
+
     /* طبقة الخلفية خلف الزجاج — افتراضي: تدرّج رمادي-أزرق هادئ (لا مشبَّع) يحاكي
        أثر صورة طبيعية مموَّهة، لا تدرّجًا صريحًا بلون العلامة — قابل للاستبدال
        الكامل من استوديو تخصيص المظهر (/settings/appearance). */
@@ -390,6 +407,31 @@
     --shadow-card: 0 14px 44px 0 rgba(15, 23, 42, 0.18), inset 0 1px 1px 0 rgba(255, 255, 255, 0.75);
     --shadow-raised: 0 10px 30px -4px rgba(15, 23, 42, 0.08), inset 0 1px 2px 0 rgba(255, 255, 255, 1);
     --shadow-overlay: 0 24px 60px -12px rgba(15, 23, 42, 0.18), inset 0 1px 2px 0 rgba(255, 255, 255, 1);
+
+    /*
+     * ═════════════════════════════════════════════════════════════════════
+     *  مفردات التوكنات القديمة (`--bg-surface` و`--text-primary` و…)
+     * ═════════════════════════════════════════════════════════════════════
+     *
+     * ثماني عشرة شاشة مالية وإدارية مكتوبة بأنماط سطرية تستدعي مفردات توكنات
+     * أخرى غير مفردات هذا الملف: `var(--bg-surface)` لا `--color-surface`،
+     * و`var(--text-primary)` لا `--color-ink` — 430 استدعاءً.
+     *
+     * والمتغيّر غير المعرَّف لا يُنتج خطأ يراه أحد: الخاصية كلها تسقط بصمت.
+     * فحقل بـ`background: var(--bg-surface)` يخرج **شفافًا تمامًا**، وفوق
+     * خلفية الصورة المموَّهة يصير نصّه الغامق على تلّ أخضر — وهو ما ظهر فعلًا
+     * في شاشة التحويلات بين الحسابات.
+     *
+     * فتُعرَّف المفردتان هنا على توكنات السمة الحقيقية: الشاشات الثماني عشرة
+     * تُصلَح دفعةً واحدة، ويبقى لكل سمة قيمها. والأصل أن تُكتب تلك الشاشات
+     * بالمفردات الحالية، وإلى أن تُعاد كتابتها لا تبقى شفافة.
+     */
+    --bg-surface: var(--color-surface);
+    --bg-secondary: var(--color-subtle);
+    --bg-surface-alt: var(--color-subtle);
+    --primary: var(--color-brand-600);
+    --danger-text: var(--color-danger-300);
+    --radius-input: var(--radius-control);
 
     /* خلفية وغطاء شفاف 22% */
     --bg-layer-image: url("../assets/background.jpg");

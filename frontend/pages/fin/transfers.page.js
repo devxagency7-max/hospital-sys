@@ -61,9 +61,16 @@ export default async function transfersPage() {
     )
   );
 
-  // بطاقات الإحصاءات السريعة
-  const totalCashBalance = money.sumBy(cashBoxes, "currentBalance");
-  const totalBankBalance = money.sumBy(bankAccounts, "currentBalance");
+  /*
+   * بطاقات الإحصاءات السريعة.
+   *
+   * الحقل `balance` لا `currentBalance`: الثاني لا وجود له في خزينة ولا حساب
+   * بنكي (هو حقل ملخص العميل والمورّد)، و`sumBy` على حقل غائب يُعيد صفرًا بلا
+   * شكوى — فكانت الشاشة تُعلن «إجمالي السيولة المتاحة 0.00» والخزائن فيها
+   * ملايين. رقم صفر معروض بثقة أسوأ من رقم غائب.
+   */
+  const totalCashBalance = money.sumBy(cashBoxes, "balance");
+  const totalBankBalance = money.sumBy(bankAccounts, "balance");
 
   const statsRow = el(
     "div",
