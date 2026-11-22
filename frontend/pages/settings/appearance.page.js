@@ -267,7 +267,7 @@ function customColorSwatch(onPick) {
 
 // تسميات مطابقة حرفيًا لـ bg-studio.html في مؤسسة النهضة.
 const SLIDERS = [
-  { key: "blur", label: "درجة الضبابية (Blur)", min: 0, max: 30, unit: "px" },
+  { key: "blur", label: "ضبابية صورة الخلفية (Blur)", min: 0, max: 30, unit: "px" },
   { key: "brightness", label: "الإضاءة والسطوع (Brightness)", min: 40, max: 160, unit: "%" },
   { key: "contrast", label: "درجة التباين (Contrast)", min: 50, max: 160, unit: "%" },
   { key: "saturate", label: "درجة تشبع الألوان (Saturation)", min: 0, max: 220, unit: "%" },

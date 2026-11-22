@@ -127,7 +127,7 @@ export function loginScreen({ onEnter }) {
           "div",
           { class: "flex items-center gap-2" },
           el("span", { class: "h-px flex-1 bg-line" }),
-          el("span", { class: "text-[11px] text-faint" }, "أو ادخل مباشرة بدورك"),
+          el("span", { class: "text-[11px] font-semibold text-muted" }, "أو ادخل مباشرة بدورك"),
           el("span", { class: "h-px flex-1 bg-line" }),
         ),
 

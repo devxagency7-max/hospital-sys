@@ -16,17 +16,18 @@ import { appState, writePreference, readPreference } from "./store.js";
 import { toast } from "../../components/feedback/toast.js";
 
 /*
- * الافتراضي منسوخ حرفيًا من defaultBgSettings في state/store.js لمؤسسة
- * النهضة + الشريحة النشطة فعليًا في لقطة الشاشة المرجعية (أوف وايت #f8fafc
- * بدل الصورة الافتراضية هناك) — القيم بالضبط: blur 25px, brightness 81%,
- * contrast 98%, saturate 140%, overlay 22%.
+ * الافتراضي منسوخ حرفيًا من مؤسسة النهضة — الصورة الطبيعية المموَّهة لا لونًا
+ * صلبًا: الواجهة كلها زجاج (glass / glass-card / glass-rail)، والزجاج فوق لون
+ * صلب أوف-وايت يُنتج أبيض مسطَّحًا بلا أي أثر زجاجي مرئي — كل الشفافية
+ * والضبابية تعمل بلا شيء خلفها تُظهره. القيم بالضبط كما في المرجع:
+ * blur 20px, brightness 89%, contrast 98%, saturate 140%, overlay 22%.
  */
 export const DEFAULTS = Object.freeze({
   /** "image" | "color" | "gradient" */
-  type: "color",
-  val: "#f8fafc",
-  blur: 25,
-  brightness: 81,
+  type: "image",
+  val: "assets/background.jpg",
+  blur: 20,
+  brightness: 89,
   contrast: 98,
   saturate: 140,
   /** شفافية غطاء الصفحة. */
@@ -78,8 +79,14 @@ function apply() {
   root.style.setProperty("--bg-brightness", `${s.brightness}%`);
   root.style.setProperty("--bg-contrast", `${s.contrast}%`);
   root.style.setProperty("--bg-saturate", `${s.saturate}%`);
-  root.style.setProperty("--glass-blur", `${s.blur}px`);
-  root.style.setProperty("--glass-blur-rail", `${s.blur}px`);
+
+  /*
+   * ضبابية الزجاج **لا** تتبع ضبابية الخلفية: سؤالان مختلفان. ضبابية الخلفية
+   * تخصّ الصورة نفسها (كم تنعم تفاصيلها)، وضبابية الزجاج تخصّ ما يُرى عبر
+   * الأسطح فوقها. ربطهما سابقًا جعل من يخفض ضبابية الخلفية ليرى صورته أوضح
+   * يفقد أثر الزجاج كله في نفس اللحظة. المرجع يفصلهما: خلفية 20px وزجاج 36px،
+   * والقيمة الثانية تبقى ثابتة في --glass-blur بـ tailwind.src.css.
+   */
 
   // الغطاء يأخذ لونه من توكن السمة الحالية (داكن/فاتح) بنفس درجة الشفافية
   // المُختارة — لا لونًا ثابتًا بصرف النظر عن السمة، وإلا بدا الغطاء الفاتح
