@@ -147,6 +147,18 @@
   --color-glass-card: rgb(18 25 41 / 0.72);
   --color-glass-border: rgb(255 255 255 / 0.09);
 
+  /* --- زجاج النوافذ (يُعاد تعريفه لكل سمة في @layer base أدناه) --- */
+  --color-glass-modal: rgb(17 24 39 / 0.82);
+  --color-glass-modal-border: rgb(255 255 255 / 0.14);
+  --color-glass-modal-bar: rgb(255 255 255 / 0.04);
+  --glass-modal-gradient: linear-gradient(
+    160deg,
+    rgb(255 255 255 / 0.08) 0%,
+    rgb(255 255 255 / 0.02) 48%,
+    rgb(255 255 255 / 0.05) 100%
+  );
+  --shadow-modal: 0 32px 80px -12px rgb(0 0 0 / 0.75), inset 0 1px 1px 0 rgb(255 255 255 / 0.08);
+
   /* --- أبعاد اللياوت: 290px شريط مفتوح، 84px مطوي، 50px هيدر --- */
   --spacing-sidebar: 290px;
   --spacing-sidebar-collapsed: 84px;
@@ -254,6 +266,18 @@
     --shadow-overlay: inset 0 1px 0 0 rgb(255 255 255 / 0.06), 0 0 0 1px rgb(255 255 255 / 0.06),
       0 32px 80px -16px rgb(0 0 0 / 0.75);
 
+    --color-glass-modal: rgba(17, 24, 39, 0.82);
+    --glass-modal-gradient: linear-gradient(
+      160deg,
+      rgba(255, 255, 255, 0.08) 0%,
+      rgba(255, 255, 255, 0.02) 48%,
+      rgba(255, 255, 255, 0.05) 100%
+    );
+    --color-glass-modal-border: rgba(255, 255, 255, 0.14);
+    --color-glass-modal-bar: rgba(255, 255, 255, 0.04);
+    --shadow-modal: 0 32px 80px -12px rgba(0, 0, 0, 0.75),
+      inset 0 1px 1px 0 rgba(255, 255, 255, 0.08);
+
     /* طبقة الخلفية خلف الزجاج — افتراضي: تدرّج رمادي-أزرق هادئ (لا مشبَّع) يحاكي
        أثر صورة طبيعية مموَّهة، لا تدرّجًا صريحًا بلون العلامة — قابل للاستبدال
        الكامل من استوديو تخصيص المظهر (/settings/appearance). */
@@ -344,6 +368,21 @@
     --color-glass-rail: rgba(255, 255, 255, 0.20);
     --color-glass-card: rgba(255, 255, 255, 0.45);
     --color-glass-border: rgba(255, 255, 255, 0.50);
+
+    /* زجاج النوافذ — أكثف من الكروت لأنه فوق غطاء داكن لا فوق الخلفية */
+    /* 0.78 لا 0.72: عند 0.72 كانت أشكال الجدول خلف النافذة تُرى كأشباح باهتة
+       خلف الأرقام — زجاج يُظهر ما لا ينفع إظهاره ويُشوّش ما يجب أن يُقرأ. */
+    --color-glass-modal: rgba(255, 255, 255, 0.78);
+    --glass-modal-gradient: linear-gradient(
+      160deg,
+      rgba(255, 255, 255, 0.42) 0%,
+      rgba(255, 255, 255, 0.1) 52%,
+      rgba(255, 255, 255, 0.26) 100%
+    );
+    --color-glass-modal-border: rgba(255, 255, 255, 0.72);
+    --color-glass-modal-bar: rgba(255, 255, 255, 0.34);
+    --shadow-modal: 0 32px 80px -12px rgba(15, 23, 42, 0.42),
+      inset 0 1px 1px 0 rgba(255, 255, 255, 0.9);
 
     /* ظلال الزجاج الدقيقة */
     --glass-shadow: 0 14px 44px 0 rgba(15, 23, 42, 0.18), inset 0 1px 1px 0 rgba(255, 255, 255, 0.75);
@@ -601,6 +640,27 @@ aside[data-collapsed="true"] .rail-expanded-only {
 
 aside[data-collapsed="false"] .rail-collapsed-only {
   display: none !important;
+}
+
+/* --------------------------------------------------------------------------
+   زجاج النوافذ والأدراج
+
+   النافذة تختلف عن الكرت: تقف فوق غطاء داكن يُعتِم الصفحة خلفها، فلا يصل
+   إليها من الخلفية إلا ضوء خافت. لذلك زجاجها أكثف (أقل شفافية) وضبابيته
+   أعلى — تبقى سطحًا زجاجيًا واضح الانتماء لبقية الواجهة، ويبقى نصّها
+   مقروءًا بثقة وهو غالبًا بيانات مالية أو تأكيد إجراء لا يُقرأ على الظنّ.
+   -------------------------------------------------------------------------- */
+.glass-modal {
+  background-color: var(--color-glass-modal);
+  background-image: var(--glass-modal-gradient);
+  backdrop-filter: blur(44px) saturate(150%) brightness(104%);
+  border: 1px solid var(--color-glass-modal-border);
+  box-shadow: var(--shadow-modal);
+}
+
+/* رأس النافذة وتذييلها: درجة أفتح قليلًا من جسمها لا لونًا رماديًا مصمتًا. */
+.glass-modal-bar {
+  background-color: var(--color-glass-modal-bar);
 }
 
 .glass-card {

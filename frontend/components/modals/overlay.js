@@ -40,8 +40,12 @@ export function openOverlay({ panel, onClose, dismissible = true, align = "cente
   };
 
   const backdrop = el("div", {
+    /*
+     * الغطاء أخفّ من قبل (65% → 45%) وضبابيته أعلى: لوحة زجاجية فوق غطاء
+     * شبه معتم تبدو لوحًا أبيض مصمتًا — لا يصلها من الخلفية ما تُظهره.
+     */
     class: cx(
-      "hx-backdrop fixed inset-0 z-50 bg-slate-950/65 backdrop-blur-sm flex no-print",
+      "hx-backdrop fixed inset-0 z-50 bg-slate-950/45 backdrop-blur-md flex no-print",
       ALIGN[align] ?? ALIGN.center,
     ),
   });
@@ -137,7 +141,7 @@ export function openModal({
              * خلفية خاصة بهما، وبلا قصّ تظهر زواياهما القائمة خارج استدارة
              * اللوحة — حافة بيضاء مربّعة فوق كل نافذة.
              */
-            "hx-rise bg-white dark:bg-slate-900 text-ink border border-line-strong/60 shadow-2xl w-full rounded-[var(--radius-card)] overflow-hidden flex flex-col",
+            "hx-rise glass-modal text-ink w-full rounded-[var(--radius-card)] overflow-hidden flex flex-col",
             "max-h-[min(90vh,52rem)]",
             SIZES[size] ?? SIZES.md,
           ),
@@ -148,7 +152,7 @@ export function openModal({
         },
         el(
           "header",
-          { class: "flex items-start justify-between gap-4 px-6 py-4 border-b border-line bg-subtle/50 shrink-0" },
+          { class: "glass-modal-bar flex items-start justify-between gap-4 px-6 py-4 border-b border-line shrink-0" },
           el(
             "div",
             { class: "min-w-0" },
@@ -177,7 +181,7 @@ export function openModal({
         footer
           ? el(
               "footer",
-              { class: "flex items-center justify-start gap-2.5 px-6 py-4 border-t border-line bg-subtle shrink-0" },
+              { class: "glass-modal-bar flex items-center justify-start gap-2.5 px-6 py-4 border-t border-line shrink-0" },
               ...[typeof footer === "function" ? footer(close) : footer].flat().filter(Boolean),
             )
           : null,
@@ -214,7 +218,7 @@ export function openDrawer({
         "div",
         {
           class: cx(
-            "hx-drawer bg-surface w-full h-full flex flex-col shadow-overlay",
+            "hx-drawer glass-modal w-full h-full flex flex-col",
             WIDTHS[size] ?? WIDTHS.md,
           ),
           role: "dialog",
@@ -224,7 +228,7 @@ export function openDrawer({
         },
         el(
           "header",
-          { class: "flex items-start justify-between gap-4 px-5 py-3.5 border-b border-line shrink-0" },
+          { class: "glass-modal-bar flex items-start justify-between gap-4 px-5 py-3.5 border-b border-line shrink-0" },
           el(
             "div",
             { class: "min-w-0" },
@@ -252,7 +256,7 @@ export function openDrawer({
         footer
           ? el(
               "footer",
-              { class: "flex items-center gap-2 px-5 py-3.5 border-t border-line bg-subtle shrink-0" },
+              { class: "glass-modal-bar flex items-center gap-2 px-5 py-3.5 border-t border-line shrink-0" },
               ...[typeof footer === "function" ? footer(close) : footer].flat().filter(Boolean),
             )
           : null,
