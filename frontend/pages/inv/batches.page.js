@@ -92,6 +92,7 @@ export default async function batchesPage() {
         : null,
 
     onRowClick: (row) => navigate(`/inv/items/${row.itemId}`),
+    recordLabel: "فتح ملف الصنف",
 
     rowActions: (row) =>
       buttonGroup(

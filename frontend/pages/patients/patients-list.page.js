@@ -142,6 +142,7 @@ export default async function patientsListPage() {
     ],
 
     onRowClick: (row) => navigate(`/patients/${row.id}`),
+    recordLabel: "فتح ملف المريض",
 
     stats: () => [
       statTile({

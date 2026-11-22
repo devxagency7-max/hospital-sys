@@ -78,6 +78,7 @@ export default async function warehousesPage() {
     ],
 
     onRowClick: (row) => navigate(`/inv/balances?warehouseId=${row.id}`),
+    recordLabel: "عرض أرصدة المخزن",
 
     rowActions: (row) =>
       buttonGroup(

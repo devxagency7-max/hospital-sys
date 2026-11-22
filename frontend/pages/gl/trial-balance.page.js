@@ -25,6 +25,7 @@ import { getTrialBalance } from "../../js/api/accounting.api.js";
 import { getCostCenters, getPeriods, toOptions } from "../../js/api/lookups.api.js";
 import { printReport, num } from "../_shared/print.js";
 import { getCompanyInfo } from "../../js/api/settings.api.js";
+import { tableScroller } from "../../components/tables/table-fit.js";
 
 const TYPE_LABELS = {
   asset: "أصول",
@@ -300,9 +301,7 @@ export default async function trialBalancePage() {
     );
 
     tableHost.appendChild(
-      el(
-        "div",
-        { class: "overflow-x-auto" },
+      tableScroller(
         el("table", { class: "w-full border-collapse" }, head, body, foot),
       ),
     );

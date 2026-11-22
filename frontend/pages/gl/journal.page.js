@@ -105,6 +105,7 @@ export default async function journalPage() {
         : null,
 
     onRowClick: (row) => navigate(`/gl/journal/${row.id}`),
+    recordLabel: "فتح القيد",
 
     rowActions: (row, context) =>
       buttonGroup(

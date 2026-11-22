@@ -66,6 +66,7 @@ export default async function categoriesPage() {
     ],
 
     onRowClick: (row) => navigate(`/inv/items?category=${encodeURIComponent(row.name)}`),
+    recordLabel: "عرض أصناف التصنيف",
 
     rowActions: (row) =>
       buttonGroup(

@@ -19,6 +19,7 @@ import { printReport, num } from "../_shared/print.js";
 import { getGeneralLedger } from "../../js/api/accounting.api.js";
 import { getAccounts, getCostCenters, toAccountOptions, toOptions } from "../../js/api/lookups.api.js";
 import { getCompanyInfo } from "../../js/api/settings.api.js";
+import { tableScroller } from "../../components/tables/table-fit.js";
 
 export default async function ledgerPage({ params = {}, query = {} } = {}) {
   const [accounts, costCenters, company] = await Promise.all([
@@ -131,9 +132,7 @@ export default async function ledgerPage({ params = {}, query = {} } = {}) {
     const td = (content, extra) => el("td", { class: cx("px-3 py-2 text-xs", extra) }, content);
 
     bodyHost.appendChild(
-      el(
-        "div",
-        { class: "overflow-x-auto" },
+      tableScroller(
         el(
           "table",
           { class: "w-full border-collapse" },

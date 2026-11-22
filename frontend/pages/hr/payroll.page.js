@@ -127,6 +127,7 @@ export default async function payrollPage() {
         : null,
 
     onRowClick: (row) => navigate(`/hr/payroll/${row.id}`),
+    recordLabel: "فتح مسيَّر الرواتب",
 
     rowActions: (row, context) =>
       buttonGroup(

@@ -15,6 +15,7 @@ import { listReceptionReceipts, listReceptionPatients, createReceptionReceipt } 
 import { formModal, selectField, value } from "../_shared/forms.js";
 import { textField } from "../../components/forms/fields.js";
 import { navigate } from "../../js/core/router.js";
+import { tableScroller } from "../../components/tables/table-fit.js";
 
 export default async function receptionReceiptsPage() {
   const container = el("div", { class: "flex flex-col gap-6 p-4 md:p-6" });
@@ -186,7 +187,7 @@ function buildReceiptsTable(receipts) {
   });
 
   table.append(thead, tbody);
-  return el("div", { class: "overflow-x-auto" }, table);
+  return tableScroller(table);
 }
 
 function exportReceiptsExcel(receipts) {

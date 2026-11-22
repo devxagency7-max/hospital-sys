@@ -116,6 +116,7 @@ export default async function patientInvoicesPage() {
     ],
 
     onRowClick: (row) => previewInvoiceBill(row),
+    recordLabel: "معاينة الفاتورة",
 
     stats: async (rows) => {
       let data = Array.isArray(rows) && rows.length ? rows : [];

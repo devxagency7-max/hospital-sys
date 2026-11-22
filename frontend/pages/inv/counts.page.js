@@ -85,6 +85,7 @@ export default async function countsPage() {
         : null,
 
     onRowClick: (row) => navigate(`/inv/counts/${row.id}`),
+    recordLabel: "فتح محضر الجرد",
 
     rowActions: (row, context) =>
       buttonGroup(

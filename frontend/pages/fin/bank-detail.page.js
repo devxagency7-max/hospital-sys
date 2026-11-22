@@ -10,6 +10,7 @@ import { amount, date, integer } from "../../js/core/format.js";
 import { navigate } from "../../js/core/router.js";
 import { exportStyledExcel, printReport } from "../_shared/print.js";
 import { getBankAccount } from "../../js/api/finance.api.js";
+import { tableScroller } from "../../components/tables/table-fit.js";
 
 export default async function bankDetailPage(context) {
   const accountId = context.params?.id;
@@ -209,7 +210,7 @@ function renderTransactionsTable(transactions) {
   }
 
   table.append(thead, tbody);
-  return el("div", { class: "overflow-x-auto" }, table);
+  return tableScroller(table);
 }
 
 function exportBankExcel(bank) {

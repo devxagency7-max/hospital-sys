@@ -89,6 +89,7 @@ export default async function suppliersPage() {
         : null,
 
     onRowClick: (row) => navigate(`/fin/suppliers/${row.id}`),
+    recordLabel: "فتح ملف المورّد",
 
     rowActions: (row) =>
       buttonGroup(

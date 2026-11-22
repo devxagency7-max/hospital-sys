@@ -97,6 +97,7 @@ export default async function customerInvoicesPage() {
         : null,
 
     onRowClick: (row) => navigate(`/fin/customer-invoices/${row.id}`),
+    recordLabel: "فتح الفاتورة",
 
     rowActions: (row) =>
       buttonGroup(

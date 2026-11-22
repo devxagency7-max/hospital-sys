@@ -21,6 +21,7 @@ import { selectField, formModal, value } from "../_shared/forms.js";
 import { progressCell } from "../_shared/cells.js";
 import { getAttendanceReport, listAttendance, correctAttendance } from "../../js/api/hr.api.js";
 import { getDepartments, getEmployees, toOptions } from "../../js/api/lookups.api.js";
+import { tableScroller } from "../../components/tables/table-fit.js";
 
 const CURRENT_PERIOD = new Date().toISOString().slice(0, 7);
 
@@ -151,9 +152,7 @@ export default async function attendancePage({ query = {} } = {}) {
         title: `ملخص الحضور — ${report.periodLabel}`,
         subtitle: "مرتَّب بالأقل انتظامًا أولًا",
         flush: true,
-        body: el(
-          "div",
-          { class: "overflow-x-auto" },
+        body: tableScroller(
           el(
             "table",
             { class: "w-full border-collapse" },

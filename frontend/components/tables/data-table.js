@@ -22,6 +22,12 @@ import { tableSkeleton, emptyState, errorState } from "../feedback/states.js";
 import { readPreference, writePreference } from "../../js/core/store.js";
 import { registerCleanup } from "../../js/core/lifecycle.js";
 import { toApiError } from "../../js/core/errors.js";
+import { openDrawer } from "../modals/overlay.js";
+import { fitTableWidth, FIT_TOLERANCE, MIN_READABLE_WIDTH as MIN_COLUMN_WIDTH } from "./table-fit.js";
+
+/** لا جدول بأقل من هذا العدد مهما ضاقت الشاشة — صفٌّ بعمود واحد ليس جدولًا. */
+const MIN_VISIBLE_COLUMNS = 3;
+import { dataRow } from "../common/card.js";
 
 /**
  * @typedef {object} Column
@@ -34,7 +40,9 @@ import { toApiError } from "../../js/core/errors.js";
  * @property {string} [width]             قيمة CSS، مثل "8rem"
  * @property {boolean} [numeric]          محاذاة نهاية + أرقام بعرض ثابت
  * @property {boolean} [hidden]           مخفي ابتداءً (يظهر من قائمة الأعمدة)
- * @property {boolean} [alwaysVisible]    لا يمكن إخفاؤه
+ * @property {boolean} [alwaysVisible]    لا يمكن إخفاؤه — ولا يطويه الاتساع التلقائي
+ * @property {number} [priority]          أهمية العمود عند ضيق الشاشة (الافتراضي 50).
+ *                                        الأقل يُطوى أولًا؛ العمود الأول دائمًا باقٍ.
  */
 
 /**
@@ -55,7 +63,9 @@ import { toApiError } from "../../js/core/errors.js";
  * @param {TableFilter[]} [options.filters]
  * @param {string} [options.searchPlaceholder]
  * @param {(row:object)=>Node|null} [options.rowActions]
- * @param {(row:object)=>void} [options.onRowClick]
+ * @param {(row:object)=>void} [options.onRowClick]  يصير زر «فتح السجل» داخل لوحة الصف
+ * @param {string} [options.recordLabel]             نص زر فتح السجل في لوحة الصف
+ * @param {boolean} [options.rowDetail=true]         نقر الصف يفتح لوحة بكل بيانات الصف
  * @param {object} [options.initialParams]
  * @param {Node|Node[]} [options.toolbarActions]  أزرار على يسار شريط الأدوات
  * @param {boolean} [options.selectable]          خانات اختيار + إجراءات جماعية
@@ -73,6 +83,8 @@ export function dataTable({
   searchPlaceholder = "بحث…",
   rowActions,
   onRowClick,
+  recordLabel = "فتح السجل كاملًا",
+  rowDetail = true,
   initialParams = {},
   toolbarActions,
   selectable = false,
@@ -90,6 +102,25 @@ export function dataTable({
   columns.forEach((column) => {
     if (column.hidden && !readPreference(COLUMNS_PREFERENCE)) hiddenColumns.add(column.key);
   });
+
+  /*
+   * أعمدة طواها **قياس الاتساع** لا المستخدم.
+   *
+   * ═════════════════════════════════════════════════════════════════════════
+   *  لا تمرير أفقي في أي جدول. المستخدم على شاشة مكتب لا يسحب الجدول يمينًا
+   *  ليرى آخره ثم شمالًا ليرى أوله — جدول يحتاج ذلك هو جدول لم يُصمَّم للشاشة
+   *  التي يُعرض عليها.
+   * ═════════════════════════════════════════════════════════════════════════
+   *
+   * فالجدول يقيس نفسه بعد كل رسم: ما دام أعرض من حاويته، يطوي أقل أعمدته
+   * أهمية واحدًا واحدًا حتى يتّسع. المطويّ **لا يضيع**: نقر الصف يفتح لوحة
+   * فيها كل الأعمدة بلا استثناء، والتصدير والطباعة يأخذان `columns` كاملة لا
+   * المرئي منها. وشريط الأدوات يُعلن العدد المطوي صراحةً — لا عمود يختفي
+   * بصمت.
+   */
+  let autoHidden = new Set();
+  /** يمنع إعادة الدخول: `fitColumns` تُعيد الرسم، والرسم يستدعي `fitColumns`. */
+  let fitting = false;
 
   let params = {
     page: 1,
@@ -116,16 +147,149 @@ export function dataTable({
   const paginationHost = el("div");
   const filterHost = el("div", { class: "flex flex-wrap items-end gap-3 px-3 pb-3" });
 
-  const tableScroll = el(
-    "div",
-    { class: "overflow-x-auto" },
-    el("table", { class: "w-full text-sm border-collapse" }, tableHead, tableBody, tableFoot),
-  );
+  const tableElement = el("table", { class: "w-full text-sm border-collapse" }, tableHead, tableBody, tableFoot);
+
+  /*
+   * `overflow-x-auto` باقية رغم أن الهدف ألّا تظهر أبدًا: لو عجز الطيّ
+   * التلقائي يومًا عن الاتّساع (عمود واحد أعرض من الشاشة مثلًا) فالنتيجة
+   * شريط تمرير — سلوك اليوم — لا بيانات مقصوصة يراها المستخدم ناقصة ولا
+   * يعرف أنها ناقصة.
+   */
+  const tableScroll = el("div", { class: "overflow-x-auto" }, tableElement);
+
+  /** إعلان الأعمدة المطوية — يُملأ في `paintFitNotice`. */
+  const fitNotice = el("div", { class: "hidden" });
 
   /* ---------------------------------------------------------------- مساعدات */
 
+  function allColumns() {
+    return columns.filter(Boolean);
+  }
+
+  /** ما يُعرَض فعلًا: بعد إخفاء المستخدم، وبعد طيّ القياس. */
   function visibleColumns() {
-    return columns.filter((column) => column && !hiddenColumns.has(column.key));
+    return allColumns().filter((column) => !hiddenColumns.has(column.key) && !autoHidden.has(column.key));
+  }
+
+  /** ما اختاره المستخدم أن يراه — قبل طيّ القياس. أساس كل قياس جديد. */
+  function userVisibleColumns() {
+    return allColumns().filter((column) => !hiddenColumns.has(column.key));
+  }
+
+  /**
+   * ترتيب الطيّ: الأقل أهمية أولًا، وعند التساوي الأخير قبل الأول.
+   *
+   * العمود الأول لا يُطوى أبدًا — هو هوية الصف (اسم المريض، كود الصنف)،
+   * وجدول بلا عمود هوية صفوفٌ بلا معنى. و`alwaysVisible` كذلك.
+   */
+  function foldOrder() {
+    const user = userVisibleColumns();
+
+    return user
+      .map((column, index) => ({ column, index }))
+      .filter(({ column, index }) => index > 0 && !column.alwaysVisible)
+      .sort((a, b) => (a.column.priority ?? 50) - (b.column.priority ?? 50) || b.index - a.index)
+      .map(({ column }) => column.key);
+  }
+
+  /**
+   * يطوي أقل الأعمدة أهمية حتى يتّسع الجدول في حاويته.
+   *
+   * القياس مرة واحدة لا مرة لكل عمود: الجدول وهو متجاوز يعرض كل عمود بعرضه
+   * الطبيعي، فمجموع عروض الرؤوس = عرض الجدول. نطرح منه عرض كل عمود نطويه
+   * حتى يصل للمتاح، ثم نرسم مرة واحدة. الرسم داخل حلقة قياس كان يُعيد تخطيط
+   * الصفحة عشر مرات لكل تحميل صفحة.
+   */
+  function fitColumns() {
+    if (fitting || state !== "ready") return;
+
+    const available = tableScroll.clientWidth;
+    if (!available) return; // الجدول داخل تبويب مخفي — لا شيء يُقاس
+
+    fitting = true;
+
+    try {
+      /*
+       * كل قياس يبدأ من الصفر: شاشة اتّسعت يجب أن تُعيد ما طوته وهي ضيقة.
+       * و`table-fixed` تُرفع أولًا — تحت التخطيط الثابت لا يتجاوز الجدول
+       * حاويته أبدًا، فلو بقيت لأظهر القياس «كل شيء متّسع» ولما عاد عمود
+       * مطويّ واحد بعد أن تتّسع الشاشة من جديد.
+       */
+      tableElement.classList.remove("table-fixed");
+
+      if (autoHidden.size) {
+        autoHidden = new Set();
+        paintHead();
+        paintBody();
+      }
+
+      [...tableHead.querySelectorAll("th")].forEach((th) => {
+        th.style.width = "";
+      });
+
+      if (tableElement.scrollWidth <= available + FIT_TOLERANCE) return;
+
+      /*
+       * الطيّ آخر الحلول لا أولها.
+       *
+       * العرض «الطبيعي» للعمود هو عرض نصّه في سطر واحد — وهو ليس العرض الذي
+       * يحتاجه ليُقرأ: «سعر الشراء / التكلفة» يُقرأ في سطرين داخل 90px.
+       * فالطيّ بناءً على العرض الطبيعي كان يُخفي خمسة أعمدة من سبعة بينما
+       * السبعة تسع لو التفّت نصوصها (قيس فعلًا: شاشة الأصناف على 1024px
+       * بقيت بعمودين).
+       *
+       * فنحسب كم عمودًا يسع العرض المتاح بحدّ أدنى معقول للعمود، ونطوي
+       * الزائد عن ذلك فقط، ثم نترك `fitTableWidth` يوزّع المتاح على الباقي
+       * نسبيًا ويلفّ نصوصه. النتيجة: أكثر ما يمكن إظهاره، لا أقلّه.
+       */
+      const extras = [...tableHead.querySelectorAll("th:not([data-column-key])")].reduce(
+        (sum, th) => sum + th.offsetWidth,
+        0,
+      );
+
+      const room = Math.max(0, available - extras);
+      const maxColumns = Math.max(MIN_VISIBLE_COLUMNS, Math.floor(room / MIN_COLUMN_WIDTH));
+      const foldable = foldOrder();
+      const surplus = visibleColumns().length - maxColumns;
+
+      if (surplus > 0 && foldable.length) {
+        autoHidden = new Set(foldable.slice(0, Math.min(surplus, foldable.length)));
+        paintHead();
+        paintBody();
+      }
+
+      /*
+       * الملاذ الأخير: التوزيع النسبي على ما بقي من أعمدة. يُستدعى دائمًا لا
+       * عند الطيّ فقط — جدول بأربعة أعمدة عريضة قد يتجاوز حاويته بلا أن
+       * يستحق طيّ عمود منها.
+       */
+      fitTableWidth(tableScroll, tableElement);
+    } finally {
+      fitting = false;
+      paintFitNotice();
+      // علامة «قِيس»: يعتمد عليها اختبار المتصفح لينتظر استقرار الجدول.
+      tableElement.dataset.fit = "done";
+    }
+  }
+
+  function paintFitNotice() {
+    if (!autoHidden.size) {
+      fitNotice.className = "hidden";
+      clear(fitNotice);
+      return;
+    }
+
+    fitNotice.className = "flex items-center gap-1.5 px-3 pb-2 text-[11px] text-muted no-print";
+
+    render(
+      fitNotice,
+      icon("info", { size: 12, class: "text-faint shrink-0" }),
+      el(
+        "span",
+        {},
+        `${autoHidden.size} ${autoHidden.size === 1 ? "عمود مطويّ" : "أعمدة مطوية"} لتتّسع الشاشة — اضغط أي صف لعرض كل بياناته.`,
+      ),
+    );
   }
 
   function readUrlParams() {
@@ -256,8 +420,14 @@ export function dataTable({
         "th",
         {
           scope: "col",
+          dataset: { columnKey: column.key },
           class: cx(
-            "px-3 py-2.5 text-xs whitespace-nowrap border-b border-line",
+            /*
+             * بلا `whitespace-nowrap`: رأس مثل «سعر الشراء / التكلفة» كان
+             * يفرض على عموده عرض السطر كاملًا، فيتجاوز الجدول حاويته بسبب
+             * رؤوسه لا بسبب بياناته. سطران في الرأس أرخص من عمود مطويّ.
+             */
+            "px-3 py-2.5 text-xs leading-tight border-b border-line",
             alignment === "end" ? "text-end" : alignment === "center" ? "text-center" : "text-start",
             column.tooltip && "cursor-help",
           ),
@@ -300,6 +470,96 @@ export function dataTable({
     );
   }
 
+  /* ------------------------------------------------------------ لوحة الصف */
+
+  /**
+   * عنوان اللوحة: نص العمود الأول — هوية الصف كما يراها المستخدم في الجدول
+   * نفسه، لا حقل يخمّنه هذا المكوّن من أسماء المفاتيح.
+   */
+  function rowTitle(row) {
+    const first = allColumns()[0];
+    if (!first) return "تفاصيل السجل";
+
+    const value = first.render ? first.render(row) : row[first.key];
+    const text = value instanceof Node ? nodeText(value) : String(value ?? "");
+
+    return text.replace(/\s+/g, " ").trim() || "تفاصيل السجل";
+  }
+
+  /**
+   * نصّ عنصر مع فاصل بين أبنائه.
+   *
+   * `textContent` يلصق الأبناء بلا فاصل، وخلية «الاسم فوق الكود» بناؤها
+   * عنصران — فيخرج العنوان «أنابيب تخدير وتنفسITM-0022» كلمةً واحدة ملتصقة.
+   */
+  function nodeText(node) {
+    if (node.nodeType === Node.TEXT_NODE) return node.textContent ?? "";
+    return [...node.childNodes].map(nodeText).join(" ");
+  }
+
+  /**
+   * نقر الصف يفتح كل بياناته.
+   *
+   * ═════════════════════════════════════════════════════════════════════════
+   *  الجدول يعرض ما يتّسع، واللوحة تعرض **كل شيء**: الأعمدة المرئية، وما
+   *  أخفاه المستخدم، وما طواه ضيق الشاشة — بنفس تنسيق خلاياها في الجدول
+   *  (`column.render`)، فالمبلغ يبقى مبلغًا والشارة تبقى شارة.
+   * ═════════════════════════════════════════════════════════════════════════
+   *
+   * وزر «فتح السجل كاملًا» هو وجهة `onRowClick` التي كانت الشاشة تذهب إليها
+   * بالنقر مباشرة: المستخدم يُطالع الصف أولًا، ثم يقرر الانتقال — لا ينتقل
+   * ليكتشف أنه فتح الصف الخطأ ثم يرجع.
+   */
+  function openRowDetail(row) {
+    const fields = allColumns().map((column) => {
+      const value = column.render ? column.render(row) : row[column.key];
+      const empty = value === null || value === undefined || value === "";
+
+      return dataRow(column.label, value instanceof Node ? value : empty ? "—" : String(value));
+    });
+
+    const actions = rowActions?.(row) ?? null;
+
+    openDrawer({
+      title: rowTitle(row),
+      subtitle: `كل بيانات السجل — ${fields.length} ${fields.length === 1 ? "حقل" : "حقلًا"}`,
+      size: "md",
+      body: el(
+        "div",
+        { class: "space-y-4" },
+        el("dl", {}, ...fields),
+        actions
+          ? el(
+              "div",
+              { class: "pt-1" },
+              el("p", { class: "text-[11px] font-semibold text-faint mb-1.5" }, "إجراءات"),
+              el("div", { class: "flex flex-wrap items-center gap-2" }, actions),
+            )
+          : null,
+      ),
+      footer: (close) => [
+        onRowClick
+          ? button({
+              label: recordLabel,
+              icon: "chevronStart",
+              variant: "primary",
+              onClick: () => {
+                close();
+                onRowClick(row);
+              },
+            })
+          : null,
+        button({ label: "إغلاق", variant: "ghost", onClick: () => close() }),
+      ],
+    });
+  }
+
+  /** ما يحدث فعلًا عند نقر صف. */
+  function handleRowClick(row) {
+    if (rowDetail) openRowDetail(row);
+    else onRowClick?.(row);
+  }
+
   function paintBody() {
     clear(tableBody);
 
@@ -323,20 +583,22 @@ export function dataTable({
         );
       });
 
+      const clickable = rowDetail || Boolean(onRowClick);
+
       const tr = el(
         "tr",
         {
           class: cx(
             "transition-colors",
             isSelected ? "bg-brand-50" : "hover:bg-subtle",
-            onRowClick && "cursor-pointer",
+            clickable && "cursor-pointer",
           ),
           dataset: { rowId: row.id },
-          ...(onRowClick
+          ...(clickable
             ? {
                 tabindex: "0",
                 onKeydown: (evt) => {
-                  if (evt.key === "Enter") onRowClick(row);
+                  if (evt.key === "Enter") handleRowClick(row);
                 },
               }
             : {}),
@@ -385,9 +647,46 @@ export function dataTable({
       if (summary instanceof Node) {
         tableFoot.appendChild(summary);
       } else if (Array.isArray(summary)) {
-        tableFoot.appendChild(summaryCells(summary));
+        tableFoot.appendChild(summaryCells(adaptSummaryCells(summary)));
       }
     }
+  }
+
+  /**
+   * يُطابق صفّ المجاميع مع الأعمدة الظاهرة فعلًا.
+   *
+   * الشاشة تُصرّح بخلايا المجاميع **بالموضع** (خلية بـ colspan 3 ثم ثلاث
+   * خلايا أرقام…) على افتراض ظهور كل الأعمدة. فإذا اختفى عمود — أخفاه
+   * المستخدم أو طواه ضيق الشاشة — حدث أمران، كلاهما خطأ:
+   *
+   *   1. مجموع الـ colspan يتجاوز عدد الأعمدة، فيُضيف المتصفح أعمدة من عنده
+   *      للتذييل. الجدول يتسع من جديد، فيطوي القياس عمودًا آخر، فيتسع… حتى
+   *      لا يبقى في الجدول عمودان. (حدث فعلًا: شاشة الأرصدة بقيت بثلاثة
+   *      أعمدة من عشرة.)
+   *   2. تنزلق الأرقام أسفل أعمدة ليست أعمدتها — ومجموع «المحجوز» تحت عمود
+   *      «المتاح» ليس عرضًا ناقصًا، بل رقم كاذب.
+   *
+   * فنمشي على الأعمدة المُصرَّح بها بالترتيب، ونُعطي كل خلية مجاميع عدد ما
+   * بقي ظاهرًا من أعمدتها، ونحذف الخلية التي اختفت أعمدتها كلها.
+   */
+  function adaptSummaryCells(cells) {
+    const declared = allColumns();
+    const visible = new Set(visibleColumns().map((column) => column.key));
+    const adapted = [];
+    let index = 0;
+
+    for (const cell of cells) {
+      const span = Math.max(1, cell.colspan ?? 1);
+      const covered = declared.slice(index, index + span);
+      index += span;
+
+      const shown = covered.filter((column) => visible.has(column.key)).length;
+      if (!shown) continue;
+
+      adapted.push(shown === span ? cell : { ...cell, colspan: shown });
+    }
+
+    return adapted;
   }
 
   function paintBulkBar() {
@@ -531,6 +830,13 @@ export function dataTable({
       clear(stateHost);
       tableScroll.classList.remove("hidden");
       paintBody();
+
+      /*
+       * القياس بعد أن يرسم المتصفح لا داخل هذه الدالة: `offsetWidth` قبل
+       * التخطيط يعود صفرًا، فيقرأ القياس «الجدول متّسع» دائمًا ولا يُطوى
+       * عمود واحد مهما ضاقت الشاشة.
+       */
+      if (!fitting) requestAnimationFrame(fitColumns);
     }
 
     paintBulkBar();
@@ -639,6 +945,16 @@ export function dataTable({
                 },
               }),
               el("span", { class: "text-xs text-ink" }, column.label),
+              autoHidden.has(column.key)
+                ? el(
+                    "span",
+                    {
+                      class: "ms-auto text-[10px] text-faint shrink-0",
+                      title: "مطويّ تلقائيًا لضيق الشاشة — موجود كاملًا في لوحة الصف",
+                    },
+                    "مطويّ",
+                  )
+                : null,
             ),
           ),
         );
@@ -694,23 +1010,51 @@ export function dataTable({
     },
     el("div", { class: "no-print" }, toolbar, filters.length ? filterHost : null),
     bulkBar,
+    fitNotice,
     tableScroll,
     stateHost,
     el("div", { class: "no-print" }, paginationHost),
   );
 
-  const unbindRowClick = onRowClick
-    ? delegate(tableBody, "click", "tr[data-row-id]", (_evt, tr) => {
-        const row = rows.find((candidate) => String(candidate.id) === tr.dataset.rowId);
-        if (row) onRowClick(row);
-      })
-    : () => {};
+  const unbindRowClick =
+    rowDetail || onRowClick
+      ? delegate(tableBody, "click", "tr[data-row-id]", (_evt, tr) => {
+          const row = rows.find((candidate) => String(candidate.id) === tr.dataset.rowId);
+          if (row) handleRowClick(row);
+        })
+      : () => {};
+
+  /*
+   * عرض الحاوية يتغيّر بلا تغيّر حجم النافذة: طيّ الشريط الجانبي (290px →
+   * 84px) يمنح الجدول 206px إضافية، وهي فرق عمودين. مراقبة النافذة وحدها
+   * كانت تترك الأعمدة مطوية بلا سبب حتى أول تحديث للجدول.
+   */
+  let lastFitWidth = 0;
+
+  /*
+   * القياس داخل requestAnimationFrame لا داخل نداء المراقب نفسه: إعادة
+   * الرسم أثناء معالجة إشعار ResizeObserver تُنتج
+   * «ResizeObserver loop completed with undelivered notifications» — خطأ
+   * حقيقي في الـ console يلتقطه الحارس العام ويعرضه للمستخدم.
+   */
+  const resizeObserver =
+    typeof ResizeObserver === "function"
+      ? new ResizeObserver(() => {
+          const width = tableScroll.clientWidth;
+          if (!width || Math.abs(width - lastFitWidth) < FIT_TOLERANCE) return;
+          lastFitWidth = width;
+          requestAnimationFrame(fitColumns);
+        })
+      : null;
+
+  resizeObserver?.observe(tableScroll);
 
   function destroy() {
     requestToken += 1; // يُبطل أي استجابة في الطريق
     onSearch.cancel();
     unbindRowClick();
     closeColumnsMenu();
+    resizeObserver?.disconnect();
   }
 
   /*

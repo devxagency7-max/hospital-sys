@@ -13,6 +13,7 @@ import { amount, date, dateTime, integer } from "../../js/core/format.js";
 import { navigate } from "../../js/core/router.js";
 import { exportStyledExcel, printReport } from "../_shared/print.js";
 import { toast } from "../../components/feedback/toast.js";
+import { tableScroller } from "../../components/tables/table-fit.js";
 import {
   getJournalEntry,
   postJournalEntry,
@@ -187,9 +188,7 @@ export default async function journalDetailPage(context) {
         { tone: "brand" },
       ),
     ),
-    el(
-      "div",
-      { class: "overflow-x-auto" },
+    tableScroller(
       renderLinesTable(entry.lines || [], entry.totalDebit, entry.totalCredit),
     ),
   );

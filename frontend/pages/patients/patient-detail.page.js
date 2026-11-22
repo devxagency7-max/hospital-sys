@@ -13,6 +13,7 @@ import { navigate } from "../../js/core/router.js";
 import { previewTableReport, exportTableToCsv } from "../_shared/print.js";
 import { formModal, selectField, value } from "../_shared/forms.js";
 import { textField } from "../../components/forms/fields.js";
+import { tableScroller } from "../../components/tables/table-fit.js";
 import {
   getPatient,
   getPatientStatement,
@@ -281,7 +282,7 @@ function buildStatementTable(entries) {
 
   table.append(thead, tbody);
 
-  return el("div", { class: "overflow-x-auto" }, table);
+  return tableScroller(table);
 }
 
 function buildAdmissionsSection(admissions) {
@@ -348,7 +349,7 @@ function buildAdmissionsSection(admissions) {
   });
 
   table.append(thead, tbody);
-  card.appendChild(el("div", { class: "overflow-x-auto" }, table));
+  card.appendChild(tableScroller(table));
   return card;
 }
 

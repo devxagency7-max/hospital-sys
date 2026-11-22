@@ -98,6 +98,7 @@ export default async function patientReceiptsPage() {
     ],
 
     onRowClick: (row) => previewReceiptVoucher(row),
+    recordLabel: "معاينة سند القبض",
 
     stats: async (rows) => {
       let data = Array.isArray(rows) && rows.length ? rows : [];

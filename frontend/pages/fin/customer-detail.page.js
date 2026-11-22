@@ -13,6 +13,7 @@ import { amount, date, integer, phone as formatPhone } from "../../js/core/forma
 import { navigate } from "../../js/core/router.js";
 import { exportStyledExcel, printReport } from "../_shared/print.js";
 import { getCustomerAccount } from "../../js/api/finance.api.js";
+import { tableScroller } from "../../components/tables/table-fit.js";
 
 const INVOICE_STATUS_MAP = {
   paid: { label: "مسددة بالكامل", tone: "success" },
@@ -226,7 +227,7 @@ function renderInvoicesTable(invoices) {
   }
 
   table.append(thead, tbody);
-  return el("div", { class: "overflow-x-auto" }, table);
+  return tableScroller(table);
 }
 
 function renderReceiptsTable(receipts) {
@@ -268,7 +269,7 @@ function renderReceiptsTable(receipts) {
   }
 
   table.append(thead, tbody);
-  return el("div", { class: "overflow-x-auto" }, table);
+  return tableScroller(table);
 }
 
 function exportCustomerExcel(party, accountData) {

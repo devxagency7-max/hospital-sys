@@ -28,6 +28,7 @@ import {
   createReceptionReceipt,
 } from "../../js/api/reception.api.js";
 import { getPatientStats } from "../../js/api/patients.api.js";
+import { tableScroller } from "../../components/tables/table-fit.js";
 
 export default async function receptionBillingPage(context) {
   const container = el("div", { class: "flex flex-col gap-6 p-4 md:p-6" });
@@ -483,7 +484,7 @@ function buildReceptionServicesSection(patient, summaryData) {
   });
 
   table.append(thead, tbody);
-  card.appendChild(el("div", { class: "overflow-x-auto" }, table));
+  card.appendChild(tableScroller(table));
   return card;
 }
 
@@ -793,7 +794,7 @@ function buildReceptionReceiptsSection(patient, summaryData, onReceiptCreated) {
   });
 
   table.append(thead, tbody);
-  card.appendChild(el("div", { class: "overflow-x-auto" }, table));
+  card.appendChild(tableScroller(table));
   return card;
 }
 

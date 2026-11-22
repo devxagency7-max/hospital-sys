@@ -4,6 +4,17 @@
  * عمود المبلغ وعمود التاريخ وعمود الحالة تتكرر في كل شاشة. تعريفها هنا يضمن
  * أن «مبلغ» يُنسَّق بنفس الطريقة في سبعين شاشة، وأن الرقم السالب يظهر أحمر
  * في كل مكان لا في بعضه.
+ *
+ * ولكل نوع عمود هنا **أولوية** افتراضية (`priority`) يستعملها الجدول حين
+ * يضيق عن أعمدته كلها: الأعلى يبقى والأدنى يُطوى إلى لوحة الصف
+ * (components/tables/data-table.js). الترتيب المقصود — من يبقى آخر الصامدين:
+ *
+ *   الاسم (لا يُطوى أبدًا) > الحالة > المبلغ > الكمية > النسبة والوسم >
+ *   العدد والنص > الكود > التاريخ > النص الباهت
+ *
+ * المنطق: المستخدم يفتح شاشة قائمة ليعرف «مَن، وكم، وفي أي حالة». التاريخ
+ * والكود مرجعان يُراجَعان عند فتح السجل، لا سببَ فتحه. وأي شاشة تخالف هذا
+ * الترتيب تُمرّر `priority` صراحةً لعمودها.
  */
 
 import { el, cx } from "../../js/core/dom.js";
@@ -24,8 +35,9 @@ import * as money from "../../js/core/money.js";
  * الاتجاه معنى (الربح، الفرق، الرصيد). الأعمدة التي لا تكون سالبة أبدًا
  * (الإجمالي، المدين) تبقى محايدة اللون، فلا يصير اللون ضجيجًا.
  */
-export function moneyColumn(key, label, { signed = false, width, hidden, align = "end", symbol = false, tooltip } = {}) {
+export function moneyColumn(key, label, { signed = false, width, hidden, align = "end", symbol = false, tooltip, priority = 65 } = {}) {
   return {
+    priority,
     key,
     label,
     numeric: true,
@@ -54,8 +66,9 @@ export function moneyColumn(key, label, { signed = false, width, hidden, align =
 }
 
 /** عمود كمية — يحترم عدد المنازل العشرية للوحدة. */
-export function quantityColumn(key, label, { width, hidden, decimals, tooltip } = {}) {
+export function quantityColumn(key, label, { width, hidden, decimals, tooltip, priority = 60 } = {}) {
   return {
+    priority,
     key,
     label,
     numeric: true,
@@ -74,8 +87,9 @@ export function quantityColumn(key, label, { width, hidden, decimals, tooltip } 
 }
 
 /** عمود نسبة مئوية — المدخل كسر (0.14 = 14%). */
-export function percentColumn(key, label, { width, hidden } = {}) {
+export function percentColumn(key, label, { width, hidden, priority = 55 } = {}) {
   return {
+    priority,
     key,
     label,
     numeric: true,
@@ -90,8 +104,9 @@ export function percentColumn(key, label, { width, hidden } = {}) {
   };
 }
 
-export function dateColumn(key, label, { width = "7rem", hidden, withTime = false } = {}) {
+export function dateColumn(key, label, { width = "7rem", hidden, withTime = false, priority = 30 } = {}) {
   return {
+    priority,
     key,
     label,
     sortable: true,
@@ -105,8 +120,9 @@ export function dateColumn(key, label, { width = "7rem", hidden, withTime = fals
 }
 
 /** عمود حالة — يقرأ من كتالوج الحالات في js/core/statuses.js. */
-export function statusColumn(key = "status", label = "الحالة", { width = "8rem", hidden } = {}) {
+export function statusColumn(key = "status", label = "الحالة", { width = "8rem", hidden, priority = 70 } = {}) {
   return {
+    priority,
     key,
     label,
     width,
@@ -117,8 +133,9 @@ export function statusColumn(key = "status", label = "الحالة", { width = "
 }
 
 /** عمود مرجع أو كود — يُعزل اتجاهيًا دائمًا. */
-export function codeColumn(key, label, { width = "9rem", hidden, mono = true } = {}) {
+export function codeColumn(key, label, { width = "9rem", hidden, mono = true, priority = 40 } = {}) {
   return {
+    priority,
     key,
     label,
     sortable: true,
@@ -144,8 +161,10 @@ export function nameColumn(nameKey, codeKey, label, { width, alwaysVisible = tru
 }
 
 /** عمود نص عادي مع تقصير. */
-export function textColumn(key, label, { width, hidden, sortable = false, muted = false } = {}) {
+export function textColumn(key, label, { width, hidden, sortable = false, muted = false, priority } = {}) {
   return {
+    // النص الذي وصفته الشاشة «باهتًا» وصفته ثانويًا بنفسها — فيُطوى قبل غيره.
+    priority: priority ?? (muted ? 35 : 50),
     key,
     label,
     sortable,
@@ -159,8 +178,9 @@ export function textColumn(key, label, { width, hidden, sortable = false, muted 
 }
 
 /** عمود وسم من قائمة قيم ← ألوان. */
-export function tagColumn(key, label, map, { width = "8rem", hidden, tooltip } = {}) {
+export function tagColumn(key, label, map, { width = "8rem", hidden, tooltip, priority = 55 } = {}) {
   return {
+    priority,
     key,
     label,
     width,
@@ -176,8 +196,9 @@ export function tagColumn(key, label, map, { width = "8rem", hidden, tooltip } =
 }
 
 /** عمود عدد. */
-export function countColumn(key, label, { width = "6rem", hidden } = {}) {
+export function countColumn(key, label, { width = "6rem", hidden, priority = 50 } = {}) {
   return {
+    priority,
     key,
     label,
     numeric: true,

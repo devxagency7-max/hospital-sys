@@ -104,6 +104,7 @@ export default async function banksPage() {
     ],
 
     onRowClick: (row) => navigate(`/fin/banks/${row.id}`),
+    recordLabel: "فتح الحساب البنكي",
 
     rowActions: (row) =>
       buttonGroup(

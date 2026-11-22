@@ -107,6 +107,7 @@ export default async function customersPage() {
         : null,
 
     onRowClick: (row) => navigate(`/fin/customers/${row.id}`),
+    recordLabel: "فتح ملف العميل",
 
     rowActions: (row) =>
       buttonGroup(

@@ -108,6 +108,7 @@ export default async function employeesPage() {
         : null,
 
     onRowClick: (row) => navigate(`/hr/employees/${row.id}`),
+    recordLabel: "فتح ملف الموظف",
 
     rowActions: (row) =>
       buttonGroup(

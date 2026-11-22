@@ -11,6 +11,7 @@ import { amount, date, integer } from "../../js/core/format.js";
 import { navigate } from "../../js/core/router.js";
 import { exportStyledExcel, printReport } from "../_shared/print.js";
 import { getStockCount, startStockCount, closeStockCount } from "../../js/api/inventory.api.js";
+import { tableScroller } from "../../components/tables/table-fit.js";
 
 export default async function countDetailPage(context) {
   const countId = context.params?.id;
@@ -139,9 +140,7 @@ export default async function countDetailPage(context) {
       el("h2", { class: "text-base font-bold text-ink" }, "كشف بنود وأصناف الجرد"),
       el("span", { class: "text-xs text-muted" }, `إجمالي البنود: ${lines.length}`),
     ),
-    el(
-      "div",
-      { class: "overflow-x-auto" },
+    tableScroller(
       el(
         "table",
         { class: "w-full text-sm text-right border-collapse" },

@@ -107,6 +107,7 @@ export default async function adjustmentsPage() {
         : null,
 
     onRowClick: (row) => navigate(`/inv/items/${row.itemId}`),
+    recordLabel: "فتح ملف الصنف",
 
     rowActions: (row, context) =>
       buttonGroup(

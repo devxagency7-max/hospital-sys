@@ -13,6 +13,7 @@ import { amount, date, integer, phone as formatPhone } from "../../js/core/forma
 import { navigate } from "../../js/core/router.js";
 import { exportStyledExcel, printReport } from "../_shared/print.js";
 import { getEmployee } from "../../js/api/hr.api.js";
+import { tableScroller } from "../../components/tables/table-fit.js";
 
 const STATUS_MAP = {
   employed: { label: "على رأس العمل", tone: "success" },
@@ -226,7 +227,7 @@ function renderDocumentsTable(documents) {
   }
 
   table.append(thead, tbody);
-  return el("div", { class: "overflow-x-auto" }, table);
+  return tableScroller(table);
 }
 
 function renderPayslipsTable(payslips) {
@@ -270,7 +271,7 @@ function renderPayslipsTable(payslips) {
   }
 
   table.append(thead, tbody);
-  return el("div", { class: "overflow-x-auto" }, table);
+  return tableScroller(table);
 }
 
 function exportEmployeeExcel(emp) {

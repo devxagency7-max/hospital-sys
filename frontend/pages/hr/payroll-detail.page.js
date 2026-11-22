@@ -12,6 +12,7 @@ import { navigate } from "../../js/core/router.js";
 import { exportStyledExcel, printReport } from "../_shared/print.js";
 import { getPayrollRun, approvePayroll, payPayroll } from "../../js/api/hr.api.js";
 import { listBankAccounts } from "../../js/api/finance.api.js";
+import { tableScroller } from "../../components/tables/table-fit.js";
 
 export default async function payrollDetailPage(context) {
   const runId = context.params?.id;
@@ -155,9 +156,7 @@ export default async function payrollDetailPage(context) {
       el("h2", { class: "text-base font-bold text-ink" }, "كشف رواتب الموظفين"),
       el("span", { class: "text-xs text-muted" }, `إجمالي القسائم: ${payslips.length}`),
     ),
-    el(
-      "div",
-      { class: "overflow-x-auto" },
+    tableScroller(
       el(
         "table",
         { class: "w-full text-sm text-right border-collapse" },

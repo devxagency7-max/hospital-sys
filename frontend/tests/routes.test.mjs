@@ -9,6 +9,7 @@ const BASE = process.env.BASE ?? "http://localhost:4173";
 const NAV = "../js/config/navigation.js";
 
 const { flatScreens } = await import(NAV);
+const { FIT_TOLERANCE } = await import("../components/tables/table-fit.js");
 const screens = flatScreens();
 
 const browser = await chromium.launch();
@@ -72,6 +73,43 @@ for (const screen of screens) {
     };
   });
 
+  /*
+   * لا تمرير أفقي في أي جدول — القاعدة التي بُني لها
+   * components/tables/table-fit.js. الانتظار على `data-fit` لا على مهلة
+   * ثابتة: القياس يحدث بعد وصول البيانات وبعد أول رسم للمتصفح، ومهلة ثابتة
+   * تلتقط الجدول قبل أن يقيس نفسه فتُبلّغ عن تجاوز لا وجود له.
+   */
+  await page
+    .waitForFunction(
+      () => {
+        const tables = [...document.querySelectorAll("#page .overflow-x-auto table")];
+        return tables.length === 0 || tables.every((table) => table.dataset.fit === "done");
+      },
+      { timeout: 3000 },
+    )
+    .catch(() => {});
+
+  const wide = await page.evaluate(
+    (tolerance) =>
+      [...document.querySelectorAll("#page .overflow-x-auto")]
+        .map((host) => {
+          const table = host.querySelector("table");
+          if (!table) return null;
+          const overflow = Math.round(table.scrollWidth - host.clientWidth);
+          return overflow > tolerance ? { overflow, columns: table.querySelectorAll("thead th").length } : null;
+        })
+        .filter(Boolean),
+    FIT_TOLERANCE,
+  );
+
+  for (const table of wide) {
+    problems.push({
+      path: screen.path,
+      kind: "overflow",
+      text: `جدول يتجاوز حاويته بـ ${table.overflow}px (${table.columns} عمودًا) — يحتاج المستخدم تمريرًا أفقيًا`,
+    });
+  }
+
   if (!info.hasTitle || info.textLength < 20) {
     blank += 1;
     problems.push({
@@ -122,6 +160,7 @@ const dangling = [...hrefs].filter((h) => !known.has(h));
 console.log(`مسارات رُسمت بنجاح : ${rendered}`);
 console.log(`مسارات فارغة       : ${blank}`);
 console.log(`روابط الشريط       : ${hrefs.size} (${dangling.length} غير مسجَّل)`);
+console.log(`جداول تتجاوز شاشتها: ${problems.filter((p) => p.kind === "overflow").length}`);
 
 if (dangling.length) console.log(`\nروابط غير مسجَّلة:\n${dangling.join("\n")}`);
 

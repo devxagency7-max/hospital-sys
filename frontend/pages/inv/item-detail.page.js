@@ -14,6 +14,7 @@ import { navigate } from "../../js/core/router.js";
 import { exportStyledExcel, printReport } from "../_shared/print.js";
 import { getItem } from "../../js/api/inventory.api.js";
 import { can } from "../../js/core/permissions.js";
+import { tableScroller } from "../../components/tables/table-fit.js";
 
 const MOVEMENT_TYPE_MAP = {
   receipt: { label: "إذن إضافة", tone: "success" },
@@ -250,7 +251,7 @@ function renderBalancesTable(balances, unitName) {
   }
 
   table.append(thead, tbody);
-  return el("div", { class: "overflow-x-auto" }, table);
+  return tableScroller(table);
 }
 
 function renderBatchesTable(batches, unitName) {
@@ -302,7 +303,7 @@ function renderBatchesTable(batches, unitName) {
   }
 
   table.append(thead, tbody);
-  return el("div", { class: "overflow-x-auto" }, table);
+  return tableScroller(table);
 }
 
 function renderMovementsTable(movements, unitName) {
@@ -349,7 +350,7 @@ function renderMovementsTable(movements, unitName) {
   }
 
   table.append(thead, tbody);
-  return el("div", { class: "overflow-x-auto" }, table);
+  return tableScroller(table);
 }
 
 function exportItemExcel(item) {

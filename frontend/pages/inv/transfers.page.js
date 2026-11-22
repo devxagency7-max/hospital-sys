@@ -85,6 +85,7 @@ export default async function transfersPage() {
         : null,
 
     onRowClick: (row) => navigate(`/inv/items/${row.itemId}`),
+    recordLabel: "فتح ملف الصنف",
 
     rowActions: (row) =>
       buttonGroup(

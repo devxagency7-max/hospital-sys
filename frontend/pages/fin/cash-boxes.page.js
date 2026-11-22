@@ -104,6 +104,7 @@ export default async function cashBoxesPage() {
     ],
 
     onRowClick: (row) => navigate(`/fin/cash-boxes/${row.id}`),
+    recordLabel: "فتح الخزينة",
 
     rowActions: (row) =>
       buttonGroup(

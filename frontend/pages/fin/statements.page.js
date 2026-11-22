@@ -22,6 +22,7 @@ import { printReport, num } from "../_shared/print.js";
 import { getIncomeStatement, getBalanceSheet, getCashFlowStatement } from "../../js/api/finance.api.js";
 import { getCostCenters, toOptions } from "../../js/api/lookups.api.js";
 import { getCompanyInfo } from "../../js/api/settings.api.js";
+import { tableScroller } from "../../components/tables/table-fit.js";
 
 export default async function statementsPage() {
   const [costCenters, company] = await Promise.all([getCostCenters(), getCompanyInfo()]);
@@ -73,9 +74,7 @@ export default async function statementsPage() {
     return card({
       title,
       flush: true,
-      body: el(
-        "div",
-        { class: "overflow-x-auto" },
+      body: tableScroller(
         el(
           "table",
           { class: "w-full border-collapse text-sm" },

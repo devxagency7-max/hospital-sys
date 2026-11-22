@@ -11,6 +11,7 @@ import { amount, date, integer } from "../../js/core/format.js";
 import { navigate } from "../../js/core/router.js";
 import { exportStyledExcel, printReport } from "../_shared/print.js";
 import { getAsset, disposeAsset } from "../../js/api/finance.api.js";
+import { tableScroller } from "../../components/tables/table-fit.js";
 
 export default async function assetDetailPage(context) {
   const assetId = context.params?.id;
@@ -155,9 +156,7 @@ export default async function assetDetailPage(context) {
       el("h2", { class: "text-base font-bold text-ink" }, "جدول الإهلاك (Depreciation Schedule)"),
       el("span", { class: "text-xs text-muted" }, `إجمالي الفترات المجدولة: ${scheduleRows.length}`),
     ),
-    el(
-      "div",
-      { class: "overflow-x-auto" },
+    tableScroller(
       el(
         "table",
         { class: "w-full text-sm text-right border-collapse" },

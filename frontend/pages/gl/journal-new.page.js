@@ -27,6 +27,7 @@ import * as money from "../../js/core/money.js";
 import { selectField, dateFieldWithLabel, notesField, asyncButton, value, numberValue } from "../_shared/forms.js";
 import { createJournalEntry } from "../../js/api/accounting.api.js";
 import { getAccounts, getCostCenters, toOptions, toAccountOptions } from "../../js/api/lookups.api.js";
+import { tableScroller } from "../../components/tables/table-fit.js";
 
 /** السطر الفارغ — نبدأ بسطرين لأن القيد يحتاج طرفين على الأقل. */
 const emptyLine = () => ({ accountId: "", debit: 0, credit: 0, description: "", costCenterId: "" });
@@ -385,9 +386,7 @@ export default async function journalNewPage() {
         },
       }),
       flush: true,
-      body: el(
-        "div",
-        { class: "overflow-x-auto" },
+      body: tableScroller(
         el(
           "table",
           { class: "w-full text-sm border-collapse" },

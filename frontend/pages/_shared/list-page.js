@@ -17,7 +17,7 @@
 import { el, clear } from "../../js/core/dom.js";
 import { pageHeader } from "../../components/layout/breadcrumbs.js";
 import { card, statGrid } from "../../components/common/card.js";
-import { dataTable, summaryCells } from "../../components/tables/data-table.js";
+import { dataTable } from "../../components/tables/data-table.js";
 import { errorState } from "../../components/feedback/states.js";
 import { toast } from "../../components/feedback/toast.js";
 import { button } from "../../components/common/button.js";
@@ -38,7 +38,9 @@ import { describeError } from "../../js/core/errors.js";
  * @param {() => Promise<Array>|Array} [definition.stats]  بطاقات المؤشرات
  * @param {(ctx:object)=>Array} [definition.actions]       أزرار الترويسة
  * @param {(row:object, ctx:object)=>Node|null} [definition.rowActions]
- * @param {(row:object)=>void} [definition.onRowClick]
+ * @param {(row:object)=>void} [definition.onRowClick]  وجهة زر «فتح السجل» في لوحة الصف
+ * @param {string} [definition.recordLabel]                نص ذلك الزر — «فتح ملف المريض» مثلًا
+ * @param {boolean} [definition.rowDetail=true]            نقر الصف يفتح لوحة بكل بياناته
  * @param {object} [definition.initialParams]
  * @param {(rows:object[])=>Node} [definition.summaryRow]
  * @param {string} [definition.emptyMessage]
@@ -61,6 +63,8 @@ export async function listPage(definition) {
     actions,
     rowActions,
     onRowClick,
+    recordLabel,
+    rowDetail,
     initialParams = {},
     summaryRow,
     emptyMessage,
@@ -201,22 +205,17 @@ export async function listPage(definition) {
     toolbarActions: [exportBtn, csvBtn, printBtn],
     rowActions: rowActions ? (row) => rowActions(row, context) : undefined,
     onRowClick,
+    recordLabel,
+    rowDetail,
     initialParams,
     /*
-     * `dataTable` يتوقع **عنصرًا** في صف المجاميع (`<tr>`)، و`summaryCells`
-     * هو ما يبنيه من أوصاف الخلايا. تمرير المصفوفة مباشرة يرمي
-     * «appendChild: parameter 1 is not of type Node» عند أول صفحة نتائج.
-     *
-     * السماح بالاثنين هنا يجعل الشاشة تُصرّح بالخلايا وحدها — وهو الشكل
-     * الأوضح — دون أن تتذكر كل شاشة أن تُغلّفها بنفسها.
+     * تُمرَّر أوصاف الخلايا كما صرّحت بها الشاشة — مصفوفةً لا عنصرًا جاهزًا.
+     * `dataTable` يقبل الاثنين، لكنه لا يستطيع مطابقة صفّ المجاميع مع
+     * الأعمدة الظاهرة (`adaptSummaryCells`) إلا وهي أوصاف: `<tr>` مبنيّ
+     * سلفًا صندوق مغلق لا يعرف أيّ خلية تخصّ أيّ عمود. تغليفه هنا كان
+     * يُنتج مجاميع تحت أعمدة ليست أعمدتها كلما اختفى عمود.
      */
-    summaryRow: summaryRow
-      ? (rows) => {
-          const built = summaryRow(rows);
-          if (!built) return null;
-          return Array.isArray(built) ? summaryCells(built) : built;
-        }
-      : undefined,
+    summaryRow,
     emptyMessage,
     selectable,
     bulkActions: bulkActions ? (rows, clearSelection) => bulkActions(rows, clearSelection, context) : undefined,
